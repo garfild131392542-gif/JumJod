@@ -1,11 +1,12 @@
 'use client';
 
 import { useAuth } from '@/components/providers/auth-provider';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { ClipboardList, AlertCircle } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 
-export default function LoginPage() {
+
+function LoginContent() {
   const { signInWithGoogle, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,5 +90,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-950 px-4">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 animate-pulse">
+          <ClipboardList className="w-8 h-8 text-white" />
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
