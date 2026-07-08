@@ -2,7 +2,13 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar as BigCalendar, momentLocalizer, Event as CalendarEvent } from 'react-big-calendar';
+import { momentLocalizer, Event as CalendarEvent } from 'react-big-calendar';
+import dynamic from 'next/dynamic';
+
+const BigCalendar = dynamic(
+  () => import('react-big-calendar').then((mod) => mod.Calendar),
+  { ssr: false }
+);
 import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { createClient } from '@/lib/supabase/client';
@@ -24,6 +30,73 @@ interface CustomEvent extends CalendarEvent {
   item: Item;
 }
 
+interface ToolbarProps {
+  label: string;
+  onNavigate: (navigate: 'PREV' | 'NEXT' | 'TODAY') => void;
+  onView: (view: 'month' | 'week' | 'day' | 'agenda') => void;
+  view: string;
+}
+
+const CustomToolbar = ({ label, onNavigate, onView, view }: ToolbarProps) => {
+  return (
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6 p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm backdrop-blur-sm">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onNavigate('TODAY')}
+          className="px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
+        >
+          วันนี้
+        </button>
+        <button
+          type="button"
+          onClick={() => onNavigate('PREV')}
+          className="px-3.5 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
+        >
+          ก่อนหน้า
+        </button>
+        <button
+          type="button"
+          onClick={() => onNavigate('NEXT')}
+          className="px-3.5 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
+        >
+          ถัดไป
+        </button>
+      </div>
+
+      <span className="text-base font-extrabold text-slate-805 dark:text-slate-100 tracking-tight text-center">
+        {label}
+      </span>
+
+      <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
+        {(['month', 'week', 'day', 'agenda'] as const).map((v) => {
+          const isActive = view === v;
+          let labelText = '';
+          if (v === 'month') labelText = 'เดือน';
+          if (v === 'week') labelText = 'สัปดาห์';
+          if (v === 'day') labelText = 'วัน';
+          if (v === 'agenda') labelText = 'กิจกรรม';
+
+          return (
+            <button
+              key={v}
+              type="button"
+              onClick={() => onView(v)}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                isActive
+                  ? 'bg-white dark:bg-slate-900 text-violet-600 dark:text-violet-400 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-850 dark:hover:text-slate-350'
+              }`}
+            >
+              {labelText}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 export default function CalendarPage() {
   const { user } = useAuth();
   const { theme } = useTheme();
@@ -31,6 +104,10 @@ export default function CalendarPage() {
   
   // Selected event state for detail drawer
   const [selectedEvent, setSelectedEvent] = useState<CustomEvent | null>(null);
+
+  // Controlled calendar states
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [currentView, setCurrentView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
 
   // Fetch items using TanStack Query
   const { data: items = [], isLoading, error } = useQuery<Item[]>({
@@ -84,6 +161,7 @@ export default function CalendarPage() {
 
   // Event Styling Customization
   const eventStyleGetter = (event: CustomEvent) => {
+    if (!event || !event.type) return {};
     const isDark = theme === 'dark';
     let backgroundColor = '';
     let textColor = '';
@@ -148,15 +226,22 @@ export default function CalendarPage() {
             <p className="text-xs text-slate-400">{(error as any)?.message}</p>
           </div>
         ) : (
-          <div className="h-full bg-white dark:bg-slate-950/20 rounded-2xl shadow-sm dark:shadow-none border border-slate-200/50 dark:border-slate-800/20">
+          <div className="p-6 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm">
             <BigCalendar
               localizer={localizer}
               events={events}
+              date={currentDate}
+              view={currentView}
+              onNavigate={(date) => setCurrentDate(date)}
+              onView={(view) => setCurrentView(view as any)}
               startAccessor="start"
               endAccessor="end"
               style={{ height: 600 }}
               eventPropGetter={eventStyleGetter as any}
               onSelectEvent={(event) => setSelectedEvent(event as CustomEvent)}
+              components={{
+                toolbar: CustomToolbar as any,
+              }}
               messages={{
                 next: 'ถัดไป',
                 previous: 'ก่อนหน้า',

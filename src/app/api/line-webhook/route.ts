@@ -50,8 +50,8 @@ function createItemFlexBubble(item: any, appUrl: string) {
   } else {
     // Non-PR status
     statusText = item.status === 'Pending' ? 'กำลังดำเนินการ' 
-      : item.status === 'Purchasing' ? 'ติดต่อจัดซื้อ' 
-      : 'สำเร็จ/ออก ITEM';
+      : item.status === 'Purchasing' ? 'ติดต่อที่จัดซื้อ' 
+      : 'สำเร็จ (ออก ITEM)';
     statusColor = item.status === 'Pending' ? '#f59e0b'
       : item.status === 'Purchasing' ? '#8b5cf6'
       : '#10b981';
@@ -423,6 +423,35 @@ export async function POST(request: Request) {
               await sendLineReply(
                 replyToken, 
                 `🎉 บันทึกสำเร็จแล้ว!\nอัปเดตรายการ "${item.title}" เป็น "สำเร็จ (ออก ITEM)" เรียบร้อยแล้ว\n📅 วันครบกำหนดชำระ: ${formattedDate}\n*รายการนี้จะย้ายจากบอร์ดไปแสดงที่หน้า 'รายการสำเร็จ' ทันที*`
+              );
+            }
+          } else if (action === 'set_requested') {
+            const { data: item, error: fetchError } = await supabaseAdmin
+              .from('items')
+              .select('title')
+              .eq('id', itemId)
+              .single();
+
+            if (fetchError || !item) {
+              await sendLineReply(replyToken, '❌ ไม่พบรายการจัดซื้อนี้ หรืออาจถูกลบไปแล้ว');
+              continue;
+            }
+
+            const { error: updateError } = await supabaseAdmin
+              .from('items')
+              .update({
+                item_request_status: 'Pending',
+                status: 'Purchasing',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', itemId);
+
+            if (updateError) {
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูลแจ้งจัดซื้อ');
+            } else {
+              await sendLineReply(
+                replyToken, 
+                `⏳ แจ้งจัดซื้อแอดไอเทมเรียบร้อย!\nอัปเดตรายการ "${item.title}" เป็น "รอจัดซื้อแอด Item ใน AX" และย้ายไปคอลัมน์ "ติดต่อที่จัดซื้อ" บนบอร์ดแล้วครับ`
               );
             }
           } else if (action === 'delete') {

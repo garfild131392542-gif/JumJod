@@ -49,13 +49,36 @@ export default function CompletedItemsPage() {
     enabled: !!user?.id,
   });
 
-  const toggleAudit = (itemId: string) => {
-    const updated = {
-      ...auditedItems,
-      [itemId]: !auditedItems[itemId]
-    };
-    setAuditedItems(updated);
-    localStorage.setItem('audited_items', JSON.stringify(updated));
+  const toggleAudit = async (itemId: string) => {
+    if (confirm('คุณต้องการนำรายการนี้กลับไปยังบอร์ดรายการใช่หรือไม่?')) {
+      const { error } = await supabase
+        .from('items')
+        .update({ 
+          status: 'Purchasing', 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', itemId);
+
+      if (error) {
+        alert('เกิดข้อผิดพลาดในการนำรายการกลับไปยังบอร์ด: ' + error.message);
+        return;
+      }
+
+      // Remove from auditedItems in localStorage
+      const saved = localStorage.getItem('audited_items');
+      if (saved) {
+        try {
+          const audited = JSON.parse(saved);
+          delete audited[itemId];
+          localStorage.setItem('audited_items', JSON.stringify(audited));
+          setAuditedItems(audited);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      refetch();
+    }
   };
 
   // Filter items by search query
@@ -137,7 +160,7 @@ export default function CompletedItemsPage() {
               </thead>
               <tbody className="divide-y divide-slate-150 dark:divide-slate-850/50 text-slate-700 dark:text-slate-300">
                 {filteredItems.map((item, index) => {
-                  const isAudited = auditedItems[item.id] || false;
+                  const isAudited = true;
                   
                   return (
                     <tr 

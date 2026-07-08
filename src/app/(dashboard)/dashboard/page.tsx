@@ -291,18 +291,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleMoveStatus = (item: Item, direction: 'left' | 'right') => {
-    const statuses: ItemStatus[] = ['Pending', 'Purchasing', 'Issuing Item'];
-    const currentIndex = statuses.indexOf(item.status);
-    let nextIndex = currentIndex + (direction === 'right' ? 1 : -1);
 
-    if (nextIndex >= 0 && nextIndex < statuses.length) {
-      moveStatusMutation.mutate({
-        itemId: item.id,
-        nextStatus: statuses[nextIndex],
-      });
-    }
-  };
 
   // Filter items by search query and exclude audited items
   let filteredItems = items.filter(
@@ -316,14 +305,7 @@ export default function DashboardPage() {
     filteredItems = filteredItems.filter(item => item.is_pr);
   }
 
-  // PR Summary Statistics
-  const activePrItems = items.filter(item => item.is_pr && !auditedItems[item.id]);
-  const prStats = {
-    total: activePrItems.length,
-    waitingItem: activePrItems.filter(item => !item.has_item_number && item.item_request_status === 'Pending').length,
-    ready: activePrItems.filter(item => item.has_item_number && item.pr_status === 'Ready').length,
-    issued: activePrItems.filter(item => item.pr_status === 'Issued').length,
-  };
+
 
   const columns: { status: ItemStatus; title: string; subtitle: string; colorClass: string; borderClass: string }[] = [
     {
@@ -339,13 +321,6 @@ export default function DashboardPage() {
       subtitle: 'ประสานงาน PO / เลือกเงื่อนไขเครดิต',
       colorClass: 'text-violet-600 dark:text-violet-400 bg-violet-500/10',
       borderClass: 'border-violet-500/20',
-    },
-    {
-      status: 'Issuing Item',
-      title: 'กำลังออก ITEM (Issuing Item)',
-      subtitle: 'ออกรหัส ITEM / รอจัดส่งมอบงาน',
-      colorClass: 'text-emerald-600 dark:text-emerald-450 bg-emerald-500/10',
-      borderClass: 'border-emerald-500/20',
     },
   ];
 
@@ -423,46 +398,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* PR Summary Widget */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-fade-in">
-        <div className="backdrop-blur-sm bg-white dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">PR ทั้งหมดค้างทำ</span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-black text-slate-800 dark:text-white">{prStats.total}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-bold text-slate-500">รายการ</span>
-          </div>
-        </div>
-
-        <div className="backdrop-blur-sm bg-white dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">กำลังขอแอด Item ใน AX</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-          </div>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-black text-amber-600 dark:text-amber-400">{prStats.waitingItem}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 font-bold text-amber-600 dark:text-amber-400">รอจัดซื้อ</span>
-          </div>
-        </div>
-
-        <div className="backdrop-blur-sm bg-white dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-violet-500 uppercase tracking-wider">พร้อมออก PR (มี Item แล้ว)</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
-          </div>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-black text-violet-600 dark:text-violet-400">{prStats.ready}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-violet-500/10 font-bold text-violet-600 dark:text-violet-400">พร้อมออก</span>
-          </div>
-        </div>
-
-        <div className="backdrop-blur-sm bg-white dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-          <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">ออก PR สำเร็จ</span>
-          <div className="flex items-baseline justify-between mt-2">
-            <span className="text-2xl font-black text-emerald-600 dark:text-emerald-450">{prStats.issued}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 font-bold text-emerald-600 dark:text-emerald-450">สำเร็จ</span>
-          </div>
-        </div>
-      </div>
 
       {/* Filter and Search Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 p-3 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl backdrop-blur-sm shadow-sm">
@@ -515,7 +450,7 @@ export default function DashboardPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400">{(error as any)?.message || 'โปรดตรวจสอบสิทธิ์เชื่อมต่อหรือรีเฟรชหน้าเว็บ'}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {columns.map((column) => {
             const columnItems = filteredItems.filter((item) => item.status === column.status);
             const isColumnHovered = activeDragColumn === column.status;
