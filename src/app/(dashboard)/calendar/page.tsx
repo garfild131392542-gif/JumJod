@@ -234,8 +234,8 @@ export default function CalendarPage() {
               view={currentView}
               onNavigate={(date) => setCurrentDate(date)}
               onView={(view) => setCurrentView(view as any)}
-              startAccessor="start"
-              endAccessor="end"
+              startAccessor={(event: any) => event.start as Date}
+              endAccessor={(event: any) => event.end as Date}
               style={{ height: 600 }}
               eventPropGetter={eventStyleGetter as any}
               onSelectEvent={(event) => setSelectedEvent(event as CustomEvent)}
