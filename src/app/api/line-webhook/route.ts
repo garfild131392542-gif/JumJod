@@ -576,6 +576,25 @@ async function sendLineReply(replyToken: string, content: string | any) {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('Error replying to LINE:', errorData);
+      try {
+        const errorString = JSON.stringify(errorData);
+        await fetch('https://api.line.me/v2/bot/message/reply', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${channelAccessToken}`,
+          },
+          body: JSON.stringify({
+            replyToken,
+            messages: [{
+              type: 'text',
+              text: `❌ LINE API Error:\n${errorString.substring(0, 1000)}`
+            }]
+          }),
+        });
+      } catch (err) {
+        console.error('Failed to send fallback LINE reply:', err);
+      }
     }
   } catch (error) {
     console.error('Failed to send LINE reply:', error);
