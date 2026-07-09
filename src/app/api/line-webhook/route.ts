@@ -16,7 +16,7 @@ const memoryStateCache = new Map<string, any>();
 /**
  * Creates a beautiful LINE Flex Message Bubble for JodJum items.
  */
-function createItemFlexBubble(item: any, appUrl: string) {
+export function createItemFlexBubble(item: any, appUrl: string) {
   const shortId = item.id.substring(item.id.length - 3);
   const editUrl = `${appUrl}/dashboard?edit=${item.id}`;
   
@@ -193,6 +193,34 @@ function createItemFlexBubble(item: any, appUrl: string) {
           text: `${item.credit_term} วัน (ครบกำหนด: ${formattedDate})`,
           size: 'xs',
           color: '#ef4444',
+          weight: 'bold',
+          flex: 8
+        }
+      ]
+    });
+  }
+
+  // Add reminder details if exists
+  if (item.reminder_date) {
+    const dateObj = new Date(item.reminder_date);
+    const dateStr = dateObj.toLocaleDateString('th-TH', { dateStyle: 'short' });
+    const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    bubble.body.contents[bubble.body.contents.length - 1].contents.push({
+      type: 'box',
+      layout: 'horizontal',
+      contents: [
+        {
+          type: 'text',
+          text: 'แจ้งเตือน:',
+          size: 'xs',
+          color: '#94a3b8',
+          flex: 2
+        },
+        {
+          type: 'text',
+          text: `🔔 ${dateStr} (เวลา ${timeStr} น.)`,
+          size: 'xs',
+          color: '#8b5cf6',
           weight: 'bold',
           flex: 8
         }

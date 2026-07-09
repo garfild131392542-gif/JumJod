@@ -19,6 +19,7 @@ export interface Item {
   status: ItemStatus;
   image_url: string | null;
   reminder_date: string | null; // ISO string
+  reminder_sent: boolean;
   po_date: string | null; // YYYY-MM-DD
   credit_term: 30 | 60 | 90 | null;
   budget_due_date: string | null; // YYYY-MM-DD
@@ -69,6 +70,7 @@ export interface Database {
           status?: ItemStatus;
           image_url?: string | null;
           reminder_date?: string | null;
+          reminder_sent?: boolean;
           po_date?: string | null;
           credit_term?: 30 | 60 | 90 | null;
           budget_due_date?: string | null;
@@ -89,6 +91,7 @@ export interface Database {
           status?: ItemStatus;
           image_url?: string | null;
           reminder_date?: string | null;
+          reminder_sent?: boolean;
           po_date?: string | null;
           credit_term?: 30 | 60 | 90 | null;
           budget_due_date?: string | null;

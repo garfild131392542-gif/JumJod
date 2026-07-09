@@ -16,3 +16,6 @@ ALTER TABLE public.items ADD CONSTRAINT item_request_status_check CHECK (item_re
 ALTER TABLE public.items DROP CONSTRAINT IF EXISTS pr_status_check;
 ALTER TABLE public.items ADD CONSTRAINT pr_status_check CHECK (pr_status IN ('Pending', 'Ready', 'Issued'));
 
+-- เพิ่มฟิลด์ตรวจสอบว่าส่งการแจ้งเตือนในไลน์บอทไปแล้วหรือยัง เพื่อป้องกันการแจ้งเตือนซ้ำ
+ALTER TABLE public.items ADD COLUMN IF NOT EXISTS reminder_sent boolean DEFAULT false NOT NULL;
+
