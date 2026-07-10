@@ -1822,7 +1822,7 @@ export async function POST(request: Request) {
 
             if (searchStocks) {
               matchedStocks = searchStocks;
-              const exactMatch = matchedStocks.find(s => s.name.toLowerCase() === targetName.toLowerCase());
+              const exactMatch = matchedStocks.find(s => (s.name || '').toLowerCase() === targetName.toLowerCase());
               targetStock = exactMatch || (matchedStocks.length === 1 ? matchedStocks[0] : null);
             }
           }
@@ -2240,12 +2240,12 @@ export async function POST(request: Request) {
 
           if (allStocks) {
             const matchedByInclusion = allStocks.filter((s: any) => {
-              const cleanName = s.name.toLowerCase().trim();
+              const cleanName = (s.name || '').toLowerCase().trim();
               return cleanName && messageText.toLowerCase().includes(cleanName);
             });
 
             if (matchedByInclusion.length > 0) {
-              matchedByInclusion.sort((a: any, b: any) => b.name.length - a.name.length);
+              matchedByInclusion.sort((a: any, b: any) => (b.name || '').length - (a.name || '').length);
               targetStock = matchedByInclusion[0];
               matchedStocks = [targetStock];
             }
@@ -2262,7 +2262,7 @@ export async function POST(request: Request) {
 
             if (searchStocks) {
               matchedStocks = searchStocks;
-              const exactMatch = matchedStocks.find(s => s.name.toLowerCase() === searchName.toLowerCase());
+              const exactMatch = matchedStocks.find(s => (s.name || '').toLowerCase() === searchName.toLowerCase());
               targetStock = exactMatch || (matchedStocks.length === 1 ? matchedStocks[0] : null);
             }
           }
@@ -2473,7 +2473,7 @@ export async function POST(request: Request) {
           }
 
           // Case 2: Exact name match found (or exactly 1 match)
-          const exactMatch = matchedStocks.find(s => s.name.toLowerCase() === searchName.toLowerCase());
+          const exactMatch = matchedStocks.find(s => (s.name || '').toLowerCase() === searchName.toLowerCase());
           targetStock = targetStock || exactMatch || (matchedStocks.length === 1 ? matchedStocks[0] : null);
 
           if (targetStock && stockData.action === 'DELETE') {
