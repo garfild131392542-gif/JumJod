@@ -931,8 +931,20 @@ async function setUserModeState(profile: any, lineUserId: string, mode: 'reminde
 }
 
 // Helper to detect stock operation from text when parsing has no clear intent or is ambiguous
-function detectStockOperation(text: string): 'ADD' | 'SUBTRACT' | 'SET' | 'CHECK' {
+function detectStockOperation(text: string): 'ADD' | 'SUBTRACT' | 'SET' | 'CHECK' | 'EDIT_NAME' | 'EDIT_DESC' | 'EDIT_MIN' | 'EDIT_PRIORITY' {
   const clean = text.toLowerCase().trim();
+  if (clean.includes('แก้ชื่อ') || clean.includes('เปลี่ยนชื่อ')) {
+    return 'EDIT_NAME';
+  }
+  if (clean.includes('แก้ไขรายละเอียด') || clean.includes('แก้รายละเอียด') || clean.includes('แก้ไขคำอธิบาย') || clean.includes('แก้คำอธิบาย') || clean.includes('รายละเอียด') || clean.includes('คำอธิบาย')) {
+    return 'EDIT_DESC';
+  }
+  if (clean.includes('เกณฑ์ขั้นต่ำ') || clean.includes('ขั้นต่ำ') || clean.includes('ตั้งเกณฑ์') || clean.includes('เกณฑ์')) {
+    return 'EDIT_MIN';
+  }
+  if (clean.includes('ความสำคัญ') || clean.includes('ด่วน') || clean.includes('ระดับความสำคัญ')) {
+    return 'EDIT_PRIORITY';
+  }
   if (clean.includes('ปรับยอด') || clean.includes('ตั้งค่า') || clean.includes('เท่ากับ') || clean.includes('แก้สต็อกเป็น') || clean.includes('เซ็ต') || clean.includes('เซต') || clean.includes('ปรับ')) {
     return 'SET';
   }
@@ -1776,14 +1788,47 @@ export async function POST(request: Request) {
 
       // Handle stock pending name input
       if (userState && userState.action === 'stock_pending_name') {
-        const targetName = messageText
-          .replace(/^(?:เบิก|หัก|ลด|ตัดยอด|เบิกออก|เพิ่ม|แอด|เติม|ลบ|ตั้ง|เช็ก|ดู|สต็อก|สต๊อก|เช็ค|ปรับยอด|ปรับยอดใหม่|ปรับ)\s*/i, '')
-          .replace(/\b\d+\b/g, '')
-          .replace(/(?:จำนวน|เท่ากับ|เป็น|ยอด|ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|แท่ง|แพ็ค|แพค|แผ่น|เครื่อง|ตัว|คู่|ชุด|กิโล|ลิตร|มิลลิลิตร|วัน|เครดิต|ด่วน|ทั่วไป|ไม่ด่วน|สำคัญมาก)/g, '')
-          .replace(/\s+/g, ' ')
-          .trim();
+        const rawName = messageText.trim();
+        let targetStock: any = null;
+        let matchedStocks: any[] = [];
+        let targetName = rawName;
 
-        if (!targetName) {
+        // Try exact match on raw name first
+        const { data: exactStocks } = await supabaseAdmin
+          .from('stocks')
+          .select('*')
+          .eq('user_id', profile.id)
+          .ilike('name', rawName);
+
+        if (exactStocks && exactStocks.length === 1) {
+          targetStock = exactStocks[0];
+          matchedStocks = [targetStock];
+        } else {
+          // Fallback to cleaned name matching
+          targetName = messageText
+            .replace(/^(?:เบิก|หัก|ลด|ตัดยอด|เบิกออก|เพิ่ม|แอด|เติม|ลบ|ตั้ง|เช็ก|ดู|สต็อก|สต๊อก|เช็ค|ปรับยอด|ปรับยอดใหม่|ปรับ)\s*/i, '')
+            .replace(/\b\d+\b/g, '')
+            .replace(/(?:จำนวน|เท่ากับ|เป็น|ยอด|ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|แท่ง|แพ็ค|แพค|แผ่น|เครื่อง|ตัว|คู่|ชุด|กิโล|ลิตร|มิลลิลิตร|วัน|เครดิต|ด่วน|ทั่วไป|ไม่ด่วน|สำคัญมาก)/g, '')
+            .replace(/(?:ครับ|ค่ะ|จ้า|นะ|นะครับ|นะคะ|ด้วย|ด้วยครับ|ด้วยค่ะ|หน่อย|หน่อยครับ|หน่อยค่ะ)\s*$/i, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          if (targetName) {
+            const { data: searchStocks } = await supabaseAdmin
+              .from('stocks')
+              .select('*')
+              .eq('user_id', profile.id)
+              .ilike('name', `%${targetName}%`);
+
+            if (searchStocks) {
+              matchedStocks = searchStocks;
+              const exactMatch = matchedStocks.find(s => s.name.toLowerCase() === targetName.toLowerCase());
+              targetStock = exactMatch || (matchedStocks.length === 1 ? matchedStocks[0] : null);
+            }
+          }
+        }
+
+        if (!targetName && !targetStock) {
           await sendLineReply(replyToken, '❌ กรุณาระบุชื่อวัสดุด้วยครับ');
           continue;
         }
@@ -1798,16 +1843,6 @@ export async function POST(request: Request) {
             unit = unitMatch ? unitMatch[1] : null;
           }
         }
-
-        // Find target stock item in DB
-        const { data: matchedStocks } = await supabaseAdmin
-          .from('stocks')
-          .select('*')
-          .eq('user_id', profile.id)
-          .ilike('name', `%${targetName}%`);
-
-        const exactMatch = matchedStocks?.find(s => s.name.toLowerCase() === targetName.toLowerCase());
-        const targetStock = exactMatch || (matchedStocks?.length === 1 ? matchedStocks[0] : null);
 
         if (!targetStock) {
           if (matchedStocks && matchedStocks.length > 1) {
@@ -1874,6 +1909,34 @@ export async function POST(request: Request) {
               contents: notFoundFlex
             });
           }
+          continue;
+        }
+
+        // Found exact/single matching item! Check if it's an edit action first
+        if (['EDIT_NAME', 'EDIT_DESC', 'EDIT_MIN', 'EDIT_PRIORITY'].includes(userState.operation)) {
+          const fieldMap: Record<string, string> = {
+            'EDIT_NAME': 'name',
+            'EDIT_DESC': 'desc',
+            'EDIT_MIN': 'min',
+            'EDIT_PRIORITY': 'priority'
+          };
+          const field = fieldMap[userState.operation] || 'name';
+          
+          memoryStateCache.set(lineUserId, {
+            action: 'stock_editing',
+            stockId: targetStock.id,
+            stockName: targetStock.name,
+            field
+          });
+
+          const fieldPrompts: Record<string, string> = {
+            name: `🏷️ กรุณาพิมพ์ชื่อใหม่สำหรับวัสดุ "${targetStock.name}":`,
+            desc: `📝 กรุณาพิมพ์รายละเอียดใหม่สำหรับวัสดุ "${targetStock.name}":\n(ค่าปัจจุบัน: ${targetStock.description || 'ไม่มี'})`,
+            min: `🔔 กรุณาพิมพ์เกณฑ์ขั้นต่ำใหม่สำหรับวัสดุ "${targetStock.name}":\n(ค่าปัจจุบัน: ${targetStock.min_threshold ?? 0})\nพิมพ์เป็นตัวเลข เช่น "5"`,
+            priority: `⚡ กรุณาเลือกความสำคัญใหม่สำหรับวัสดุ "${targetStock.name}":\nพิมพ์ "High" (ด่วนมาก), "Medium" (ปานกลาง), หรือ "Low" (ทั่วไป)`
+          };
+
+          await sendLineReply(replyToken, fieldPrompts[field]);
           continue;
         }
 
@@ -2165,7 +2228,44 @@ export async function POST(request: Request) {
             continue;
           }
 
-          const searchName = stockData.name || '';
+          const parsedSearchName = stockData.name || '';
+          let targetStock: any = null;
+          let matchedStocks: any[] = [];
+
+          // 1. Try finding stock item by exact/inclusion matching first (helps with units/digits names)
+          const { data: allStocks } = await supabaseAdmin
+            .from('stocks')
+            .select('*')
+            .eq('user_id', profile.id);
+
+          if (allStocks) {
+            const matchedByInclusion = allStocks.filter((s: any) => {
+              const cleanName = s.name.toLowerCase().trim();
+              return cleanName && messageText.toLowerCase().includes(cleanName);
+            });
+
+            if (matchedByInclusion.length > 0) {
+              matchedByInclusion.sort((a: any, b: any) => b.name.length - a.name.length);
+              targetStock = matchedByInclusion[0];
+              matchedStocks = [targetStock];
+            }
+          }
+
+          let searchName = targetStock ? targetStock.name : parsedSearchName;
+
+          if (!targetStock && searchName) {
+            const { data: searchStocks } = await supabaseAdmin
+              .from('stocks')
+              .select('*')
+              .eq('user_id', profile.id)
+              .ilike('name', `%${searchName}%`);
+
+            if (searchStocks) {
+              matchedStocks = searchStocks;
+              const exactMatch = matchedStocks.find(s => s.name.toLowerCase() === searchName.toLowerCase());
+              targetStock = exactMatch || (matchedStocks.length === 1 ? matchedStocks[0] : null);
+            }
+          }
           
           // If material name is completely missing, prompt user for name and save conversational state
           if (!searchName || searchName.trim() === '') {
@@ -2184,7 +2284,14 @@ export async function POST(request: Request) {
               unit: unit
             });
 
-            const opText = detectedOp === 'SUBTRACT' ? 'เบิก' : detectedOp === 'ADD' ? 'เติม' : detectedOp === 'SET' ? 'ปรับยอด' : 'ตรวจสอบ';
+            const opText = detectedOp === 'SUBTRACT' ? 'เบิก' : 
+                           detectedOp === 'ADD' ? 'เติม' : 
+                           detectedOp === 'SET' ? 'ปรับยอด' : 
+                           detectedOp === 'EDIT_NAME' ? 'แก้ไขชื่อ' :
+                           detectedOp === 'EDIT_DESC' ? 'แก้ไขรายละเอียด' :
+                           detectedOp === 'EDIT_MIN' ? 'แก้ไขเกณฑ์ขั้นต่ำ' :
+                           detectedOp === 'EDIT_PRIORITY' ? 'แก้ไขความสำคัญ' :
+                           'ตรวจสอบ';
             const qtyText = quantity ? ` "${quantity} ${unit || 'ชิ้น'}"` : '';
             await sendLineReply(replyToken, `🔍 คุณต้องการ${opText}สต็อก${qtyText} แต่ยังไม่ได้ระบุชื่อวัสดุ คุณต้องการจัดการวัสดุชิ้นไหนครับ?`);
             continue;
@@ -2199,19 +2306,22 @@ export async function POST(request: Request) {
           // Handle EDIT_NAME / EDIT_DESC / EDIT_MIN / EDIT_PRIORITY via AI text command
           if (['EDIT_NAME', 'EDIT_DESC', 'EDIT_MIN', 'EDIT_PRIORITY'].includes(stockData.action)) {
             // Find target stock item
-            const { data: editMatchedStocks } = await supabaseAdmin
-              .from('stocks')
-              .select('*')
-              .eq('user_id', profile.id)
-              .ilike('name', `%${searchName}%`);
-            
-            const editExact = editMatchedStocks?.find(s => s.name.toLowerCase() === searchName.toLowerCase());
-            const editTarget = editExact || (editMatchedStocks?.length === 1 ? editMatchedStocks[0] : null);
+            let editTarget = targetStock;
+            if (!editTarget) {
+              const { data: editMatchedStocks } = await supabaseAdmin
+                .from('stocks')
+                .select('*')
+                .eq('user_id', profile.id)
+                .ilike('name', `%${searchName}%`);
+              
+              const editExact = editMatchedStocks?.find(s => s.name.toLowerCase() === searchName.toLowerCase());
+              editTarget = editExact || (editMatchedStocks?.length === 1 ? editMatchedStocks[0] : null);
+            }
 
             if (!editTarget) {
-              if (editMatchedStocks && editMatchedStocks.length > 1) {
+              if (matchedStocks && matchedStocks.length > 1) {
                 // Multiple matches - show carousel to pick
-                const bubbles = editMatchedStocks.slice(0, 9).map(s => createStockFlexBubble(s, 'CHECK', null));
+                const bubbles = matchedStocks.slice(0, 9).map(s => createStockFlexBubble(s, 'CHECK', null));
                 await sendLineReply(replyToken, {
                   type: 'flex',
                   altText: `📦 พบวัสดุหลายรายการที่ตรงกับ "${searchName}" กรุณาเลือก`,
@@ -2220,6 +2330,28 @@ export async function POST(request: Request) {
               } else {
                 await sendLineReply(replyToken, `❌ ไม่พบวัสดุชื่อ "${searchName}" ในคลัง กรุณาตรวจสอบชื่ออีกครั้งครับ`);
               }
+              continue;
+            }
+
+            // Conversational Editing Flow: if edit parameter is missing, transition to editing state
+            if (stockData.action === 'EDIT_NAME' && !stockData.new_name) {
+              memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'name' });
+              await sendLineReply(replyToken, `🏷️ กรุณาพิมพ์ชื่อใหม่สำหรับวัสดุ "${editTarget.name}":`);
+              continue;
+            }
+            if (stockData.action === 'EDIT_DESC' && !stockData.description) {
+              memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'desc' });
+              await sendLineReply(replyToken, `📝 กรุณาพิมพ์รายละเอียดใหม่สำหรับวัสดุ "${editTarget.name}":\n(ค่าปัจจุบัน: ${editTarget.description || 'ไม่มี'})`);
+              continue;
+            }
+            if (stockData.action === 'EDIT_MIN' && (stockData.new_min_threshold === null || stockData.new_min_threshold === undefined)) {
+              memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'min' });
+              await sendLineReply(replyToken, `🔔 กรุณาพิมพ์เกณฑ์ขั้นต่ำใหม่สำหรับวัสดุ "${editTarget.name}":\n(ค่าปัจจุบัน: ${editTarget.min_threshold ?? 0})\nพิมพ์เป็นตัวเลข เช่น "5"`);
+              continue;
+            }
+            if (stockData.action === 'EDIT_PRIORITY' && !stockData.new_priority) {
+              memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'priority' });
+              await sendLineReply(replyToken, `⚡ กรุณาเลือกความสำคัญใหม่สำหรับวัสดุ "${editTarget.name}":\nพิมพ์ "High" (ด่วนมาก), "Medium" (ปานกลาง), หรือ "Low" (ทั่วไป)`);
               continue;
             }
 
@@ -2253,15 +2385,18 @@ export async function POST(request: Request) {
             continue;
           }
 
-          const { data: matchedStocks, error: searchError } = await supabaseAdmin
-            .from('stocks')
-            .select('*')
-            .eq('user_id', profile.id)
-            .ilike('name', `%${searchName}%`);
+          if (!matchedStocks || matchedStocks.length === 0) {
+            const { data: searchStocks, error: searchError } = await supabaseAdmin
+              .from('stocks')
+              .select('*')
+              .eq('user_id', profile.id)
+              .ilike('name', `%${searchName}%`);
 
-          if (searchError) {
-            await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการค้นหาคลังวัสดุ');
-            continue;
+            if (searchError) {
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการค้นหาคลังวัสดุ');
+              continue;
+            }
+            matchedStocks = searchStocks || [];
           }
 
           // Case 1: No match found
@@ -2339,7 +2474,7 @@ export async function POST(request: Request) {
 
           // Case 2: Exact name match found (or exactly 1 match)
           const exactMatch = matchedStocks.find(s => s.name.toLowerCase() === searchName.toLowerCase());
-          const targetStock = exactMatch || (matchedStocks.length === 1 ? matchedStocks[0] : null);
+          targetStock = targetStock || exactMatch || (matchedStocks.length === 1 ? matchedStocks[0] : null);
 
           if (targetStock && stockData.action === 'DELETE') {
             const { error: deleteError } = await supabaseAdmin
