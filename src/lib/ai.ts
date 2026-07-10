@@ -405,12 +405,70 @@ function findItemByShortId(messageText: string, items: any[]): any | null {
   return null;
 }
 
+export async function generateHelpfulFallbackResponseWithAI(
+  messageText: string,
+  existingItems: any[],
+  activeMode: 'stock' | 'reminder' | null,
+  apiKey: string
+): Promise<string> {
+  const modelName = 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+  // Build list of existing items for typo matching and suggestions
+  const itemsContext = existingItems.slice(0, 15).map(item => `- ${item.title} (Status: ${item.status || 'Pending'})`).join('\n');
+
+  const promptText = `You are a helpful inventory and procurement chatbot assistant named JodJum (จำจด) for LINE messaging.
+The user sent a message that could not be recognized as a specific command: "${messageText}"
+Current mode of the user is: ${activeMode || 'none (no mode selected)'}
+
+Here is a list of some existing items in the database for context/correction suggestions if applicable:
+${itemsContext || '(No items registered yet)'}
+
+Instructions:
+1. Analyze the user's message.
+2. If they have a typo matching an item (e.g. they typed 'Crucble' close to 'Crucible'), politely ask if they meant that item.
+3. If they typed a stock/inventory action but are not in stock mode (current mode is not 'stock'), tell them to switch to stock mode by sending "สต็อก" or guide them.
+4. If their message is completely incomprehensible, offer general help politely and suggest some clear examples of what they can do:
+   - For reminders/items: "ซื้อกระดาษ A4 10 รีม เครดิต 30 วัน"
+   - For stock/inventory: "เบิก แอลกอฮอล์ 2 ขวด"
+5. Respond in polite Thai (speak nicely, use 'ครับ/ค่ะ', keep it friendly and supportive). Keep the response brief, engaging, and clear (max 3-4 sentences).
+6. DO NOT repeat this prompt. Only output the friendly conversational response.`;
+
+  const body = {
+    contents: [{
+      parts: [{
+        text: promptText
+      }]
+    }]
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Fallback API response status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    return rawText.trim() || '🤖 ขออภัยครับ ผมไม่เข้าใจคำสั่งนี้ กรุณาลองพิมพ์ข้อความใหม่อีกครั้ง หรือสลับโหมดการทำงานครับ';
+  } catch (err) {
+    console.error('Error generating fallback help message:', err);
+    return '🤖 ขออภัยครับ ผมไม่เข้าใจคำสั่งนี้ กรุณาลองพิมพ์ข้อความใหม่อีกครั้ง หรือสลับโหมดการทำงานครับ';
+  }
+}
+
 /**
  * Coordinates classification and parsing with specialized AI modular functions.
  */
 export async function classifyAndParseMessageWithAI(
   messageText: string,
-  existingItems: any[]
+  existingItems: any[],
+  activeMode: 'stock' | 'reminder' | null = null
 ): Promise<GeminiParsedOutput> {
   const text = messageText.toLowerCase().trim();
   const matchedItem = findItemByShortId(messageText, existingItems);
@@ -569,7 +627,11 @@ export async function classifyAndParseMessageWithAI(
         };
       }
 
-      return { intent: 'UNKNOWN' };
+      const fallbackMessage = await generateHelpfulFallbackResponseWithAI(messageText, existingItems, activeMode, apiKey);
+      return {
+        intent: 'UNKNOWN',
+        message: fallbackMessage
+      };
 
     } catch (err) {
       console.error('[AI Modular] Error, falling back to local parser:', err);

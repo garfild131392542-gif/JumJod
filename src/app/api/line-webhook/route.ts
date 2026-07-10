@@ -1200,7 +1200,7 @@ export async function POST(request: Request) {
           }
         } else {
           console.log(`[LINE BOT] Classifying user query: "${messageText}"`);
-          parsedResult = await classifyAndParseMessageWithAI(messageText, existingItems);
+          parsedResult = await classifyAndParseMessageWithAI(messageText, existingItems, activeMode);
         }
       } else if (activeMode === 'reminder') {
         if (parsedResult.intent === 'STOCK') {
