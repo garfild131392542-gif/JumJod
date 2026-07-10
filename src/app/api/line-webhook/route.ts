@@ -2526,11 +2526,13 @@ export async function POST(request: Request) {
             continue;
           }
 
-          // If CHECK action with quantity, just show the current balance (don't modify)
+          // If CHECK action, show the item as a Flex Card containing the "✅ เลือก" action button
           if (targetStock && stockData.action === 'CHECK') {
-            const isAlert = targetStock.quantity <= (targetStock.min_threshold ?? 0);
-            const alertMsg = isAlert ? `\n⚠️ ระดับวัสดุต่ำกว่าเกณฑ์ขั้นต่ำแล้ว! (เกณฑ์ขั้นต่ำ: ${targetStock.min_threshold} ${targetStock.unit})` : '';
-            await sendLineReply(replyToken, `📦 วัสดุ "${targetStock.name}"\nยอดคงเหลือปัจจุบัน: ${targetStock.quantity} ${targetStock.unit}${alertMsg}`);
+            await sendLineReply(replyToken, {
+              type: 'flex',
+              altText: `📦 ข้อมูลวัสดุ "${targetStock.name}"`,
+              contents: createStockFlexBubble(targetStock, 'CHECK', null)
+            });
             continue;
           }
 
