@@ -1,0 +1,941 @@
+export function createItemFlexBubble(item: any, appUrl: string) {
+  const shortId = item.id.substring(item.id.length - 3);
+  const editUrl = `${appUrl}/dashboard?edit=${item.id}`;
+  
+  // Determine Status text and badge color
+  let statusText = 'บันทึกทั่วไป';
+  let statusColor = '#64748b'; // slate
+  let infoText = '';
+  
+  if (item.is_pr) {
+    if (item.has_item_number) {
+      if (item.pr_number) {
+        statusText = `ออก PR แล้ว (#${item.pr_number})`;
+        statusColor = '#10b981'; // green
+        infoText = `📦 AX Item: ${item.item_number || 'มีเลขแล้ว'}`;
+      } else {
+        statusText = 'พร้อมออก PR';
+        statusColor = '#8b5cf6'; // violet
+        infoText = `📦 AX Item: ${item.item_number || 'มีเลขแล้ว'}`;
+      }
+    } else {
+      if (item.item_request_status === 'Pending') {
+        statusText = 'รอจัดซื้อแอด Item ใน AX';
+        statusColor = '#f59e0b'; // amber
+        infoText = '⏳ ส่งเรื่องจัดซื้อเรียบร้อยแล้ว (รอแอด Item)';
+      } else {
+        statusText = 'ยังไม่มีเลข Item';
+        statusColor = '#ef4444'; // red
+        infoText = '⚠️ รอดำเนินการแจ้งเรื่องจัดซื้อ';
+      }
+    }
+  } else {
+    // Non-PR status
+    statusText = item.status === 'Pending' ? 'กำลังดำเนินการ' 
+      : item.status === 'Purchasing' ? 'ติดต่อที่จัดซื้อ' 
+      : 'สำเร็จ (ออก ITEM)';
+    statusColor = item.status === 'Pending' ? '#f59e0b'
+      : item.status === 'Purchasing' ? '#8b5cf6'
+      : '#10b981';
+  }
+
+  const bubble: any = {
+    type: 'bubble',
+    size: 'mega',
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            {
+              type: 'text',
+              text: item.is_pr ? '🏷️ รายการ PR' : '📌 บันทึกทั่วไป',
+              weight: 'bold',
+              size: 'xs',
+              color: item.is_pr ? '#8b5cf6' : '#64748b',
+              flex: 1
+            },
+            {
+              type: 'text',
+              text: `#${shortId}`,
+              weight: 'bold',
+              size: 'xs',
+              color: '#94a3b8',
+              align: 'end',
+              flex: 0
+            }
+          ]
+        },
+        {
+          type: 'text',
+          text: item.title,
+          weight: 'bold',
+          size: 'md',
+          margin: 'md',
+          wrap: true,
+          color: '#1e293b'
+        }
+      ]
+    }
+  };
+
+  // Add description if exists
+  if (item.description) {
+    bubble.body.contents.push({
+      type: 'text',
+      text: item.description,
+      size: 'xs',
+      color: '#64748b',
+      margin: 'sm',
+      wrap: true
+    });
+  }
+
+  // Separator & Status Info
+  bubble.body.contents.push(
+    {
+      type: 'separator',
+      margin: 'md'
+    },
+    {
+      type: 'box',
+      layout: 'vertical',
+      margin: 'md',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            {
+              type: 'text',
+              text: 'สถานะ:',
+              size: 'xs',
+              color: '#94a3b8',
+              flex: 2
+            },
+            {
+              type: 'text',
+              text: statusText,
+              size: 'xs',
+              weight: 'bold',
+              color: statusColor,
+              flex: 8,
+              wrap: true
+            }
+          ]
+        }
+      ]
+    }
+  );
+
+  if (infoText) {
+    bubble.body.contents[bubble.body.contents.length - 1].contents.push({
+      type: 'box',
+      layout: 'horizontal',
+      contents: [
+        {
+          type: 'text',
+          text: 'ข้อมูล:',
+          size: 'xs',
+          color: '#94a3b8',
+          flex: 2
+        },
+        {
+          type: 'text',
+          text: infoText,
+          size: 'xs',
+          color: '#334155',
+          flex: 8,
+          wrap: true
+        }
+      ]
+    });
+  }
+
+  // Add credit details if exists
+  if (item.credit_term) {
+    const formattedDate = item.budget_due_date ? new Date(item.budget_due_date).toLocaleDateString('th-TH', { dateStyle: 'short' }) : '-';
+    bubble.body.contents[bubble.body.contents.length - 1].contents.push({
+      type: 'box',
+      layout: 'horizontal',
+      contents: [
+        {
+          type: 'text',
+          text: 'เครดิต:',
+          size: 'xs',
+          color: '#94a3b8',
+          flex: 2
+        },
+        {
+          type: 'text',
+          text: `${item.credit_term} วัน (ครบกำหนด: ${formattedDate})`,
+          size: 'xs',
+          color: '#ef4444',
+          weight: 'bold',
+          flex: 8
+        }
+      ]
+    });
+  }
+
+  // Add reminder details if exists
+  if (item.reminder_date) {
+    const dateObj = new Date(item.reminder_date);
+    const dateStr = dateObj.toLocaleDateString('th-TH', { dateStyle: 'short' });
+    const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    bubble.body.contents[bubble.body.contents.length - 1].contents.push({
+      type: 'box',
+      layout: 'horizontal',
+      contents: [
+        {
+          type: 'text',
+          text: 'แจ้งเตือน:',
+          size: 'xs',
+          color: '#94a3b8',
+          flex: 2
+        },
+        {
+          type: 'text',
+          text: `🔔 ${dateStr} (เวลา ${timeStr} น.)`,
+          size: 'xs',
+          color: '#8b5cf6',
+          weight: 'bold',
+          flex: 8
+        }
+      ]
+    });
+  }
+
+  // Footer Action buttons
+  bubble.footer = {
+    type: 'box',
+    layout: 'vertical',
+    spacing: 'sm',
+    contents: []
+  };
+
+  // Action buttons depending on state
+  const actions = [];
+  
+  // 1. "แจ้งสำเร็จ" button - always available if not finished yet
+  if (item.status !== 'Issuing Item') {
+    actions.push({
+      type: 'button',
+      style: 'primary',
+      height: 'sm',
+      color: '#10b981',
+      action: {
+        type: 'postback',
+        label: '✅ สำเร็จ',
+        data: `action=complete&itemId=${item.id}`
+      }
+    });
+  }
+
+  // 3. Edit button in LINE
+  actions.push({
+    type: 'button',
+    style: 'secondary',
+    height: 'sm',
+    action: {
+      type: 'postback',
+      label: '✍️ แก้ไขรายการ',
+      data: `action=request_edit&itemId=${item.id}`
+    }
+  });
+
+  bubble.footer.contents = actions;
+
+  return bubble;
+}
+
+export function createStockFlexBubble(stock: any, op: string, qty: number | null) {
+  const isAlert = stock.quantity <= (stock.min_threshold ?? 0);
+  const displayName = stock.name;
+  const priorityLabel = stock.priority === 'High' ? '🔴 ด่วนมาก' : stock.priority === 'Medium' ? '🟡 ปานกลาง' : '🟢 ทั่วไป';
+  
+  const bubble: any = {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      background: {
+        type: 'linearGradient',
+        angle: '135deg',
+        startColor: '#6366f1',
+        endColor: '#3b82f6'
+      },
+      paddingAll: '20px',
+      contents: [
+        {
+          type: 'text',
+          text: `📦 หมวดหมู่: ${stock.category || 'ทั่วไป'}`,
+          weight: 'bold',
+          size: 'xs',
+          color: '#dbeafe'
+        },
+        {
+          type: 'text',
+          text: displayName,
+          weight: 'bold',
+          size: 'lg',
+          color: '#ffffff',
+          margin: 'sm',
+          wrap: true
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      paddingAll: '20px',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            {
+              type: 'text',
+              text: 'สถานะ:',
+              size: 'xs',
+              color: '#64748b',
+              flex: 4
+            },
+            {
+              type: 'text',
+              text: isAlert ? '⚠️ ยอดต่ำกว่าเกณฑ์' : '🟢 ระดับปกติ',
+              weight: 'bold',
+              size: 'xs',
+              color: isAlert ? '#ef4444' : '#10b981',
+              flex: 8
+            }
+          ]
+        },
+        {
+          type: 'separator',
+          margin: 'md'
+        },
+        {
+          type: 'box',
+          layout: 'vertical',
+          margin: 'md',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'box',
+              layout: 'horizontal',
+              contents: [
+                {
+                  type: 'text',
+                  text: 'คงเหลือปัจจุบัน:',
+                  size: 'xs',
+                  color: '#64748b',
+                  flex: 4
+                },
+                {
+                  type: 'text',
+                  text: `${stock.quantity} ${stock.unit}`,
+                  size: 'sm',
+                  weight: 'bold',
+                  color: isAlert ? '#ef4444' : '#0f172a',
+                  flex: 8
+                }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'horizontal',
+              contents: [
+                {
+                  type: 'text',
+                  text: 'เกณฑ์ขั้นต่ำ:',
+                  size: 'xs',
+                  color: '#64748b',
+                  flex: 4
+                },
+                {
+                  type: 'text',
+                  text: `${stock.min_threshold ?? 0} ${stock.unit}`,
+                  size: 'xs',
+                  color: '#334155',
+                  flex: 8
+                }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'horizontal',
+              contents: [
+                {
+                  type: 'text',
+                  text: 'ความสำคัญ:',
+                  size: 'xs',
+                  color: '#64748b',
+                  flex: 4
+                },
+                {
+                  type: 'text',
+                  text: priorityLabel,
+                  size: 'xs',
+                  color: '#334155',
+                  flex: 8
+                }
+              ]
+            },
+            ...(stock.description ? [
+              {
+                type: 'box',
+                layout: 'horizontal',
+                contents: [
+                  {
+                    type: 'text',
+                    text: 'รายละเอียด:',
+                    size: 'xs',
+                    color: '#64748b',
+                    flex: 4
+                  },
+                  {
+                    type: 'text',
+                    text: stock.description,
+                    size: 'xs',
+                    color: '#334155',
+                    wrap: true,
+                    flex: 8
+                  }
+                ]
+              }
+            ] : [])
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      paddingAll: '15px',
+      contents: [
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#4f46e5',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '✅ เลือกวัสดุนี้',
+            data: `action=stock_select_action&id=${stock.id}`
+          }
+        }
+      ]
+    }
+  };
+
+  return bubble;
+}
+
+export function createStockActionMenuFlex(stock: any) {
+  const isAlert = stock.quantity <= (stock.min_threshold ?? 0);
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      background: {
+        type: 'linearGradient',
+        angle: '135deg',
+        startColor: '#7c3aed',
+        endColor: '#ec4899'
+      },
+      paddingAll: '20px',
+      contents: [
+        {
+          type: 'text',
+          text: '⚡ INVENTORY OPERATIONS',
+          weight: 'bold',
+          size: 'xxs',
+          color: '#fdf2f8'
+        },
+        {
+          type: 'text',
+          text: `📦 ${stock.name}`,
+          weight: 'bold',
+          color: '#ffffff',
+          size: 'md',
+          margin: 'xs',
+          wrap: true
+        },
+        {
+          type: 'text',
+          text: `คงเหลือปัจจุบัน: ${stock.quantity} ${stock.unit}${isAlert ? ' ⚠️ (ต่ำกว่าเกณฑ์)' : ''}`,
+          size: 'xs',
+          color: '#fbcfe8',
+          margin: 'xs'
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'md',
+      paddingAll: '20px',
+      contents: [
+        {
+          type: 'text',
+          text: 'กรุณาเลือกการดำเนินการที่ต้องการ:',
+          size: 'xs',
+          color: '#64748b',
+          weight: 'bold'
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'md',
+          contents: [
+            {
+              type: 'button',
+              style: 'primary',
+              color: '#ef4444',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🔻 เบิกออก',
+                data: `action=stock_execute&id=${stock.id}&op=SUBTRACT&qty=`
+              }
+            },
+            {
+              type: 'button',
+              style: 'primary',
+              color: '#10b981',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🔺 เติมสต็อก',
+                data: `action=stock_execute&id=${stock.id}&op=ADD&qty=`
+              }
+            }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'md',
+          contents: [
+            {
+              type: 'button',
+              style: 'primary',
+              color: '#6366f1',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🔢 ปรับยอด',
+                data: `action=stock_execute&id=${stock.id}&op=SET&qty=`
+              }
+            },
+            {
+              type: 'button',
+              style: 'primary',
+              color: '#0ea5e9',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '📊 เช็คยอด',
+                data: `action=stock_execute&id=${stock.id}&op=CHECK&qty=`
+              }
+            }
+          ]
+        },
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#f59e0b',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '✏️ แก้ไขรายละเอียดวัสดุ',
+            data: `action=stock_edit_menu&id=${stock.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          color: '#dc2626',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '🗑️ ลบจากคลังคุมสินค้า',
+            data: `action=stock_delete_confirm&id=${stock.id}`
+          }
+        }
+      ]
+    }
+  };
+}
+
+export function createStockEditMenuFlex(stock: any) {
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      background: {
+        type: 'linearGradient',
+        angle: '135deg',
+        startColor: '#334155',
+        endColor: '#475569'
+      },
+      paddingAll: '20px',
+      contents: [
+        {
+          type: 'text',
+          text: '✏️ EDIT STOCK DETAIL',
+          weight: 'bold',
+          size: 'xxs',
+          color: '#cbd5e1'
+        },
+        {
+          type: 'text',
+          text: stock.name,
+          weight: 'bold',
+          color: '#ffffff',
+          size: 'md',
+          margin: 'xs',
+          wrap: true
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'md',
+      paddingAll: '20px',
+      contents: [
+        {
+          type: 'text',
+          text: 'เลือกรายการที่คุณต้องการจะแก้ไข:',
+          size: 'xs',
+          color: '#64748b',
+          weight: 'bold'
+        },
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#3b82f6',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '🏷️ แก้ไขชื่อวัสดุ',
+            data: `action=stock_request_edit&id=${stock.id}&field=name`
+          }
+        },
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#10b981',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '📝 แก้ไขรายละเอียดวัสดุ',
+            data: `action=stock_request_edit&id=${stock.id}&field=desc`
+          }
+        },
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#f59e0b',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '🔔 แก้ไขเกณฑ์ขั้นต่ำ',
+            data: `action=stock_request_edit&id=${stock.id}&field=min`
+          }
+        },
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#8b5cf6',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '⚡ แก้ไขระดับความสำคัญ',
+            data: `action=stock_request_edit&id=${stock.id}&field=priority`
+          }
+        }
+      ]
+    }
+  };
+}
+
+export function createStockDashboardFlex(stocks: any[]) {
+  const total = stocks.length;
+  const alertItems = stocks.filter(s => s.quantity <= (s.min_threshold ?? 0) && s.quantity > 0);
+  const emptyItems = stocks.filter(s => s.quantity === 0);
+  const normalItems = stocks.filter(s => s.quantity > (s.min_threshold ?? 0));
+  const labItems = stocks.filter(s => s.category === 'Laboratory');
+  const officeItems = stocks.filter(s => s.category === 'อุปกรณ์สำนักงาน');
+  const sortedByQty = [...stocks].sort((a, b) => a.quantity - b.quantity).slice(0, 3);
+
+  const alertRows = alertItems.slice(0, 5).map(s => ({
+    type: 'box',
+    layout: 'horizontal',
+    contents: [
+      { type: 'text', text: `⚠️ ${s.name}`, size: 'xs', color: '#ef4444', flex: 7, wrap: true },
+      { type: 'text', text: `${s.quantity} ${s.unit}`, size: 'xs', color: '#ef4444', align: 'end', flex: 3 }
+    ]
+  }));
+
+  const emptyRows = emptyItems.slice(0, 3).map(s => ({
+    type: 'box',
+    layout: 'horizontal',
+    contents: [
+      { type: 'text', text: `❌ ${s.name}`, size: 'xs', color: '#94a3b8', flex: 7, wrap: true },
+      { type: 'text', text: 'หมดแล้ว', size: 'xs', color: '#94a3b8', align: 'end', flex: 3 }
+    ]
+  }));
+
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#1e293b',
+      contents: [
+        {
+          type: 'text',
+          text: '📊 Dashboard สรุปสต็อกวัสดุ',
+          weight: 'bold',
+          color: '#ffffff',
+          size: 'md'
+        },
+        {
+          type: 'text',
+          text: `อัปเดตล่าสุด: ${new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}`,
+          size: 'xs',
+          color: '#94a3b8',
+          margin: 'xs'
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'md',
+      contents: [
+        // Summary cards row
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#f8fafc',
+              cornerRadius: '8px',
+              paddingAll: 'sm',
+              flex: 1,
+              contents: [
+                { type: 'text', text: `${total}`, weight: 'bold', size: 'xl', color: '#1e293b', align: 'center' },
+                { type: 'text', text: 'ทั้งหมด', size: 'xxs', color: '#64748b', align: 'center' }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#dcfce7',
+              cornerRadius: '8px',
+              paddingAll: 'sm',
+              flex: 1,
+              contents: [
+                { type: 'text', text: `${normalItems.length}`, weight: 'bold', size: 'xl', color: '#10b981', align: 'center' },
+                { type: 'text', text: 'ปกติ', size: 'xxs', color: '#10b981', align: 'center' }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#fef9c3',
+              cornerRadius: '8px',
+              paddingAll: 'sm',
+              flex: 1,
+              contents: [
+                { type: 'text', text: `${alertItems.length}`, weight: 'bold', size: 'xl', color: '#d97706', align: 'center' },
+                { type: 'text', text: 'ใกล้หมด', size: 'xxs', color: '#d97706', align: 'center' }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#fee2e2',
+              cornerRadius: '8px',
+              paddingAll: 'sm',
+              flex: 1,
+              contents: [
+                { type: 'text', text: `${emptyItems.length}`, weight: 'bold', size: 'xl', color: '#ef4444', align: 'center' },
+                { type: 'text', text: 'หมดแล้ว', size: 'xxs', color: '#ef4444', align: 'center' }
+              ]
+            }
+          ]
+        },
+        // Category breakdown
+        {
+          type: 'separator'
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: '🔬 Laboratory:', size: 'xs', color: '#64748b', flex: 5 },
+            { type: 'text', text: `${labItems.length} รายการ`, size: 'xs', color: '#334155', weight: 'bold', flex: 5 }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: '💼 สำนักงาน:', size: 'xs', color: '#64748b', flex: 5 },
+            { type: 'text', text: `${officeItems.length} รายการ`, size: 'xs', color: '#334155', weight: 'bold', flex: 5 }
+          ]
+        },
+        // Alert items
+        ...(alertRows.length > 0 ? [
+          { type: 'separator' },
+          { type: 'text', text: '⚠️ วัสดุที่ต้องเติมด่วน:', size: 'xs', weight: 'bold', color: '#ef4444' },
+          ...alertRows
+        ] : []),
+        // Empty items
+        ...(emptyRows.length > 0 ? [
+          { type: 'separator' },
+          { type: 'text', text: '❌ วัสดุที่หมดแล้ว:', size: 'xs', weight: 'bold', color: '#94a3b8' },
+          ...emptyRows
+        ] : []),
+        // Top low stock
+        ...(sortedByQty.length > 0 ? [
+          { type: 'separator' },
+          { type: 'text', text: '📉 ยอดต่ำสุด 3 อันดับ:', size: 'xs', weight: 'bold', color: '#64748b' },
+          ...sortedByQty.map(s => ({
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              { type: 'text', text: s.name, size: 'xs', color: '#334155', flex: 7, wrap: true },
+              { type: 'text', text: `${s.quantity} ${s.unit}`, size: 'xs', color: '#8b5cf6', align: 'end', flex: 3 }
+            ]
+          }))
+        ] : [])
+      ]
+    }
+  };
+}
+
+export function createStockCreateFlexBubble(searchName: string, qty: number | null) {
+  const createNewPostback = `action=stock_create_prompt&name=${searchName}&qty=${qty || ''}`;
+  return {
+    type: 'bubble',
+    size: 'mega',
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'text',
+          text: '➕ เพิ่มวัสดุใหม่',
+          weight: 'bold',
+          size: 'md',
+          color: '#8b5cf6'
+        },
+        {
+          type: 'text',
+          text: `ไม่พบวัสดุที่ตรงใจ หรือต้องการสร้างเพิ่มใหม่สำหรับ "${searchName}" หรือไม่?`,
+          size: 'xs',
+          color: '#64748b',
+          margin: 'md',
+          wrap: true
+        }
+      ]
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#8b5cf6',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: `สร้างวัสดุ "${searchName}"`,
+            data: createNewPostback
+          }
+        }
+      ]
+    }
+  };
+}
+
+export function createModeSelectionFlex() {
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#f8fafc',
+      contents: [
+        {
+          type: 'text',
+          text: '🤖 ยินดีต้อนรับสู่ระบบ จำจด (JumJod)',
+          weight: 'bold',
+          size: 'md',
+          color: '#1e293b'
+        },
+        {
+          type: 'text',
+          text: 'กรุณาเลือกโหมดการทำงานเพื่อเริ่มป้อนข้อมูล:',
+          size: 'xs',
+          color: '#64748b',
+          margin: 'xs'
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'md',
+      contents: [
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#8b5cf6',
+          height: 'sm',
+          action: {
+            type: 'message',
+            label: '📝 โหมดบันทึกช่วยจำ & แจ้งเตือน',
+            text: 'บันทึกช่วยจำ'
+          }
+        },
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#10b981',
+          height: 'sm',
+          action: {
+            type: 'message',
+            label: '📦 โหมดสต็อก & คลังวัสดุ',
+            text: 'สต็อก'
+          }
+        }
+      ]
+    }
+  };
+}

@@ -80,7 +80,7 @@ export async function GET(request: Request) {
           continue;
         }
 
-        const { createItemFlexBubble } = await import('../../line-webhook/route');
+        const { createItemFlexBubble } = await import('../../../../lib/line/flex-templates');
         const bubble = createItemFlexBubble(item, appUrl);
         
         const pushSuccess = await sendLinePush(profile.line_user_id, [
