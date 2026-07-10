@@ -78,19 +78,33 @@ BEGIN
     v_notes := v_notes || ' (ผ่านหน้าเว็บ)';
   END IF;
 
-  INSERT INTO public.stock_transactions (
-    user_id, stock_id, type, quantity_changed, quantity_before, quantity_after, notes
-  ) VALUES (
-    COALESCE(NEW.user_id, OLD.user_id),
-    COALESCE(NEW.id, OLD.id),
-    v_action,
-    v_qty_changed,
-    v_qty_before,
-    v_qty_after,
-    v_notes
-  );
-
-  RETURN NEW;
+  IF (TG_OP = 'DELETE') THEN
+    INSERT INTO public.stock_transactions (
+      user_id, stock_id, type, quantity_changed, quantity_before, quantity_after, notes
+    ) VALUES (
+      OLD.user_id,
+      OLD.id,
+      v_action,
+      v_qty_changed,
+      v_qty_before,
+      v_qty_after,
+      v_notes
+    );
+    RETURN OLD;
+  ELSE
+    INSERT INTO public.stock_transactions (
+      user_id, stock_id, type, quantity_changed, quantity_before, quantity_after, notes
+    ) VALUES (
+      NEW.user_id,
+      NEW.id,
+      v_action,
+      v_qty_changed,
+      v_qty_before,
+      v_qty_after,
+      v_notes
+    );
+    RETURN NEW;
+  END IF;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
