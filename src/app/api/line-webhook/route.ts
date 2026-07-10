@@ -1360,7 +1360,7 @@ export async function POST(request: Request) {
             const { data: stock } = await supabaseAdmin.from('stocks').select('name').eq('id', stockId).single();
             const { error: deleteError } = await supabaseAdmin.from('stocks').delete().eq('id', stockId);
             if (deleteError) {
-              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการลบวัสดุ');
+              await sendLineReply(replyToken, `❌ เกิดข้อผิดพลาดในการลบวัสดุ: ${deleteError.message}\nรายละเอียด: ${deleteError.details || 'ไม่มี'}`);
             } else {
               await sendLineReply(replyToken, `🗑️ ลบวัสดุ "${stock?.name || ''}" ออกจากคลังเรียบร้อยแล้วครับ!`);
             }
