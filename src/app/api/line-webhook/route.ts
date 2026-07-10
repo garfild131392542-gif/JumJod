@@ -12,6 +12,7 @@ const supabaseAdmin = createClient(
 
 // Fallback in-memory cache for conversation states in case database column pending_item_data doesn't exist yet
 const memoryStateCache = new Map<string, any>();
+const lastStockContextCache = new Map<string, { id: string; name: string }>();
 
 /**
  * Creates a beautiful LINE Flex Message Bubble for JodJum items.
@@ -2271,6 +2272,24 @@ export async function POST(request: Request) {
 
           let searchName = targetStock ? targetStock.name : parsedSearchName;
 
+          // Check if searchName is generic or empty, in which case we fall back to the last accessed stock item context!
+          const isGenericOpName = /^(ต้องการ)?(เพิ่ม|ลด|เบิก|หัก|ตัด|เติม|ปรับ|แก้ไข)(ยอด|จำนวน|สต็อก|สต๊อก|รายละเอียด|ข้อมูล|ชื่อ|เกณฑ์|ความสำคัญ)?$/i.test(searchName.trim());
+          if (!targetStock && (!searchName || searchName.trim() === '' || isGenericOpName)) {
+            const lastStock = lastStockContextCache.get(lineUserId);
+            if (lastStock) {
+              const { data: cachedStock } = await supabaseAdmin
+                .from('stocks')
+                .select('*')
+                .eq('id', lastStock.id)
+                .single();
+              if (cachedStock) {
+                targetStock = cachedStock;
+                searchName = cachedStock.name;
+                matchedStocks = [cachedStock];
+              }
+            }
+          }
+
           if (!targetStock && searchName) {
             const { data: searchStocks } = await supabaseAdmin
               .from('stocks')
@@ -2283,6 +2302,11 @@ export async function POST(request: Request) {
               const exactMatch = matchedStocks.find(s => (s.name || '').toLowerCase() === searchName.toLowerCase());
               targetStock = exactMatch || (matchedStocks.length === 1 ? matchedStocks[0] : null);
             }
+          }
+
+          // If we found a unique targetStock, store it as the last accessed stock item context
+          if (targetStock) {
+            lastStockContextCache.set(lineUserId, { id: targetStock.id, name: targetStock.name });
           }
           
           // If material name is completely missing, prompt user for name and save conversational state
@@ -2533,6 +2557,20 @@ export async function POST(request: Request) {
               altText: `📦 ข้อมูลวัสดุ "${targetStock.name}"`,
               contents: createStockFlexBubble(targetStock, 'CHECK', null)
             });
+            continue;
+          }
+
+          // If targetStock is matched, but quantity is null and action is ADD/SUBTRACT/SET, prompt for quantity
+          if (targetStock && stockData.quantity === null && ['ADD', 'SUBTRACT', 'SET'].includes(stockData.action)) {
+            memoryStateCache.set(lineUserId, {
+              action: 'stock_pending_qty',
+              stockId: targetStock.id,
+              operation: stockData.action,
+              stockName: targetStock.name,
+              stockUnit: targetStock.unit
+            });
+            const opText = stockData.action === 'SUBTRACT' ? 'เบิก' : stockData.action === 'ADD' ? 'เติม' : 'ปรับยอด';
+            await sendLineReply(replyToken, `📦 ต้องการ${opText}วัสดุ "${targetStock.name}" จำนวนเท่าไหร่ดีครับ?\n\n(กรุณาพิมพ์จำนวนเป็นตัวเลข เช่น "5" หรือ "10")`);
             continue;
           }
 
