@@ -603,7 +603,7 @@ function extractReminderDate(text: string): string | null {
 /**
  * Regex-based fallback parser in case Gemini API is offline or not configured.
  */
-function regexFallbackParser(messageText: string, existingItems: any[]): GeminiParsedOutput {
+export function regexFallbackParser(messageText: string, existingItems: any[]): GeminiParsedOutput {
   const text = messageText.toLowerCase().trim();
 
   // 0. STOCK intent in fallback

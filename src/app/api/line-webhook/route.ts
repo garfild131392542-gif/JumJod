@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import { ItemStatus } from '@/lib/types';
-import { classifyAndParseMessageWithAI, calculateDueDate, getGeminiApiKey, parseStockMessageWithAI } from '@/lib/ai';
+import { classifyAndParseMessageWithAI, calculateDueDate, getGeminiApiKey, parseStockMessageWithAI, regexFallbackParser } from '@/lib/ai';
 
 // Initialize Supabase admin client using the service role key to bypass RLS policies
 const supabaseAdmin = createClient(
@@ -2206,11 +2206,29 @@ export async function POST(request: Request) {
         if (parsedResult.intent !== 'STOCK' && parsedResult.intent !== 'SEARCH' && parsedResult.intent !== 'DELETE') {
           // If it got classified as CREATE or UPDATE, force it to parse as stock action!
           const apiKey = getGeminiApiKey();
-          const stockData = await parseStockMessageWithAI(messageText, apiKey || '');
-          parsedResult = {
-            intent: 'STOCK',
-            stock_data: stockData
-          };
+          try {
+            const stockData = await parseStockMessageWithAI(messageText, apiKey || '');
+            parsedResult = {
+              intent: 'STOCK',
+              stock_data: stockData
+            };
+          } catch (err) {
+            console.error('[LINE BOT] Error parsing stock message with AI, falling back to local:', err);
+            const fallback = regexFallbackParser(messageText, []);
+            if (fallback.intent === 'STOCK') {
+              parsedResult = fallback;
+            } else {
+              parsedResult = {
+                intent: 'STOCK',
+                stock_data: {
+                  action: 'CHECK',
+                  name: messageText.trim(),
+                  quantity: null,
+                  unit: null
+                }
+              };
+            }
+          }
         }
       } else if (activeMode === 'reminder') {
         if (parsedResult.intent === 'STOCK') {
