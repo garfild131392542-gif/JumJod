@@ -1,7 +1,14 @@
 -- 1. Make stock_id nullable in stock_transactions to allow preserving history after stock items are deleted
 ALTER TABLE public.stock_transactions ALTER COLUMN stock_id DROP NOT NULL;
 
--- 2. Drop the constraint if it exists, then re-add it with ON DELETE SET NULL
+-- 2. Clean up any orphaned stock_ids by setting them to NULL (prevents constraint violation when adding FK)
+UPDATE public.stock_transactions t
+SET stock_id = NULL
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.stocks s WHERE s.id = t.stock_id
+);
+
+-- 3. Drop the constraint if it exists, then re-add it with ON DELETE SET NULL
 ALTER TABLE public.stock_transactions DROP CONSTRAINT IF EXISTS stock_transactions_stock_id_fkey;
 
 ALTER TABLE public.stock_transactions
