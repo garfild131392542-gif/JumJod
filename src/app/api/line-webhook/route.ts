@@ -930,6 +930,21 @@ async function setUserModeState(profile: any, lineUserId: string, mode: 'reminde
   }
 }
 
+// Helper to detect stock operation from text when parsing has no clear intent or is ambiguous
+function detectStockOperation(text: string): 'ADD' | 'SUBTRACT' | 'SET' | 'CHECK' {
+  const clean = text.toLowerCase().trim();
+  if (clean.includes('ปรับยอด') || clean.includes('ตั้งค่า') || clean.includes('เท่ากับ') || clean.includes('แก้สต็อกเป็น') || clean.includes('เซ็ต') || clean.includes('เซต') || clean.includes('ปรับ')) {
+    return 'SET';
+  }
+  if (clean.includes('เบิก') || clean.includes('หัก') || clean.includes('ลด') || clean.includes('ตัดยอด') || clean.includes('เอาออก')) {
+    return 'SUBTRACT';
+  }
+  if (clean.includes('เพิ่ม') || clean.includes('แอด') || clean.includes('เติม') || clean.includes('บวก')) {
+    return 'ADD';
+  }
+  return 'CHECK';
+}
+
 // Helper to create mode selection flex message
 function createModeSelectionFlex() {
   return {
@@ -1759,6 +1774,151 @@ export async function POST(request: Request) {
 
       const userState = memoryStateCache.get(lineUserId);
 
+      // Handle stock pending name input
+      if (userState && userState.action === 'stock_pending_name') {
+        const targetName = messageText
+          .replace(/^(?:เบิก|หัก|ลด|ตัดยอด|เบิกออก|เพิ่ม|แอด|เติม|ลบ|ตั้ง|เช็ก|ดู|สต็อก|สต๊อก|เช็ค|ปรับยอด|ปรับยอดใหม่|ปรับ)\s*/i, '')
+          .replace(/\b\d+\b/g, '')
+          .replace(/(?:จำนวน|เท่ากับ|เป็น|ยอด|ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|แท่ง|แพ็ค|แพค|แผ่น|เครื่อง|ตัว|คู่|ชุด|กิโล|ลิตร|มิลลิลิตร|วัน|เครดิต|ด่วน|ทั่วไป|ไม่ด่วน|สำคัญมาก)/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        if (!targetName) {
+          await sendLineReply(replyToken, '❌ กรุณาระบุชื่อวัสดุด้วยครับ');
+          continue;
+        }
+
+        let quantity = userState.quantity;
+        let unit = userState.unit;
+        if (quantity === null || isNaN(quantity)) {
+          const qtyMatch = messageText.match(/\b(\d+)\b/);
+          if (qtyMatch) {
+            quantity = parseInt(qtyMatch[1]);
+            const unitMatch = messageText.match(/(ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|แท่ง|แพ็ค|แพค|แผ่น|เครื่อง|ตัว|คู่|ชุด|กิโล|ลิตร|มิลลิลิตร)/);
+            unit = unitMatch ? unitMatch[1] : null;
+          }
+        }
+
+        // Find target stock item in DB
+        const { data: matchedStocks } = await supabaseAdmin
+          .from('stocks')
+          .select('*')
+          .eq('user_id', profile.id)
+          .ilike('name', `%${targetName}%`);
+
+        const exactMatch = matchedStocks?.find(s => s.name.toLowerCase() === targetName.toLowerCase());
+        const targetStock = exactMatch || (matchedStocks?.length === 1 ? matchedStocks[0] : null);
+
+        if (!targetStock) {
+          if (matchedStocks && matchedStocks.length > 1) {
+            // Multiple matches found - show carousel and clear pending state
+            const bubbles = matchedStocks.slice(0, 9).map(stock => 
+              createStockFlexBubble(stock, userState.operation, quantity)
+            );
+            bubbles.push(createStockCreateFlexBubble(targetName, quantity));
+            
+            memoryStateCache.delete(lineUserId);
+
+            await sendLineReply(replyToken, {
+              type: 'flex',
+              altText: `📦 พบวัสดุหลายรายการที่ตรงกับ "${targetName}"`,
+              contents: {
+                type: 'carousel',
+                contents: bubbles
+              }
+            });
+          } else {
+            // No match found - show creation prompt card and clear pending state
+            memoryStateCache.delete(lineUserId);
+
+            const createNewPostback = `action=stock_create_prompt&name=${targetName}&qty=${quantity || ''}`;
+            const notFoundFlex = {
+              type: 'bubble',
+              body: {
+                type: 'box',
+                layout: 'vertical',
+                spacing: 'md',
+                contents: [
+                  {
+                    type: 'text',
+                    text: `🔎 ไม่พบวัสดุชื่อ "${targetName}" ในคลัง`,
+                    weight: 'bold',
+                    size: 'md',
+                    color: '#1e293b',
+                    wrap: true
+                  },
+                  {
+                    type: 'text',
+                    text: 'คุณต้องการบันทึกแอดวัสดุชิ้นนี้เข้าไปในระบบสต็อกใหม่เลยไหมครับ?',
+                    size: 'xs',
+                    color: '#64748b',
+                    wrap: true
+                  },
+                  {
+                    type: 'button',
+                    style: 'primary',
+                    color: '#8b5cf6',
+                    height: 'sm',
+                    action: {
+                      type: 'postback',
+                      label: '➕ สร้างวัสดุใหม่ในคลัง',
+                      data: createNewPostback
+                    }
+                  }
+                ]
+              }
+            };
+            await sendLineReply(replyToken, {
+              type: 'flex',
+              altText: `⚠️ ไม่พบวัสดุ "${targetName}" ในคลัง`,
+              contents: notFoundFlex
+            });
+          }
+          continue;
+        }
+
+        // Found exact/single matching item!
+        if (quantity !== null && !isNaN(quantity)) {
+          // Perform operation immediately
+          let newQty = targetStock.quantity;
+          if (userState.operation === 'SUBTRACT') {
+            newQty = Math.max(0, targetStock.quantity - quantity);
+          } else if (userState.operation === 'ADD') {
+            newQty = targetStock.quantity + quantity;
+          } else if (userState.operation === 'SET') {
+            newQty = quantity;
+          }
+
+          const { error: updateError } = await supabaseAdmin
+            .from('stocks')
+            .update({ quantity: newQty, updated_at: new Date().toISOString() })
+            .eq('id', targetStock.id);
+
+          memoryStateCache.delete(lineUserId);
+
+          if (updateError) {
+            await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการปรับยอดสต็อก');
+          } else {
+            const opText = userState.operation === 'SUBTRACT' ? 'เบิกออก' : userState.operation === 'ADD' ? 'เติมสต็อก' : 'ปรับยอด';
+            const isAlertTriggered = newQty <= targetStock.min_threshold && targetStock.quantity > targetStock.min_threshold;
+            const alertMsg = isAlertTriggered ? `\n\n⚠️ **คำเตือน:** ระดับวัสดุลดลงต่ำกว่าเกณฑ์ขั้นต่ำแล้ว! (เกณฑ์: ${targetStock.min_threshold} ${targetStock.unit})` : '';
+            await sendLineReply(replyToken, `✅ ทำการ${opText}วัสดุ "${targetStock.name}" เรียบร้อยแล้วครับ!\n\nยอดเดิม: ${targetStock.quantity} ${targetStock.unit}\nทำรายการ: ${quantity} ${targetStock.unit}\nยอดคงเหลือใหม่: ${newQty} ${targetStock.unit} 📦${alertMsg}`);
+          }
+        } else {
+          // Quantity is null! transition state to ask for quantity
+          memoryStateCache.set(lineUserId, {
+            action: 'stock_pending_qty',
+            stockId: targetStock.id,
+            operation: userState.operation,
+            stockName: targetStock.name,
+            stockUnit: targetStock.unit
+          });
+          const opText = userState.operation === 'SUBTRACT' ? 'เบิก' : userState.operation === 'ADD' ? 'เติม' : 'ปรับยอด';
+          await sendLineReply(replyToken, `📦 ต้องการ${opText}วัสดุ "${targetStock.name}" จำนวนเท่าไหร่ดีครับ?\n\n(กรุณาพิมพ์จำนวนเป็นตัวเลข เช่น "5" หรือ "10")`);
+        }
+        continue;
+      }
+
       // Handle stock pending edit input
       if (userState && userState.action === 'stock_editing') {
         const field = userState.field || 'name';
@@ -2007,6 +2167,29 @@ export async function POST(request: Request) {
 
           const searchName = stockData.name || '';
           
+          // If material name is completely missing, prompt user for name and save conversational state
+          if (!searchName || searchName.trim() === '') {
+            const detectedOp = detectStockOperation(messageText);
+            const qtyMatch = messageText.match(/\b(\d+)\b/);
+            const quantity = qtyMatch ? parseInt(qtyMatch[1]) : null;
+            
+            // Extract unit if quantity is present
+            const unitMatch = messageText.match(/(ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|แท่ง|แพ็ค|แพค|แผ่น|เครื่อง|ตัว|คู่|ชุด|กิโล|ลิตร|มิลลิลิตร)/);
+            const unit = unitMatch ? unitMatch[1] : null;
+
+            memoryStateCache.set(lineUserId, {
+              action: 'stock_pending_name',
+              operation: detectedOp,
+              quantity: quantity,
+              unit: unit
+            });
+
+            const opText = detectedOp === 'SUBTRACT' ? 'เบิก' : detectedOp === 'ADD' ? 'เติม' : detectedOp === 'SET' ? 'ปรับยอด' : 'ตรวจสอบ';
+            const qtyText = quantity ? ` "${quantity} ${unit || 'ชิ้น'}"` : '';
+            await sendLineReply(replyToken, `🔍 คุณต้องการ${opText}สต็อก${qtyText} แต่ยังไม่ได้ระบุชื่อวัสดุ คุณต้องการจัดการวัสดุชิ้นไหนครับ?`);
+            continue;
+          }
+          
           // Handle CONFIRM_NEEDED - AI is not confident about the intent
           if (stockData.action === 'CONFIRM_NEEDED') {
             await sendLineReply(replyToken, stockData.confirm_message || `🤔 ไม่แน่ใจว่าต้องการทำอะไรกับวัสดุ "${searchName}" กรุณาลองพิมพ์ใหม่ให้ชัดเจนขึ้นครับ`);
@@ -2120,7 +2303,8 @@ export async function POST(request: Request) {
                       text: `🔎 ไม่พบวัสดุชื่อ "${searchName}" ในคลัง`,
                       weight: 'bold',
                       size: 'md',
-                      color: '#1e293b'
+                      color: '#1e293b',
+                      wrap: true
                     },
                     {
                       type: 'text',

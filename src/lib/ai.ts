@@ -623,7 +623,7 @@ function regexFallbackParser(messageText: string, existingItems: any[]): GeminiP
     const quantity = qtyMatch ? parseInt(qtyMatch[1]) : null;
 
     // Common units
-    const unitMatch = text.match(/(ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ)/);
+    const unitMatch = text.match(/(ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|แท่ง|แพ็ค|แพค|แผ่น|เครื่อง|ตัว|คู่|ชุด|กิโล|ลิตร|มิลลิลิตร)/);
     const unit = unitMatch ? unitMatch[1] : 'ชิ้น';
 
     // Extract priority in fallback
@@ -640,9 +640,11 @@ function regexFallbackParser(messageText: string, existingItems: any[]): GeminiP
 
     // Extract name by removing action, quantity, units
     let name = messageText
-      .replace(/^(?:เบิก|หัก|ลด|ตัดยอด|เพิ่ม|แอด|เติม|ลบ|ตั้ง|เช็ก|ดู|สต็อก|สต๊อก|เช็ค)\s*/i, '')
+      .replace(/^(?:เบิก|หัก|ลด|ตัดยอด|เบิกออก|เพิ่ม|แอด|เติม|ลบ|ตั้ง|เช็ก|ดู|สต็อก|สต๊อก|เช็ค|ปรับยอด|ปรับยอดใหม่|ปรับ)\s*/i, '')
       .replace(/\b\d+\b/g, '')
-      .replace(/(ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|วัน|เครดิต|ด่วน|ทั่วไป|ไม่ด่วน|สำคัญมาก)/g, '')
+      .replace(/(?:จำนวน|เท่ากับ|เป็น|ยอด|ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|แท่ง|แพ็ค|แพค|แผ่น|เครื่อง|ตัว|คู่|ชุด|กิโล|ลิตร|มิลลิลิตร|วัน|เครดิต|ด่วน|ทั่วไป|ไม่ด่วน|สำคัญมาก)/g, '')
+      .replace(/(?:ครับ|ค่ะ|จ้า|นะ|นะครับ|นะคะ|ด้วย|ด้วยครับ|ด้วยค่ะ|หน่อย|หน่อยครับ|หน่อยค่ะ)\s*$/i, '')
+      .replace(/\s+/g, ' ')
       .trim();
     name = name.replace(/^[:\-ー\s\.]+/, '').trim();
 
