@@ -12,6 +12,16 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
+  /* Custom shades for JodJum brand alignment */
+  --color-violet-650: #7431e2;
+  --color-indigo-650: #493edf;
+  --color-slate-650: #3e4b5c;
+  --color-emerald-650: #05875e;
+  --color-amber-650: #c66507;
+  --color-red-650: #cb2121;
+  --color-slate-55: #f3f6f9;
+  --color-slate-855: #172032;
 }
 
 @media (prefers-color-scheme: dark) {
