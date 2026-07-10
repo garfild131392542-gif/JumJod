@@ -608,15 +608,17 @@ export function regexFallbackParser(messageText: string, existingItems: any[]): 
   const text = messageText.toLowerCase().trim();
 
   // 0. STOCK intent in fallback
-  const isStockAction = /(?:สต็อก|สต๊อก|คลัง|จำนวน|ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|เบิก|หักยอด|ตัดยอด|แอดวัสดุ|เพิ่มสต็อก|แล็บ|lab|วัสดุ)/i.test(text);
+  const isStockAction = /(?:สต็อก|สต๊อก|คลัง|จำนวน|ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|เบิก|หักยอด|ตัดยอด|แอดวัสดุ|เพิ่มสต็อก|แล็บ|lab|วัสดุ|หมวดหมู่|หมวด)/i.test(text);
   if (isStockAction) {
-    let action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK' = 'CHECK';
+    let action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK' | 'EDIT_CATEGORY' = 'CHECK';
     if (text.startsWith('เบิก') || text.startsWith('หัก') || text.startsWith('ลด') || text.includes('ตัดยอด') || text.includes('เบิกออก') || text.includes('เอาไปใช้') || text.includes('หักลบ') || text.startsWith('ลบ')) {
       action = 'SUBTRACT';
     } else if (text.startsWith('เพิ่ม') || text.startsWith('แอด') || text.includes('เติม') || text.includes('เพิ่มสต็อก') || text.includes('บวกเพิ่ม')) {
       action = 'ADD';
     } else if (text.startsWith('ตั้ง') || text.includes('ปรับยอด') || text.startsWith('ใส่ยอด') || text.includes('เท่ากับ')) {
       action = 'SET';
+    } else if (text.includes('ย้ายหมวด') || text.includes('เปลี่ยนหมวด') || text.includes('ย้ายไป') || text.includes('หมวดหมู่') || text.includes('หมวด')) {
+      action = 'EDIT_CATEGORY';
     }
 
     // Extract quantity
@@ -641,9 +643,9 @@ export function regexFallbackParser(messageText: string, existingItems: any[]): 
 
     // Extract name by removing action, quantity, units
     let name = messageText
-      .replace(/^(?:เบิก|หัก|ลด|ตัดยอด|เบิกออก|เพิ่ม|แอด|เติม|ลบ|ตั้ง|เช็ก|ดู|สต็อก|สต๊อก|เช็ค|ปรับยอด|ปรับยอดใหม่|ปรับ)\s*/i, '')
+      .replace(/^(?:เบิก|หัก|ลด|ตัดยอด|เบิกออก|เพิ่ม|แอด|เติม|ลบ|ตั้ง|เช็ก|ดู|สต็อก|สต๊อก|เช็ค|ปรับยอด|ปรับยอดใหม่|ปรับ|ย้าย|เปลี่ยนหมวดหมู่|เปลี่ยนหมวด|ย้ายหมวดหมู่|ย้ายหมวด)\s*/i, '')
       .replace(/\b\d+\b/g, '')
-      .replace(/(?:จำนวน|เท่ากับ|เป็น|ยอด|ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|แท่ง|แพ็ค|แพค|แผ่น|เครื่อง|ตัว|คู่|ชุด|กิโล|ลิตร|มิลลิลิตร|วัน|เครดิต|ด่วน|ทั่วไป|ไม่ด่วน|สำคัญมาก)/g, '')
+      .replace(/(?:จำนวน|เท่ากับ|เป็น|ยอด|ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|แท่ง|แพ็ค|แพค|แผ่น|เครื่อง|ตัว|คู่|ชุด|กิโล|ลิตร|มิลลิลิตร|วัน|เครดิต|ด่วน|ทั่วไป|ไม่ด่วน|สำคัญมาก|ไปหมวดหมู่|ไปหมวด|หมวดหมู่|หมวด|laboratory|office|lab|แล็บ)/gi, '')
       .replace(/(?:ครับ|ค่ะ|จ้า|นะ|นะครับ|นะคะ|ด้วย|ด้วยครับ|ด้วยค่ะ|หน่อย|หน่อยครับ|หน่อยค่ะ)\s*$/i, '')
       .replace(/\s+/g, ' ')
       .trim();

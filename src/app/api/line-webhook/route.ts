@@ -2292,14 +2292,8 @@ export async function POST(request: Request) {
 
       // 4. Initial Request intent classification using AI
       if (!parsedResult) {
-        console.log(`[LINE BOT] Classifying user query: "${messageText}"`);
-        parsedResult = await classifyAndParseMessageWithAI(messageText, existingItems);
-      }
-
-      // Enforce mode context
-      if (activeMode === 'stock') {
-        if (parsedResult.intent !== 'STOCK' && parsedResult.intent !== 'SEARCH' && parsedResult.intent !== 'DELETE') {
-          // If it got classified as CREATE or UPDATE, force it to parse as stock action!
+        if (activeMode === 'stock') {
+          console.log(`[LINE BOT] In stock mode, parsing stock message directly: "${messageText}"`);
           const apiKey = getGeminiApiKey();
           try {
             const stockData = await parseStockMessageWithAI(messageText, apiKey || '');
@@ -2308,7 +2302,7 @@ export async function POST(request: Request) {
               stock_data: stockData
             };
           } catch (err) {
-            console.error('[LINE BOT] Error parsing stock message with AI, falling back to local:', err);
+            console.error('[LINE BOT] Error parsing stock message directly, falling back to local:', err);
             const fallback = regexFallbackParser(messageText, []);
             if (fallback.intent === 'STOCK') {
               parsedResult = fallback;
@@ -2324,6 +2318,9 @@ export async function POST(request: Request) {
               };
             }
           }
+        } else {
+          console.log(`[LINE BOT] Classifying user query: "${messageText}"`);
+          parsedResult = await classifyAndParseMessageWithAI(messageText, existingItems);
         }
       } else if (activeMode === 'reminder') {
         if (parsedResult.intent === 'STOCK') {
