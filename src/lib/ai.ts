@@ -23,11 +23,17 @@ export interface GeminiParsedOutput {
     status?: 'Pending' | 'Purchasing' | 'Issuing Item';
   };
   stock_data?: {
-    action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK';
+    action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK' | 'EDIT_NAME' | 'EDIT_DESC' | 'EDIT_MIN' | 'EDIT_PRIORITY' | 'CONFIRM_NEEDED';
     name: string | null;
     quantity: number | null;
     unit: string | null;
     category?: string | null;
+    new_name?: string | null;
+    description?: string | null;
+    new_min_threshold?: number | null;
+    new_priority?: 'High' | 'Medium' | 'Low' | null;
+    confidence?: number;
+    confirm_message?: string;
     priority?: 'High' | 'Medium' | 'Low' | null;
     min_threshold?: number | null;
   };
@@ -246,13 +252,17 @@ export async function parseStockMessageWithAI(
   messageText: string,
   apiKey: string
 ): Promise<{
-  action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK';
+  action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK' | 'EDIT_NAME' | 'EDIT_DESC' | 'EDIT_MIN' | 'EDIT_PRIORITY' | 'CONFIRM_NEEDED';
   name: string | null;
   quantity: number | null;
   unit: string | null;
   category?: string | null;
-  priority?: 'High' | 'Medium' | 'Low' | null;
-  min_threshold?: number | null;
+  new_name?: string | null;
+  description?: string | null;
+  new_min_threshold?: number | null;
+  new_priority?: 'High' | 'Medium' | 'Low' | null;
+  confidence?: number;
+  confirm_message?: string;
 }> {
   const modelName = 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
@@ -265,14 +275,37 @@ Analyze this user message related to stock: "${messageText}"
 
 Extract the following fields and format strictly as JSON:
 {
-  "action": "ADD" (for adding stock/deposit/new material), "SUBTRACT" (for withdrawing/reducing/using material), "SET" (for setting specific quantity), "DELETE" (for deleting material completely from stock table), or "CHECK" (for checking stock balance),
-  "name": "Clean, specific material name (e.g. 'แอลกอฮอล์ 70%', 'กระดาษ A4'). Strip action verbs like 'เบิก', 'เพิ่ม', 'แอด', 'ลด', 'ลบ', 'เช็ก', 'เช็ค', 'ตรวจสอบ' from the name.",
-  "quantity": number or null (e.g. for 'เบิก 5 ขวด' quantity is 5, for 'เช็กแอลกอฮอล์' quantity is null),
-  "unit": "string or null (e.g. 'ขวด', 'รีม', 'กล่อง', 'ชิ้น', 'หลอด', 'แกลลอน')",
-  "category": "string or null (strictly classify as 'อุปกรณ์สำนักงาน' or 'Laboratory' based on context, e.g. chemical/lab tools go to 'Laboratory', paper/pens go to 'อุปกรณ์สำนักงาน')",
-  "priority": "strictly 'High', 'Medium', or 'Low' if user mentions importance/urgency (e.g. 'ด่วน', 'สำคัญมาก' -> 'High', otherwise null)",
-  "min_threshold": number or null (if user mentions a minimum limit for alerts, e.g. 'เตือนเมื่อเหลือน้อยกว่า 5' -> 5, otherwise null)"
-}`
+  "action": one of:
+    "ADD" (adding stock/deposit/new material, e.g. "เพิ่มกระดาษ 10 รีม", "แอดแอลกอฮอล์ 5 ขวด"),
+    "SUBTRACT" (withdrawing/reducing/using, e.g. "เบิกปากกา 2 แท่ง", "ตัดออก 1"),
+    "SET" (setting specific quantity, e.g. "ปรับยอดกระดาษเป็น 20"),
+    "DELETE" (removing from stock entirely, e.g. "ลบวัสดุแอลกอฮอล์ออก"),
+    "CHECK" (checking stock balance, e.g. "เช็คยอดปากกา", "มีกระดาษเท่าไหร่"),
+    "EDIT_NAME" (renaming a material, e.g. "เปลี่ยนชื่อปากกา Permanent เป็น ปากกาลบไม่ได้", "แก้ชื่อกระดาษ A4"),
+    "EDIT_DESC" (editing description/detail, e.g. "แก้รายละเอียดแอลกอฮอล์ว่า ใช้สำหรับทำความสะอาด", "เพิ่มคำอธิบาย"),
+    "EDIT_MIN" (changing min threshold, e.g. "ตั้งเกณฑ์ขั้นต่ำปากกาเป็น 5", "กำหนดการเตือนเมื่อเหลือน้อยกว่า 3"),
+    "EDIT_PRIORITY" (changing priority, e.g. "ตั้งด่วนกระดาษ A4 เป็น High", "เปลี่ยนความสำคัญ"),
+  "name": "Current name of the material in stock (strip all action verbs like 'เบิก', 'เพิ่ม', 'แอด', 'ลด', 'ลบ', 'เช็ก', 'เช็ค', 'ดู', 'ตรวจสอบ', 'เปลี่ยนชื่อ', 'แก้ชื่อ', 'ตั้งเกณฑ์', 'กำหนด', 'แก้รายละเอียด'). This should be the EXISTING name in stock.",
+  "quantity": number or null,
+  "unit": "string or null",
+  "category": CRITICAL RULE - Only provide category value in these specific cases:
+    1. User explicitly says 'เปลี่ยนหมวด', 'ย้ายหมวดหมู่', 'เพิ่มในหมวด Lab', etc.
+    2. NEVER set category for CHECK action - always null.
+    3. NEVER set category just because you think the item belongs to a category.
+    Set to "อุปกรณ์สำนักงาน" or "Laboratory" only when explicitly requested, otherwise null.,
+  "new_name": "The new name to rename to (only for EDIT_NAME action, otherwise null)",
+  "description": "New description text (only for EDIT_DESC action, otherwise null)",
+  "new_min_threshold": number or null (only for EDIT_MIN action, the new threshold value),
+  "new_priority": "High" | "Medium" | "Low" | null (only for EDIT_PRIORITY action),
+  "confidence": integer 1-100 (how confident you are about this interpretation),
+  "confirm_message": "Thai question to ask user to confirm if confidence < 70, e.g. 'คุณต้องการ [action] [name] ใช่ไหมครับ?', otherwise null"
+}
+
+IMPORTANT RULES:
+- If confidence < 70, set action to "CONFIRM_NEEDED" and provide confirm_message
+- For CHECK action: category MUST be null
+- For EDIT_* actions: extract the current item name carefully from the message
+- Strip all Thai action verbs from the name field`
       }]
     }],
     generationConfig: {
@@ -296,8 +329,13 @@ Extract the following fields and format strictly as JSON:
 
   // Clean stock name
   if (parsed.name) {
-    parsed.name = parsed.name.replace(/^(?:เบิก|เพิ่ม|แอด|ลด|ลบ|เช็ก|ดู|สต็อก|สต๊อก|เช็ค)\s*/i, '').trim();
+    parsed.name = parsed.name.replace(/^(?:เบิก|เพิ่ม|แอด|ลด|ลบ|เช็ก|ดู|สต็อก|สต๊อก|เช็ค|เปลี่ยนชื่อ|แก้ชื่อ|ตั้งเกณฑ์|กำหนด|แก้รายละเอียด|ตั้ง)\s*/i, '').trim();
     parsed.name = parsed.name.replace(/^[:\-ー\s\.]+/, '').trim();
+  }
+
+  // Enforce: CHECK action must never have a category
+  if (parsed.action === 'CHECK') {
+    parsed.category = null;
   }
 
   return parsed;

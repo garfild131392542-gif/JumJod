@@ -278,8 +278,6 @@ export function createItemFlexBubble(item: any, appUrl: string) {
  * Creates a beautiful LINE Flex Message Bubble for a single stock item.
  */
 export function createStockFlexBubble(stock: any, op: string, qty: number | null) {
-  const opLabel = op === 'SUBTRACT' ? 'เบิกออก' : op === 'ADD' ? 'เพิ่มสต็อก' : op === 'SET' ? 'ปรับยอด' : 'เช็กยอด';
-  const postbackData = `action=stock_execute&id=${stock.id}&op=${op}&qty=${qty || ''}`;
   const isAlert = stock.quantity <= (stock.min_threshold ?? 0);
   const displayName = stock.name;
   const priorityLabel = stock.priority === 'High' ? '🔴 ด่วนมาก' : stock.priority === 'Medium' ? '🟡 ปานกลาง' : '🟢 ทั่วไป';
@@ -393,37 +391,45 @@ export function createStockFlexBubble(stock: any, op: string, qty: number | null
                   flex: 7
                 }
               ]
-            }
+            },
+            ...(stock.description ? [{
+              type: 'box',
+              layout: 'horizontal',
+              contents: [
+                {
+                  type: 'text',
+                  text: 'รายละเอียด:',
+                  size: 'xs',
+                  color: '#94a3b8',
+                  flex: 3
+                },
+                {
+                  type: 'text',
+                  text: stock.description,
+                  size: 'xs',
+                  color: '#334155',
+                  wrap: true,
+                  flex: 7
+                }
+              ]
+            }] : [])
           ]
         }
       ]
     },
     footer: {
       type: 'box',
-      layout: 'horizontal',
-      spacing: 'sm',
+      layout: 'vertical',
       contents: [
         {
           type: 'button',
           style: 'primary',
-          color: op === 'SUBTRACT' ? '#ef4444' : '#8b5cf6',
+          color: '#8b5cf6',
           height: 'sm',
-          flex: 3,
           action: {
             type: 'postback',
-            label: opLabel,
-            data: postbackData
-          }
-        },
-        {
-          type: 'button',
-          style: 'secondary',
-          height: 'sm',
-          flex: 2,
-          action: {
-            type: 'postback',
-            label: '✍️ แก้ชื่อ',
-            data: `action=stock_request_edit&id=${stock.id}`
+            label: '✅ เลือก',
+            data: `action=stock_select_action&id=${stock.id}`
           }
         }
       ]
@@ -431,6 +437,377 @@ export function createStockFlexBubble(stock: any, op: string, qty: number | null
   };
 
   return bubble;
+}
+
+/**
+ * Creates a LINE Flex Message Bubble showing sub-actions for a specific stock item.
+ */
+export function createStockActionMenuFlex(stock: any) {
+  const isAlert = stock.quantity <= (stock.min_threshold ?? 0);
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#8b5cf6',
+      contents: [
+        {
+          type: 'text',
+          text: `📦 ${stock.name}`,
+          weight: 'bold',
+          color: '#ffffff',
+          size: 'md',
+          wrap: true
+        },
+        {
+          type: 'text',
+          text: `ยอดคงเหลือ: ${stock.quantity} ${stock.unit}${isAlert ? ' ⚠️' : ''}`,
+          size: 'xs',
+          color: '#e2d4ff',
+          margin: 'xs'
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'text',
+          text: 'กรุณาเลือกการดำเนินการ:',
+          size: 'xs',
+          color: '#64748b'
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'primary',
+              color: '#ef4444',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🔻 เบิกออก',
+                data: `action=stock_execute&id=${stock.id}&op=SUBTRACT&qty=`
+              }
+            },
+            {
+              type: 'button',
+              style: 'primary',
+              color: '#10b981',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🔺 เติมสต็อก',
+                data: `action=stock_execute&id=${stock.id}&op=ADD&qty=`
+              }
+            }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🔢 ปรับยอด',
+                data: `action=stock_execute&id=${stock.id}&op=SET&qty=`
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '📊 เช็คยอด',
+                data: `action=stock_execute&id=${stock.id}&op=CHECK&qty=`
+              }
+            }
+          ]
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '✏️ แก้ไขข้อมูล',
+            data: `action=stock_edit_menu&id=${stock.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          color: '#ef4444',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '🗑️ ลบจากคลัง',
+            data: `action=stock_delete_confirm&id=${stock.id}`
+          }
+        }
+      ]
+    }
+  };
+}
+
+/**
+ * Creates a LINE Flex Message Bubble showing edit sub-menu for a stock item.
+ */
+export function createStockEditMenuFlex(stock: any) {
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#475569',
+      contents: [
+        {
+          type: 'text',
+          text: `✏️ แก้ไขข้อมูล: ${stock.name}`,
+          weight: 'bold',
+          color: '#ffffff',
+          size: 'sm',
+          wrap: true
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'text',
+          text: 'เลือกสิ่งที่ต้องการแก้ไข หรือพิมพ์คำสั่งลัดได้เลย เช่น "แก้ชื่อ [ชื่อเดิม] เป็น [ชื่อใหม่]"',
+          size: 'xs',
+          color: '#64748b',
+          wrap: true
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '🏷️ แก้ชื่อวัสดุ',
+            data: `action=stock_request_edit&id=${stock.id}&field=name`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '📝 แก้รายละเอียด',
+            data: `action=stock_request_edit&id=${stock.id}&field=desc`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '🔔 แก้เกณฑ์ขั้นต่ำ',
+            data: `action=stock_request_edit&id=${stock.id}&field=min`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '⚡ แก้ความสำคัญ',
+            data: `action=stock_request_edit&id=${stock.id}&field=priority`
+          }
+        }
+      ]
+    }
+  };
+}
+
+/**
+ * Creates a LINE Flex Dashboard summary for all stocks.
+ */
+export function createStockDashboardFlex(stocks: any[]) {
+  const total = stocks.length;
+  const alertItems = stocks.filter(s => s.quantity <= (s.min_threshold ?? 0) && s.quantity > 0);
+  const emptyItems = stocks.filter(s => s.quantity === 0);
+  const normalItems = stocks.filter(s => s.quantity > (s.min_threshold ?? 0));
+  const labItems = stocks.filter(s => s.category === 'Laboratory');
+  const officeItems = stocks.filter(s => s.category === 'อุปกรณ์สำนักงาน');
+  const sortedByQty = [...stocks].sort((a, b) => a.quantity - b.quantity).slice(0, 3);
+
+  const alertRows = alertItems.slice(0, 5).map(s => ({
+    type: 'box',
+    layout: 'horizontal',
+    contents: [
+      { type: 'text', text: `⚠️ ${s.name}`, size: 'xs', color: '#ef4444', flex: 7, wrap: true },
+      { type: 'text', text: `${s.quantity} ${s.unit}`, size: 'xs', color: '#ef4444', align: 'end', flex: 3 }
+    ]
+  }));
+
+  const emptyRows = emptyItems.slice(0, 3).map(s => ({
+    type: 'box',
+    layout: 'horizontal',
+    contents: [
+      { type: 'text', text: `❌ ${s.name}`, size: 'xs', color: '#94a3b8', flex: 7, wrap: true },
+      { type: 'text', text: 'หมดแล้ว', size: 'xs', color: '#94a3b8', align: 'end', flex: 3 }
+    ]
+  }));
+
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#1e293b',
+      contents: [
+        {
+          type: 'text',
+          text: '📊 Dashboard สรุปสต็อกวัสดุ',
+          weight: 'bold',
+          color: '#ffffff',
+          size: 'md'
+        },
+        {
+          type: 'text',
+          text: `อัปเดตล่าสุด: ${new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}`,
+          size: 'xs',
+          color: '#94a3b8',
+          margin: 'xs'
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'md',
+      contents: [
+        // Summary cards row
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#f8fafc',
+              cornerRadius: '8px',
+              paddingAll: 'sm',
+              flex: 1,
+              contents: [
+                { type: 'text', text: `${total}`, weight: 'bold', size: 'xl', color: '#1e293b', align: 'center' },
+                { type: 'text', text: 'ทั้งหมด', size: 'xxs', color: '#64748b', align: 'center' }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#dcfce7',
+              cornerRadius: '8px',
+              paddingAll: 'sm',
+              flex: 1,
+              contents: [
+                { type: 'text', text: `${normalItems.length}`, weight: 'bold', size: 'xl', color: '#10b981', align: 'center' },
+                { type: 'text', text: 'ปกติ', size: 'xxs', color: '#10b981', align: 'center' }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#fef9c3',
+              cornerRadius: '8px',
+              paddingAll: 'sm',
+              flex: 1,
+              contents: [
+                { type: 'text', text: `${alertItems.length}`, weight: 'bold', size: 'xl', color: '#d97706', align: 'center' },
+                { type: 'text', text: 'ใกล้หมด', size: 'xxs', color: '#d97706', align: 'center' }
+              ]
+            },
+            {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#fee2e2',
+              cornerRadius: '8px',
+              paddingAll: 'sm',
+              flex: 1,
+              contents: [
+                { type: 'text', text: `${emptyItems.length}`, weight: 'bold', size: 'xl', color: '#ef4444', align: 'center' },
+                { type: 'text', text: 'หมดแล้ว', size: 'xxs', color: '#ef4444', align: 'center' }
+              ]
+            }
+          ]
+        },
+        // Category breakdown
+        {
+          type: 'separator'
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: '🔬 Laboratory:', size: 'xs', color: '#64748b', flex: 5 },
+            { type: 'text', text: `${labItems.length} รายการ`, size: 'xs', color: '#334155', weight: 'bold', flex: 5 }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: '💼 สำนักงาน:', size: 'xs', color: '#64748b', flex: 5 },
+            { type: 'text', text: `${officeItems.length} รายการ`, size: 'xs', color: '#334155', weight: 'bold', flex: 5 }
+          ]
+        },
+        // Alert items
+        ...(alertRows.length > 0 ? [
+          { type: 'separator' },
+          { type: 'text', text: '⚠️ วัสดุที่ต้องเติมด่วน:', size: 'xs', weight: 'bold', color: '#ef4444' },
+          ...alertRows
+        ] : []),
+        // Empty items
+        ...(emptyRows.length > 0 ? [
+          { type: 'separator' },
+          { type: 'text', text: '❌ วัสดุที่หมดแล้ว:', size: 'xs', weight: 'bold', color: '#94a3b8' },
+          ...emptyRows
+        ] : []),
+        // Top low stock
+        ...(sortedByQty.length > 0 ? [
+          { type: 'separator' },
+          { type: 'text', text: '📉 ยอดต่ำสุด 3 อันดับ:', size: 'xs', weight: 'bold', color: '#64748b' },
+          ...sortedByQty.map(s => ({
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              { type: 'text', text: s.name, size: 'xs', color: '#334155', flex: 7, wrap: true },
+              { type: 'text', text: `${s.quantity} ${s.unit}`, size: 'xs', color: '#8b5cf6', align: 'end', flex: 3 }
+            ]
+          }))
+        ] : [])
+      ]
+    }
+  };
 }
 
 /**
@@ -868,12 +1245,106 @@ export async function POST(request: Request) {
               replyToken,
               `✍️ เตรียมแก้ไขรายการ: "${item.title}"\n\nกรุณาพิมพ์รายละเอียดใหม่ที่คุณต้องการแก้ไขเข้ามาได้เลยครับ เช่น:\n- "เครดิต 60 วัน"\n- "แก้ชื่อเป็น คอมพิวเตอร์ i7"\n- "แก้คำอธิบายเป็น ซื้อมาใช้ในออฟฟิศ"\n(บอทจะอัปเดตข้อมูลรายการนี้โดยตรง)`
             );
-          } else if (action === 'stock_request_edit') {
+          } else if (action === 'stock_select_action') {
+            // Show sub-action menu for a stock item
+            const stockId = params.get('id');
+            if (!stockId) continue;
+            const { data: stock, error: fetchError } = await supabaseAdmin
+              .from('stocks')
+              .select('*')
+              .eq('id', stockId)
+              .single();
+            if (fetchError || !stock) {
+              await sendLineReply(replyToken, '❌ ไม่พบวัสดุชิ้นนี้ในสต็อกแล้ว');
+              continue;
+            }
+            await sendLineReply(replyToken, {
+              type: 'flex',
+              altText: `📦 เลือกการดำเนินการสำหรับ "${stock.name}"`,
+              contents: createStockActionMenuFlex(stock)
+            });
+          } else if (action === 'stock_edit_menu') {
+            // Show edit sub-menu for a stock item
+            const stockId = params.get('id');
+            if (!stockId) continue;
+            const { data: stock, error: fetchError } = await supabaseAdmin
+              .from('stocks')
+              .select('*')
+              .eq('id', stockId)
+              .single();
+            if (fetchError || !stock) {
+              await sendLineReply(replyToken, '❌ ไม่พบวัสดุชิ้นนี้ในสต็อกแล้ว');
+              continue;
+            }
+            await sendLineReply(replyToken, {
+              type: 'flex',
+              altText: `✏️ แก้ไขข้อมูล "${stock.name}"`,
+              contents: createStockEditMenuFlex(stock)
+            });
+          } else if (action === 'stock_delete_confirm') {
+            // Confirm delete for a stock item
             const stockId = params.get('id');
             if (!stockId) continue;
             const { data: stock, error: fetchError } = await supabaseAdmin
               .from('stocks')
               .select('name')
+              .eq('id', stockId)
+              .single();
+            if (fetchError || !stock) {
+              await sendLineReply(replyToken, '❌ ไม่พบวัสดุชิ้นนี้ในสต็อกแล้ว');
+              continue;
+            }
+            await sendLineReply(replyToken, {
+              type: 'flex',
+              altText: `🗑️ ยืนยันลบ "${stock.name}"?`,
+              contents: {
+                type: 'bubble',
+                body: {
+                  type: 'box',
+                  layout: 'vertical',
+                  spacing: 'md',
+                  contents: [
+                    { type: 'text', text: '⚠️ ยืนยันการลบ', weight: 'bold', size: 'md', color: '#ef4444' },
+                    { type: 'text', text: `คุณต้องการลบวัสดุ "${stock.name}" ออกจากคลังสต็อกหรือไม่?`, size: 'sm', wrap: true, color: '#334155' },
+                    { type: 'text', text: 'การดำเนินการนี้ไม่สามารถย้อนกลับได้', size: 'xs', color: '#94a3b8', wrap: true }
+                  ]
+                },
+                footer: {
+                  type: 'box',
+                  layout: 'horizontal',
+                  spacing: 'sm',
+                  contents: [
+                    {
+                      type: 'button', style: 'primary', color: '#ef4444', height: 'sm', flex: 1,
+                      action: { type: 'postback', label: '🗑️ ลบเลย', data: `action=stock_delete_execute&id=${stockId}` }
+                    },
+                    {
+                      type: 'button', style: 'secondary', height: 'sm', flex: 1,
+                      action: { type: 'postback', label: '❌ ยกเลิก', data: `action=stock_cancel` }
+                    }
+                  ]
+                }
+              }
+            });
+          } else if (action === 'stock_delete_execute') {
+            const stockId = params.get('id');
+            if (!stockId) continue;
+            const { data: stock } = await supabaseAdmin.from('stocks').select('name').eq('id', stockId).single();
+            const { error: deleteError } = await supabaseAdmin.from('stocks').delete().eq('id', stockId);
+            if (deleteError) {
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการลบวัสดุ');
+            } else {
+              await sendLineReply(replyToken, `🗑️ ลบวัสดุ "${stock?.name || ''}" ออกจากคลังเรียบร้อยแล้วครับ!`);
+            }
+          } else if (action === 'stock_cancel') {
+            await sendLineReply(replyToken, '✅ ยกเลิกการดำเนินการแล้วครับ');
+          } else if (action === 'stock_request_edit') {
+            const stockId = params.get('id');
+            const field = params.get('field') || 'name'; // name | desc | min | priority
+            if (!stockId) continue;
+            const { data: stock, error: fetchError } = await supabaseAdmin
+              .from('stocks')
+              .select('name, description, min_threshold, priority')
               .eq('id', stockId)
               .single();
 
@@ -882,13 +1353,18 @@ export async function POST(request: Request) {
               continue;
             }
 
-            memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: stockId, stockName: stock.name });
+            const fieldPrompts: Record<string, string> = {
+              name: `🏷️ กรุณาพิมพ์ชื่อใหม่สำหรับวัสดุ "${stock.name}":`,
+              desc: `📝 กรุณาพิมพ์รายละเอียดใหม่สำหรับวัสดุ "${stock.name}":\n(ค่าปัจจุบัน: ${stock.description || 'ไม่มี'})`,
+              min: `🔔 กรุณาพิมพ์เกณฑ์ขั้นต่ำใหม่สำหรับวัสดุ "${stock.name}":\n(ค่าปัจจุบัน: ${stock.min_threshold ?? 0})\nพิมพ์เป็นตัวเลข เช่น "5"`,
+              priority: `⚡ กรุณาเลือกความสำคัญใหม่สำหรับวัสดุ "${stock.name}":\nพิมพ์ "High" (ด่วนมาก), "Medium" (ปานกลาง), หรือ "Low" (ทั่วไป)`
+            };
 
-            await sendLineReply(
-              replyToken,
-              `✍️ เตรียมแก้ไขชื่อวัสดุ: "${stock.name}"\n\nกรุณาพิมพ์ชื่อใหม่ที่คุณต้องการแก้ไขเข้ามาได้เลยครับ\n(บอทจะอัปเดตชื่อวัสดุนี้โดยตรง)`
-            );
+            memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: stockId, stockName: stock.name, field });
+
+            await sendLineReply(replyToken, fieldPrompts[field] || fieldPrompts['name']);
           } else if (action === 'view_items') {
+
             const statusParam = params.get('status');
             
             const { data: userProfile, error: profileErr } = await supabaseAdmin
@@ -1138,6 +1614,33 @@ export async function POST(request: Request) {
         continue;
       }
 
+      // Check if message is a dashboard/summary request
+      const isDashboardSummary = /^(สรุป|ภาพรวม|รายงาน|dashboard|ดูภาพรวม|สรุปสต็อก|ภาพรวมสต็อก|รายงานสต็อก)(สต็อก|สต๊อก|วัสดุ)?$/i.test(cleanMessageText);
+      
+      if (isDashboardSummary) {
+        const currentMode = await getUserModeState(profile, lineUserId, supabaseAdmin);
+        if (currentMode !== 'stock') {
+          await setUserModeState(profile, lineUserId, 'stock', supabaseAdmin);
+        }
+        const { data: allStocks } = await supabaseAdmin
+          .from('stocks')
+          .select('*')
+          .eq('user_id', profile.id)
+          .order('name', { ascending: true });
+        
+        if (!allStocks || allStocks.length === 0) {
+          await sendLineReply(replyToken, '📦 คลังวัสดุของคุณยังไม่มีรายการใดๆ ครับ');
+          continue;
+        }
+        
+        await sendLineReply(replyToken, {
+          type: 'flex',
+          altText: '📊 Dashboard สรุปสต็อกวัสดุ',
+          contents: createStockDashboardFlex(allStocks)
+        });
+        continue;
+      }
+
       // Check if message is a generic request to view the entire stock/inventory
       const isCheckAllStocks = /^(ดู|เช็ก|เช็ค|รายการ|แสดง)?\s*(สต็อก|สต๊อก|วัสดุ|ของ|สินค้า|ยอด|สต็อกของ|สต๊อกของ|ยอดของ|สินค้าของ)(ทั้งหมด|ของ)?$/i.test(cleanMessageText) ||
         ['ดูสต็อก', 'ดูสต๊อก', 'เช็กสต็อก', 'เช็คสต็อก', 'เช็กสต๊อก', 'เช็คสต๊อก', 'วัสดุ', 'ดูวัสดุ', 'เช็กวัสดุ', 'เช็ควัสดุ', 'เช็คของ', 'เช็กของ', 'ดูของ', 'เช็คสต็อกของ', 'เช็กสต็อกของ', 'เช็คยอด', 'เช็กยอด', 'ยอด'].includes(cleanMessageText);
@@ -1173,6 +1676,7 @@ export async function POST(request: Request) {
         });
         continue;
       }
+
 
       // Check current active mode
       const activeMode = await getUserModeState(profile, lineUserId, supabaseAdmin);
@@ -1253,35 +1757,73 @@ export async function POST(request: Request) {
 
       const userState = memoryStateCache.get(lineUserId);
 
-      // Handle stock pending edit name input
+      // Handle stock pending edit input
       if (userState && userState.action === 'stock_editing') {
-        let newName = messageText.trim();
-        newName = newName.replace(/^(แก้ไข|แก้|เปลี่ยน|edit|update|ชื่อ|เป็น)\s*/i, '').trim();
-        
-        if (!newName) {
-          await sendLineReply(replyToken, '❌ ชื่อวัสดุห้ามว่างเปล่า กรุณาพิมพ์ใหม่อีกครั้งครับ');
+        const field = userState.field || 'name';
+        const inputText = messageText.trim();
+
+        if (!inputText) {
+          await sendLineReply(replyToken, '❌ ข้อมูลห้ามว่างเปล่า กรุณาพิมพ์ใหม่อีกครั้งครับ');
           continue;
         }
 
-        const { data: updatedStock, error: updateError } = await supabaseAdmin
+        let updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
+        let successMessage = '';
+
+        if (field === 'name') {
+          let newName = inputText.replace(/^(แก้ไข|แก้|เปลี่ยน|edit|update|ชื่อ|เป็น)\s*/i, '').trim();
+          if (!newName) {
+            await sendLineReply(replyToken, '❌ ชื่อวัสดุห้ามว่างเปล่า กรุณาพิมพ์ใหม่อีกครั้งครับ');
+            continue;
+          }
+          updatePayload.name = newName;
+          successMessage = `✅ แก้ไขชื่อวัสดุจาก "${userState.stockName}" เป็น "${newName}" เรียบร้อยแล้วครับ! 📦`;
+        } else if (field === 'desc') {
+          updatePayload.description = inputText;
+          successMessage = `✅ แก้ไขรายละเอียดของวัสดุ "${userState.stockName}" เรียบร้อยแล้วครับ!`;
+        } else if (field === 'min') {
+          const numMatch = inputText.match(/\d+/);
+          if (!numMatch) {
+            await sendLineReply(replyToken, '❌ กรุณาพิมพ์เป็นตัวเลข เช่น "5" หรือ "10" ครับ');
+            continue;
+          }
+          const newMin = parseInt(numMatch[0]);
+          updatePayload.min_threshold = newMin;
+          successMessage = `✅ ตั้งเกณฑ์ขั้นต่ำของวัสดุ "${userState.stockName}" เป็น ${newMin} เรียบร้อยแล้วครับ! 🔔`;
+        } else if (field === 'priority') {
+          const priorityMap: Record<string, string> = {
+            'high': 'High', 'สูง': 'High', 'ด่วนมาก': 'High',
+            'medium': 'Medium', 'กลาง': 'Medium', 'ปานกลาง': 'Medium',
+            'low': 'Low', 'ต่ำ': 'Low', 'ทั่วไป': 'Low'
+          };
+          const priorityKey = inputText.toLowerCase();
+          const newPriority = priorityMap[priorityKey] || (
+            inputText === 'High' || inputText === 'Medium' || inputText === 'Low' ? inputText : null
+          );
+          if (!newPriority) {
+            await sendLineReply(replyToken, '❌ กรุณาพิมพ์ "High", "Medium", หรือ "Low" เท่านั้นครับ');
+            continue;
+          }
+          updatePayload.priority = newPriority;
+          const priorityLabel = newPriority === 'High' ? '🔴 ด่วนมาก' : newPriority === 'Medium' ? '🟡 ปานกลาง' : '🟢 ทั่วไป';
+          successMessage = `✅ ตั้งความสำคัญของวัสดุ "${userState.stockName}" เป็น ${priorityLabel} เรียบร้อยแล้วครับ!`;
+        }
+
+        const { error: updateError } = await supabaseAdmin
           .from('stocks')
-          .update({ name: newName, updated_at: new Date().toISOString() })
-          .eq('id', userState.stockId)
-          .select('*')
-          .single();
+          .update(updatePayload)
+          .eq('id', userState.stockId);
 
         memoryStateCache.delete(lineUserId);
 
-        if (updateError || !updatedStock) {
-          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขชื่อวัสดุ');
+        if (updateError) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขข้อมูลวัสดุ');
         } else {
-          await sendLineReply(
-            replyToken,
-            `✅ แก้ไขชื่อวัสดุจาก "${userState.stockName}" เป็น "${newName}" เรียบร้อยแล้วครับ! 📦`
-          );
+          await sendLineReply(replyToken, successMessage);
         }
         continue;
       }
+
       
       // Handle stock pending quantity input
       if (userState && userState.action === 'stock_pending_qty') {
@@ -1461,6 +2003,69 @@ export async function POST(request: Request) {
 
           const searchName = stockData.name || '';
           
+          // Handle CONFIRM_NEEDED - AI is not confident about the intent
+          if (stockData.action === 'CONFIRM_NEEDED') {
+            await sendLineReply(replyToken, stockData.confirm_message || `🤔 ไม่แน่ใจว่าต้องการทำอะไรกับวัสดุ "${searchName}" กรุณาลองพิมพ์ใหม่ให้ชัดเจนขึ้นครับ`);
+            continue;
+          }
+
+          // Handle EDIT_NAME / EDIT_DESC / EDIT_MIN / EDIT_PRIORITY via AI text command
+          if (['EDIT_NAME', 'EDIT_DESC', 'EDIT_MIN', 'EDIT_PRIORITY'].includes(stockData.action)) {
+            // Find target stock item
+            const { data: editMatchedStocks } = await supabaseAdmin
+              .from('stocks')
+              .select('*')
+              .eq('user_id', profile.id)
+              .ilike('name', `%${searchName}%`);
+            
+            const editExact = editMatchedStocks?.find(s => s.name.toLowerCase() === searchName.toLowerCase());
+            const editTarget = editExact || (editMatchedStocks?.length === 1 ? editMatchedStocks[0] : null);
+
+            if (!editTarget) {
+              if (editMatchedStocks && editMatchedStocks.length > 1) {
+                // Multiple matches - show carousel to pick
+                const bubbles = editMatchedStocks.slice(0, 9).map(s => createStockFlexBubble(s, 'CHECK', null));
+                await sendLineReply(replyToken, {
+                  type: 'flex',
+                  altText: `📦 พบวัสดุหลายรายการที่ตรงกับ "${searchName}" กรุณาเลือก`,
+                  contents: { type: 'carousel', contents: bubbles }
+                });
+              } else {
+                await sendLineReply(replyToken, `❌ ไม่พบวัสดุชื่อ "${searchName}" ในคลัง กรุณาตรวจสอบชื่ออีกครั้งครับ`);
+              }
+              continue;
+            }
+
+            let updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
+            let successMessage = '';
+
+            if (stockData.action === 'EDIT_NAME' && stockData.new_name) {
+              updatePayload.name = stockData.new_name;
+              successMessage = `✅ แก้ไขชื่อวัสดุจาก "${editTarget.name}" เป็น "${stockData.new_name}" เรียบร้อยแล้วครับ! 📦`;
+            } else if (stockData.action === 'EDIT_DESC') {
+              updatePayload.description = stockData.description || '';
+              successMessage = `✅ แก้ไขรายละเอียดของวัสดุ "${editTarget.name}" เรียบร้อยแล้วครับ!`;
+            } else if (stockData.action === 'EDIT_MIN' && stockData.new_min_threshold !== null && stockData.new_min_threshold !== undefined) {
+              updatePayload.min_threshold = stockData.new_min_threshold;
+              successMessage = `✅ ตั้งเกณฑ์ขั้นต่ำของวัสดุ "${editTarget.name}" เป็น ${stockData.new_min_threshold} เรียบร้อยแล้วครับ! 🔔`;
+            } else if (stockData.action === 'EDIT_PRIORITY' && stockData.new_priority) {
+              updatePayload.priority = stockData.new_priority;
+              const priorityLabel = stockData.new_priority === 'High' ? '🔴 ด่วนมาก' : stockData.new_priority === 'Medium' ? '🟡 ปานกลาง' : '🟢 ทั่วไป';
+              successMessage = `✅ ตั้งความสำคัญของวัสดุ "${editTarget.name}" เป็น ${priorityLabel} เรียบร้อยแล้วครับ!`;
+            } else {
+              await sendLineReply(replyToken, `❌ ไม่สามารถแก้ไขข้อมูลได้ กรุณาระบุข้อมูลใหม่ให้ชัดเจนขึ้นครับ เช่น "แก้ชื่อ ${editTarget.name} เป็น [ชื่อใหม่]"`);
+              continue;
+            }
+
+            const { error: editError } = await supabaseAdmin.from('stocks').update(updatePayload).eq('id', editTarget.id);
+            if (editError) {
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขข้อมูลวัสดุ');
+            } else {
+              await sendLineReply(replyToken, successMessage);
+            }
+            continue;
+          }
+
           const { data: matchedStocks, error: searchError } = await supabaseAdmin
             .from('stocks')
             .select('*')
@@ -1562,7 +2167,10 @@ export async function POST(request: Request) {
             continue;
           }
 
-          if (targetStock && stockData.category) {
+          // Only update category if user explicitly requested a category change (not inferred)
+          // Guard: Category should only be updated if the original action was specifically about category
+          const isCategoryChangeRequest = /ย้ายหมวด|เปลี่ยนหมวด|ย้ายไป|เพิ่มในหมวด|ใส่ไว้หมวด/i.test(messageText);
+          if (targetStock && stockData.category && isCategoryChangeRequest) {
             const { error: updateError } = await supabaseAdmin
               .from('stocks')
               .update({ category: stockData.category, updated_at: new Date().toISOString() })
@@ -1577,13 +2185,21 @@ export async function POST(request: Request) {
             continue;
           }
 
+          // If CHECK action with quantity, just show the current balance (don't modify)
+          if (targetStock && stockData.action === 'CHECK') {
+            const isAlert = targetStock.quantity <= (targetStock.min_threshold ?? 0);
+            const alertMsg = isAlert ? `\n⚠️ ระดับวัสดุต่ำกว่าเกณฑ์ขั้นต่ำแล้ว! (เกณฑ์ขั้นต่ำ: ${targetStock.min_threshold} ${targetStock.unit})` : '';
+            await sendLineReply(replyToken, `📦 วัสดุ "${targetStock.name}"\nยอดคงเหลือปัจจุบัน: ${targetStock.quantity} ${targetStock.unit}${alertMsg}`);
+            continue;
+          }
+
           if (targetStock && stockData.quantity !== null) {
             let newQty = targetStock.quantity;
             if (stockData.action === 'SUBTRACT') {
               newQty = Math.max(0, targetStock.quantity - stockData.quantity);
             } else if (stockData.action === 'ADD') {
               newQty = targetStock.quantity + stockData.quantity;
-            } else if (stockData.action === 'SET' || stockData.action === 'CHECK') {
+            } else if (stockData.action === 'SET') {
               newQty = stockData.quantity;
             }
 

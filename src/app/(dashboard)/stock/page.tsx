@@ -147,7 +147,96 @@ export default function StockPage() {
         </button>
       </div>
 
+      {/* Dashboard Summary Section */}
+      {!isLoading && stocks.length > 0 && (() => {
+        const totalCount = stocks.length;
+        const alertItems = stocks.filter(s => s.quantity <= (s.min_threshold ?? 0) && s.quantity > 0);
+        const emptyItems = stocks.filter(s => s.quantity === 0);
+        const normalItems = stocks.filter(s => s.quantity > (s.min_threshold ?? 0));
+        const labCount = stocks.filter(s => s.category === 'Laboratory').length;
+        const officeCount = stocks.filter(s => s.category === 'อุปกรณ์สำนักงาน').length;
+        const topAlert = [...stocks].filter(s => s.quantity <= (s.min_threshold ?? 0)).sort((a, b) => a.quantity - b.quantity).slice(0, 4);
+
+        return (
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+            {/* Stat Cards */}
+            <div className="xl:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { label: 'วัสดุทั้งหมด', value: totalCount, icon: '📦', color: 'from-violet-500 to-indigo-500', textColor: 'text-white', subColor: 'text-violet-100' },
+                { label: 'สถานะปกติ', value: normalItems.length, icon: '✅', color: 'from-emerald-400 to-green-500', textColor: 'text-white', subColor: 'text-emerald-100' },
+                { label: 'ใกล้หมด', value: alertItems.length, icon: '⚠️', color: 'from-amber-400 to-orange-400', textColor: 'text-white', subColor: 'text-amber-100' },
+                { label: 'หมดแล้ว', value: emptyItems.length, icon: '❌', color: 'from-red-400 to-rose-500', textColor: 'text-white', subColor: 'text-red-100' },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${stat.color} p-4 shadow-sm flex flex-col gap-1`}
+                >
+                  <span className="text-2xl">{stat.icon}</span>
+                  <span className={`text-2xl font-black ${stat.textColor}`}>{stat.value}</span>
+                  <span className={`text-[11px] font-semibold ${stat.subColor}`}>{stat.label}</span>
+                  <div className="absolute -bottom-3 -right-3 w-14 h-14 rounded-full bg-white/10" />
+                </div>
+              ))}
+            </div>
+
+            {/* Category Breakdown + Alert List */}
+            <div className="flex flex-col gap-3">
+              {/* Category breakdown */}
+              <div className="bg-white dark:bg-slate-900/55 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 flex flex-col gap-2 shadow-sm">
+                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">หมวดหมู่</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold">🔬 Laboratory</span>
+                      <span className="text-xs font-black text-slate-700 dark:text-slate-200">{labCount}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500"
+                        style={{ width: `${totalCount ? (labCount / totalCount) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-xs text-violet-700 dark:text-violet-400 font-bold">💼 สำนักงาน</span>
+                      <span className="text-xs font-black text-slate-700 dark:text-slate-200">{officeCount}</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-violet-400 to-indigo-500 transition-all duration-500"
+                        style={{ width: `${totalCount ? (officeCount / totalCount) * 100 : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alert items */}
+              {topAlert.length > 0 && (
+                <div className="bg-red-50/50 dark:bg-red-950/10 border border-red-200/80 dark:border-red-900/30 rounded-2xl p-4 shadow-sm flex-1">
+                  <p className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wide mb-2">⚠️ ต้องเติมด่วน</p>
+                  <div className="flex flex-col gap-1.5">
+                    {topAlert.map(s => (
+                      <div key={s.id} className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-slate-700 dark:text-slate-200 truncate flex-1">{s.name}</span>
+                        <span className={`text-xs font-black px-1.5 py-0.5 rounded-md shrink-0 ${s.quantity === 0 ? 'bg-red-500/15 text-red-600 dark:text-red-400' : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'}`}>
+                          {s.quantity === 0 ? 'หมด' : `${s.quantity} ${s.unit}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Filter, Search and Sorting Bar */}
+
       <div className="flex flex-col xl:flex-row xl:items-center gap-4 p-4 bg-white dark:bg-slate-900/45 border border-slate-200 dark:border-slate-800/80 rounded-2xl backdrop-blur-sm shadow-sm">
         
         {/* Category switcher */}
