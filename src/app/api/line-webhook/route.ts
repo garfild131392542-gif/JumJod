@@ -1845,7 +1845,31 @@ export async function POST(request: Request) {
         continue;
       }
 
+      let parsedResult: any = null;
       const userState = memoryStateCache.get(lineUserId);
+
+      // Handle stock pending confirmation state
+      if (userState && userState.action === 'stock_pending_confirm') {
+        const isYes = /^(ใช่|ใช่ครับ|ใช่ค่ะ|ครับ|ค่ะ|ถูกต้อง|ถูกต้องแล้ว|ok|okay|yes|y|confirm|ยืนยัน)$/i.test(messageText.trim().toLowerCase());
+        const isNo = /^(ไม่|ไม่ใช่|ไม่ใช่ครับ|ไม่ใช่ค่ะ|ยกเลิก|no|n|cancel)$/i.test(messageText.trim().toLowerCase());
+        
+        if (isYes) {
+          const pendingStockData = userState.pendingStockData;
+          memoryStateCache.delete(lineUserId);
+          
+          parsedResult = {
+            intent: 'STOCK',
+            stock_data: pendingStockData
+          };
+        } else if (isNo) {
+          memoryStateCache.delete(lineUserId);
+          await sendLineReply(replyToken, '✅ ยกเลิกการยืนยันการดำเนินการแล้วครับ');
+          continue;
+        } else {
+          // If they typed something else, clear confirmation state and let it fall through to normal parsing
+          memoryStateCache.delete(lineUserId);
+        }
+      }
 
       // Handle stock pending name input
       if (userState && userState.action === 'stock_pending_name') {
@@ -2093,6 +2117,14 @@ export async function POST(request: Request) {
           updatePayload.priority = newPriority;
           const priorityLabel = newPriority === 'High' ? '🔴 ด่วนมาก' : newPriority === 'Medium' ? '🟡 ปานกลาง' : '🟢 ทั่วไป';
           successMessage = `✅ ตั้งความสำคัญของวัสดุ "${userState.stockName}" เป็น ${priorityLabel} เรียบร้อยแล้วครับ!`;
+        } else if (field === 'category') {
+          let newCategory = inputText.replace(/^(แก้ไข|แก้|เปลี่ยน|edit|update|หมวดหมู่|หมวด|เป็น)\s*/i, '').trim();
+          if (newCategory.toLowerCase().includes('lab') || newCategory.toLowerCase().includes('แล็บ') || newCategory.toLowerCase().includes('ห้องปฏิบัติการ') || newCategory.toLowerCase().includes('laboratory')) {
+            updatePayload.category = 'Laboratory';
+          } else {
+            updatePayload.category = 'อุปกรณ์สำนักงาน';
+          }
+          successMessage = `✅ แก้ไขหมวดหมู่ของวัสดุ "${userState.stockName}" เป็น "${updatePayload.category}" เรียบร้อยแล้วครับ!`;
         }
 
         const { error: updateError } = await supabaseAdmin
@@ -2259,8 +2291,10 @@ export async function POST(request: Request) {
       }
 
       // 4. Initial Request intent classification using AI
-      console.log(`[LINE BOT] Classifying user query: "${messageText}"`);
-      let parsedResult = await classifyAndParseMessageWithAI(messageText, existingItems);
+      if (!parsedResult) {
+        console.log(`[LINE BOT] Classifying user query: "${messageText}"`);
+        parsedResult = await classifyAndParseMessageWithAI(messageText, existingItems);
+      }
 
       // Enforce mode context
       if (activeMode === 'stock') {
@@ -2399,14 +2433,29 @@ export async function POST(request: Request) {
             continue;
           }
           
-          // Handle CONFIRM_NEEDED - AI is not confident about the intent
-          if (stockData.action === 'CONFIRM_NEEDED') {
-            await sendLineReply(replyToken, stockData.confirm_message || `🤔 ไม่แน่ใจว่าต้องการทำอะไรกับวัสดุ "${searchName}" กรุณาลองพิมพ์ใหม่ให้ชัดเจนขึ้นครับ`);
+          // Handle confirm_message (if AI outputted a low confidence suggestion)
+          if (stockData.confirm_message) {
+            memoryStateCache.set(lineUserId, {
+              action: 'stock_pending_confirm',
+              pendingStockData: {
+                ...stockData,
+                confirm_message: null // Clear to avoid loops
+              },
+              targetStockId: targetStock?.id || null,
+              searchName: searchName
+            });
+            await sendLineReply(replyToken, stockData.confirm_message);
             continue;
           }
 
-          // Handle EDIT_NAME / EDIT_DESC / EDIT_MIN / EDIT_PRIORITY via AI text command
-          if (['EDIT_NAME', 'EDIT_DESC', 'EDIT_MIN', 'EDIT_PRIORITY'].includes(stockData.action)) {
+          // Handle CONFIRM_NEEDED fallback
+          if (stockData.action === 'CONFIRM_NEEDED') {
+            await sendLineReply(replyToken, `🤔 ไม่แน่ใจว่าต้องการทำอะไรกับวัสดุ "${searchName}" กรุณาลองพิมพ์ใหม่ให้ชัดเจนขึ้นครับ`);
+            continue;
+          }
+
+          // Handle EDIT_NAME / EDIT_DESC / EDIT_MIN / EDIT_PRIORITY / EDIT_CATEGORY via AI text command
+          if (['EDIT_NAME', 'EDIT_DESC', 'EDIT_MIN', 'EDIT_PRIORITY', 'EDIT_CATEGORY'].includes(stockData.action)) {
             // Find target stock item
             let editTarget = targetStock;
             if (!editTarget) {
@@ -2456,6 +2505,11 @@ export async function POST(request: Request) {
               await sendLineReply(replyToken, `⚡ กรุณาเลือกความสำคัญใหม่สำหรับวัสดุ "${editTarget.name}":\nพิมพ์ "High" (ด่วนมาก), "Medium" (ปานกลาง), หรือ "Low" (ทั่วไป)`);
               continue;
             }
+            if (stockData.action === 'EDIT_CATEGORY' && !stockData.category) {
+              memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'category' });
+              await sendLineReply(replyToken, `📦 กรุณาระบุหมวดหมู่ใหม่สำหรับวัสดุ "${editTarget.name}":\n(ค่าปัจจุบัน: ${editTarget.category || 'ไม่มี'})\nพิมพ์ "อุปกรณ์สำนักงาน" หรือ "Laboratory"`);
+              continue;
+            }
 
             let updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
             let successMessage = '';
@@ -2473,6 +2527,9 @@ export async function POST(request: Request) {
               updatePayload.priority = stockData.new_priority;
               const priorityLabel = stockData.new_priority === 'High' ? '🔴 ด่วนมาก' : stockData.new_priority === 'Medium' ? '🟡 ปานกลาง' : '🟢 ทั่วไป';
               successMessage = `✅ ตั้งความสำคัญของวัสดุ "${editTarget.name}" เป็น ${priorityLabel} เรียบร้อยแล้วครับ!`;
+            } else if (stockData.action === 'EDIT_CATEGORY' && stockData.category) {
+              updatePayload.category = stockData.category;
+              successMessage = `✅ ย้ายหมวดหมู่ของวัสดุ "${editTarget.name}" ไปยัง "${stockData.category}" เรียบร้อยแล้วครับ! 📦`;
             } else {
               await sendLineReply(replyToken, `❌ ไม่สามารถแก้ไขข้อมูลได้ กรุณาระบุข้อมูลใหม่ให้ชัดเจนขึ้นครับ เช่น "แก้ชื่อ ${editTarget.name} เป็น [ชื่อใหม่]"`);
               continue;

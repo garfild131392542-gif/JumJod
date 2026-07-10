@@ -23,7 +23,7 @@ export interface GeminiParsedOutput {
     status?: 'Pending' | 'Purchasing' | 'Issuing Item';
   };
   stock_data?: {
-    action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK' | 'EDIT_NAME' | 'EDIT_DESC' | 'EDIT_MIN' | 'EDIT_PRIORITY' | 'CONFIRM_NEEDED';
+    action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK' | 'EDIT_NAME' | 'EDIT_DESC' | 'EDIT_MIN' | 'EDIT_PRIORITY' | 'EDIT_CATEGORY' | 'CONFIRM_NEEDED';
     name: string | null;
     quantity: number | null;
     unit: string | null;
@@ -252,7 +252,7 @@ export async function parseStockMessageWithAI(
   messageText: string,
   apiKey: string
 ): Promise<{
-  action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK' | 'EDIT_NAME' | 'EDIT_DESC' | 'EDIT_MIN' | 'EDIT_PRIORITY' | 'CONFIRM_NEEDED';
+  action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK' | 'EDIT_NAME' | 'EDIT_DESC' | 'EDIT_MIN' | 'EDIT_PRIORITY' | 'EDIT_CATEGORY' | 'CONFIRM_NEEDED';
   name: string | null;
   quantity: number | null;
   unit: string | null;
@@ -285,7 +285,8 @@ Extract the following fields and format strictly as JSON:
     "EDIT_DESC" (editing description/detail, e.g. "แก้รายละเอียดแอลกอฮอล์ว่า ใช้สำหรับทำความสะอาด", "เพิ่มคำอธิบาย"),
     "EDIT_MIN" (changing min threshold, e.g. "ตั้งเกณฑ์ขั้นต่ำปากกาเป็น 5", "กำหนดการเตือนเมื่อเหลือน้อยกว่า 3"),
     "EDIT_PRIORITY" (changing priority, e.g. "ตั้งด่วนกระดาษ A4 เป็น High", "เปลี่ยนความสำคัญ"),
-  "name": "Current name of the material in stock (strip all action verbs like 'เบิก', 'เพิ่ม', 'แอด', 'ลด', 'ลบ', 'เช็ก', 'เช็ค', 'ดู', 'ตรวจสอบ', 'เปลี่ยนชื่อ', 'แก้ชื่อ', 'ตั้งเกณฑ์', 'กำหนด', 'แก้รายละเอียด'). This should be the EXISTING name in stock.",
+    "EDIT_CATEGORY" (changing category, e.g. "ย้ายถ้วย Crucible ไปหมวดหมู่ Lab", "เปลี่ยนหมวดหมู่กระดาษเป็นอุปกรณ์สำนักงาน"),
+  "name": "Current name of the material in stock (strip all action verbs like 'เบิก', 'เพิ่ม', 'แอด', 'ลด', 'ลบ', 'เช็ก', 'เช็ค', 'ดู', 'ตรวจสอบ', 'เปลี่ยนชื่อ', 'แก้ชื่อ', 'ตั้งเกณฑ์', 'กำหนด', 'แก้รายละเอียด', 'ย้ายหมวดหมู่', 'เปลี่ยนหมวด'). This should be the EXISTING name in stock.",
   "quantity": number or null,
   "unit": "string or null",
   "category": CRITICAL RULE - Only provide category value in these specific cases:
@@ -302,7 +303,7 @@ Extract the following fields and format strictly as JSON:
 }
 
 IMPORTANT RULES:
-- If confidence < 70, set action to "CONFIRM_NEEDED" and provide confirm_message
+- If confidence < 70, provide confirm_message but still set 'action' and other fields to your best guess. Only set action to 'CONFIRM_NEEDED' if you cannot guess the action at all.
 - For CHECK action: category MUST be null
 - For EDIT_* actions: extract the current item name carefully from the message
 - Strip all Thai action verbs from the name field`
