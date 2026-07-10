@@ -2550,12 +2550,12 @@ export async function POST(request: Request) {
             continue;
           }
 
-          // If CHECK action, show the item as a Flex Card containing the "✅ เลือก" action button
+          // If CHECK action, show the item as an Action Menu Flex Card directly containing all action buttons
           if (targetStock && stockData.action === 'CHECK') {
             await sendLineReply(replyToken, {
               type: 'flex',
-              altText: `📦 ข้อมูลวัสดุ "${targetStock.name}"`,
-              contents: createStockFlexBubble(targetStock, 'CHECK', null)
+              altText: `📦 จัดการวัสดุ "${targetStock.name}"`,
+              contents: createStockActionMenuFlex(targetStock)
             });
             continue;
           }
