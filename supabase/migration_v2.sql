@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS public.stock_transactions (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
-  stock_id uuid REFERENCES public.stocks ON DELETE CASCADE NOT NULL,
+  stock_id uuid NOT NULL, -- Removed foreign key constraint to stocks(id) to allow preserving audit logs and prevent delete crashes
   type text NOT NULL CHECK (type IN ('ADD', 'SUBTRACT', 'SET', 'CREATE', 'DELETE')),
   quantity_changed integer NOT NULL,
   quantity_before integer NOT NULL,
@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS public.stock_transactions (
   notes text,
   created_at timestamptz DEFAULT now() NOT NULL
 );
+
+-- Drop foreign key constraint if it exists from previous run to fix the delete item bug
+ALTER TABLE public.stock_transactions DROP CONSTRAINT IF EXISTS stock_transactions_stock_id_fkey;
 
 -- Enable RLS for stock transactions
 ALTER TABLE public.stock_transactions ENABLE ROW LEVEL SECURITY;
