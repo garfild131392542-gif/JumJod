@@ -108,7 +108,7 @@ export async function POST(request: Request) {
             if (!itemId) continue;
             const { data: item, error: fetchError } = await supabaseAdmin
               .from('items')
-              .select('title, po_date, credit_term')
+              .select('title')
               .eq('id', itemId)
               .single();
 
@@ -117,17 +117,10 @@ export async function POST(request: Request) {
               continue;
             }
 
-            const finalPoDate = item.po_date || new Date().toISOString().substring(0, 10);
-            const finalCreditTerm = item.credit_term || 30;
-            const calculatedDueDate = calculateDueDate(finalPoDate, finalCreditTerm);
-
             const { error: completeError } = await supabaseAdmin
               .from('items')
               .update({
                 status: 'Issuing Item',
-                po_date: finalPoDate,
-                credit_term: finalCreditTerm,
-                budget_due_date: calculatedDueDate,
                 updated_at: new Date().toISOString()
               })
               .eq('id', itemId);
@@ -135,10 +128,9 @@ export async function POST(request: Request) {
             if (completeError) {
               await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูลสำเร็จ');
             } else {
-              const formattedDate = new Date(calculatedDueDate!).toLocaleDateString('th-TH', { dateStyle: 'medium' });
               await sendLineReply(
                 replyToken, 
-                `🎉 บันทึกสำเร็จแล้ว!\nอัปเดตรายการ "${item.title}" เป็น "สำเร็จ (ออก ITEM)" เรียบร้อยแล้ว\n📅 วันครบกำหนดชำระ: ${formattedDate}\n*รายการนี้จะย้ายจากบอร์ดไปแสดงที่หน้า 'รายการสำเร็จ' ทันที*`
+                `🎉 บันทึกสำเร็จแล้ว!\nอัปเดตรายการ "${item.title}" เป็น "สำเร็จ" เรียบร้อยแล้ว\n*รายการนี้จะย้ายจากบอร์ดไปแสดงที่หน้า 'รายการสำเร็จ' ทันที*`
               );
             }
           } else if (action === 'set_requested') {

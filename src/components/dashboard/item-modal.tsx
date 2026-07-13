@@ -297,7 +297,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                 let style = 'border-slate-800 text-slate-400 bg-slate-950 hover:bg-slate-900/50';
 
                 if (s === 'Purchasing') thaiName = 'ติดต่อที่จัดซื้อ';
-                if (s === 'Issuing Item') thaiName = 'กำลังออก ITEM';
+                if (s === 'Issuing Item') thaiName = 'สำเร็จ';
 
                 if (isSelected) {
                   if (s === 'Pending') style = 'border-amber-500/50 bg-amber-500/10 text-amber-400';

@@ -339,7 +339,7 @@ export default function CalendarPage() {
                     }`}>
                       {selectedEvent.item.status === 'Pending' ? 'กำลังดำเนินการ' :
                        selectedEvent.item.status === 'Purchasing' ? 'ติดต่อจัดซื้อ' :
-                       'กำลังออก ITEM'}
+                       'สำเร็จ'}
                     </span>
                   </div>
 

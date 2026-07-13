@@ -33,7 +33,7 @@ export function createItemFlexBubble(item: any, appUrl: string) {
     // Non-PR status
     statusText = item.status === 'Pending' ? 'กำลังดำเนินการ' 
       : item.status === 'Purchasing' ? 'ติดต่อที่จัดซื้อ' 
-      : 'สำเร็จ (ออก ITEM)';
+      : 'สำเร็จ';
     statusColor = item.status === 'Pending' ? '#f59e0b'
       : item.status === 'Purchasing' ? '#8b5cf6'
       : '#10b981';

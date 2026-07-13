@@ -90,7 +90,7 @@ export default function DashboardPage() {
             if (oldItem && oldItem.status !== updatedItem.status) {
               const statusName =
                 updatedItem.status === 'Pending' ? 'กำลังดำเนินการ' :
-                  updatedItem.status === 'Purchasing' ? 'ติดต่อจัดซื้อ' : 'กำลังออก ITEM';
+                  updatedItem.status === 'Purchasing' ? 'ติดต่อจัดซื้อ' : 'สำเร็จ';
               showToast(`🔄 อัปเดตรายการ: "${updatedItem.title}" เป็น "${statusName}"`, 'info');
             }
           }
@@ -211,7 +211,7 @@ export default function DashboardPage() {
         updates.po_date = null;
         updates.credit_term = null;
         updates.budget_due_date = null;
-      } else if (nextStatus === 'Purchasing' || nextStatus === 'Issuing Item') {
+      } else if (nextStatus === 'Purchasing') {
         if (currentItem) {
           // If it doesn't have a PO date, default to today
           const finalPoDate = currentItem.po_date || new Date().toISOString().substring(0, 10);
@@ -245,10 +245,9 @@ export default function DashboardPage() {
       if (data?.calculatedDueDate) {
         const dateStr = new Date(data.calculatedDueDate).toLocaleDateString('th-TH', { dateStyle: 'medium' });
         showToast(`อัปเดตเครดิต ${data.creditTerm} วันสำเร็จ! ครบกำหนดชำระจริงวันที่: ${dateStr}`);
-      } else {
+      } else if (data?.nextStatus !== 'Issuing Item') {
         const statusName =
-          data?.nextStatus === 'Pending' ? 'กำลังดำเนินการ' :
-            data?.nextStatus === 'Purchasing' ? 'ติดต่อจัดซื้อ' : 'กำลังออก ITEM';
+          data?.nextStatus === 'Pending' ? 'กำลังดำเนินการ' : 'ติดต่อจัดซื้อ';
         showToast(`ย้ายสถานะเป็น "${statusName}" เรียบร้อยแล้ว`);
       }
     },

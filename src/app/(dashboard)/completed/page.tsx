@@ -140,7 +140,7 @@ export default function CompletedItemsPage() {
           <CheckCircle2 className="w-10 h-10 text-slate-400 dark:text-slate-600 mb-3" />
           <h3 className="text-sm font-bold text-slate-700 dark:text-slate-350">ยังไม่มีรายการสำเร็จ</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mt-1 leading-relaxed">
-            รายการที่ถูกเปลี่ยนสถานะเป็น "กำลังออก ITEM" จะแสดงรายการประวัติที่นี่เพื่อการตรวจสอบ
+            รายการที่ถูกเปลี่ยนสถานะเป็น "สำเร็จ" จะแสดงรายการประวัติที่นี่เพื่อการตรวจสอบ
           </p>
         </div>
       ) : (
