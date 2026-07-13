@@ -138,11 +138,16 @@ async function parseCreateMessageWithAI(
   const modelName = 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
+  const nowUtc = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const localDate = new Date(nowUtc.getTime() + 7 * 60 * 60 * 1000);
+  const localDateTimeStr = `${localDate.getUTCFullYear()}-${pad(localDate.getUTCMonth() + 1)}-${pad(localDate.getUTCDate())}T${pad(localDate.getUTCHours())}:${pad(localDate.getUTCMinutes())}:${pad(localDate.getUTCSeconds())}+07:00`;
+
   const body = {
     contents: [{
       parts: [{
         text: `You are a data extraction AI for JodJum (จำจด).
-Today is ${new Date().toISOString().substring(0, 10)}.
+Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
 Analyze this message from the user to extract details for creating a new item: "${messageText}"
 
 Extract the following fields and format strictly as JSON:
@@ -152,7 +157,7 @@ Extract the following fields and format strictly as JSON:
   "credit_term": 30 | 60 | 90 | null (if mentioned, e.g. เครดิต 30 วัน, otherwise null),
   "po_date": "YYYY-MM-DD (default to today if credit term is matched, otherwise null)",
   "budget_due_date": "YYYY-MM-DD (calculated as po_date + credit_term if matched, otherwise null)",
-  "reminder_date": "ISOString (optional reminder date, parse if message mentions when to remind, e.g. วันจันทร์หน้า, 30/07/26)"
+  "reminder_date": "ISOString in Thailand timezone (+07:00) or UTC (optional reminder date and time. Parse if message mentions when to remind, including time if specified, e.g. 'วันจันทร์หน้า', 'พรุ่งนี้ 10:30', '30/07/26 ตอนบ่ายสอง', 'อีก 2 ชั่วโมง'. Always convert relative times accurately based on today's date/time. If only date is specified, default time to 09:00:00+07:00)"
 }`
       }]
     }],
@@ -646,7 +651,7 @@ function extractReminderDate(text: string): string | null {
   const dateMatch = text.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
   if (dateMatch) {
     const day = parseInt(dateMatch[1]);
-    const month = parseInt(dateMatch[2]) - 1; // 0-indexed
+    const month = dateMatch[2]; // 1-indexed string representation
     let year = parseInt(dateMatch[3]);
     
     if (year < 100) {
@@ -655,7 +660,33 @@ function extractReminderDate(text: string): string | null {
       year -= 543;
     }
     
-    const date = new Date(year, month, day, 9, 0, 0);
+    let hours = 9;
+    let minutes = 0;
+    
+    // Check for HH:mm or HH.mm time after "เวลา" or "at"
+    const timeMatch = text.match(/(?:เวลา|at)\s*(\d{1,2})[:.](\d{2})/i);
+    if (timeMatch) {
+      hours = parseInt(timeMatch[1]);
+      minutes = parseInt(timeMatch[2]);
+    } else {
+      // Check for simple Thai "โมง" or "โมงเช้า" / "บ่าย..." time representation
+      const mongMatch = text.match(/(\d{1,2})\s*โมง/i);
+      if (mongMatch) {
+        let h = parseInt(mongMatch[1]);
+        if (text.includes('บ่าย') && h < 12) {
+          h += 12;
+        } else if (text.includes('เย็น') && h < 12) {
+          h += 12;
+        } else if (text.includes('ค่ำ') && h < 12) {
+          h += 12;
+        }
+        hours = h;
+      }
+    }
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const localISO = `${year}-${pad(Number(month))}-${pad(day)}T${pad(hours)}:${pad(minutes)}:00+07:00`;
+    const date = new Date(localISO);
     if (!isNaN(date.getTime())) {
       return date.toISOString();
     }

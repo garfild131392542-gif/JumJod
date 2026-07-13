@@ -29,6 +29,13 @@ function calculateDueDate(poDateStr: string | null, creditTerm: number | null): 
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function toLocalISOString(dateString: string): string {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
+  return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+}
+
 export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemModalProps) {
   const queryClient = useQueryClient();
   const supabase = createClient();
@@ -66,7 +73,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
         setTitle(itemToEdit.title);
         setDescription(itemToEdit.description || '');
         setStatus(itemToEdit.status);
-        setReminderDate(itemToEdit.reminder_date ? itemToEdit.reminder_date.substring(0, 16) : '');
+        setReminderDate(itemToEdit.reminder_date ? toLocalISOString(itemToEdit.reminder_date) : '');
         setPoDate(itemToEdit.po_date || '');
         setCreditTerm(itemToEdit.credit_term);
         setBudgetDueDate(itemToEdit.budget_due_date);
