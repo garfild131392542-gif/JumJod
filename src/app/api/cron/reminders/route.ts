@@ -83,14 +83,11 @@ export async function GET(request: Request) {
         const { createItemFlexBubble } = await import('../../../../lib/line/flex-templates');
         const bubble = createItemFlexBubble(item, appUrl);
         
-        const pushSuccess = await sendLinePush(profile.line_user_id, [
-          `⏰ **แจ้งเตือนความจำจัดซื้อ!**\nถึงเวลาดำเนินการหรือแจ้งเตือนวันกำหนดของรายการ: "${item.title}" แล้วครับ`,
-          {
-            type: 'flex',
-            altText: `⏰ แจ้งเตือน: ${item.title}`,
-            contents: bubble
-          }
-        ]);
+        const pushSuccess = await sendLinePush(profile.line_user_id, {
+          type: 'flex',
+          altText: `🔔 แจ้งเตือนความจำ: ${item.title}`,
+          contents: bubble
+        });
 
         if (pushSuccess) {
           await supabaseAdmin
