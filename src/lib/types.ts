@@ -9,6 +9,7 @@ export interface Profile {
   link_code_expires_at: string | null;
   created_at: string;
   updated_at: string;
+  line_group_id: string | null;
 }
 
 export interface Item {
@@ -48,6 +49,7 @@ export interface Database {
           link_code_expires_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          line_group_id?: string | null;
         };
         Update: {
           id?: string;
@@ -58,6 +60,7 @@ export interface Database {
           link_code_expires_at?: string | null;
           created_at?: string;
           updated_at?: string;
+          line_group_id?: string | null;
         };
         Relationships: [];
       };

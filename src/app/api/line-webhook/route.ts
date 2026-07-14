@@ -400,6 +400,10 @@ export async function POST(request: Request) {
               contents: createStockActionMenuFlex(stock)
             });
           } else if (action === 'stock_edit_menu') {
+            if (lineGroupId) {
+              await sendLineReply(replyToken, '❌ ไม่ได้รับสิทธิ์ในการแก้ไขข้อมูลรายละเอียดวัสดุผ่านกลุ่มไลน์ครับ');
+              continue;
+            }
             // Show edit sub-menu for a stock item
             const stockId = params.get('id');
             if (!stockId) continue;
@@ -418,6 +422,10 @@ export async function POST(request: Request) {
               contents: createStockEditMenuFlex(stock)
             });
           } else if (action === 'stock_delete_confirm') {
+            if (lineGroupId) {
+              await sendLineReply(replyToken, '❌ ไม่ได้รับสิทธิ์ในการลบวัสดุออกจากคลังผ่านกลุ่มไลน์ครับ');
+              continue;
+            }
             // Confirm delete for a stock item
             const stockId = params.get('id');
             if (!stockId) continue;
@@ -463,6 +471,10 @@ export async function POST(request: Request) {
               }
             });
           } else if (action === 'stock_delete_execute') {
+            if (lineGroupId) {
+              await sendLineReply(replyToken, '❌ ไม่ได้รับสิทธิ์ในการลบวัสดุออกจากคลังผ่านกลุ่มไลน์ครับ');
+              continue;
+            }
             const stockId = params.get('id');
             if (!stockId) continue;
             const { data: stock } = await supabaseAdmin.from('stocks').select('name').eq('id', stockId).single();
@@ -475,6 +487,10 @@ export async function POST(request: Request) {
           } else if (action === 'stock_cancel') {
             await sendLineReply(replyToken, '✅ ยกเลิกการดำเนินการแล้วครับ');
           } else if (action === 'stock_request_edit') {
+            if (lineGroupId) {
+              await sendLineReply(replyToken, '❌ ไม่ได้รับสิทธิ์ในการแก้ไขข้อมูลรายละเอียดวัสดุผ่านกลุ่มไลน์ครับ');
+              continue;
+            }
             const stockId = params.get('id');
             const field = params.get('field') || 'name'; // name | desc | min | priority
             if (!stockId) continue;
@@ -607,6 +623,10 @@ export async function POST(request: Request) {
               await sendLineReply(replyToken, `📦 ต้องการ${opText}วัสดุ "${stockItem.name}" จำนวนเท่าไหร่ดีครับ?\n\n(กรุณาพิมพ์จำนวนเป็นตัวเลข เช่น "5" หรือ "10")`);
             }
           } else if (action === 'stock_create_prompt') {
+            if (lineGroupId) {
+              await sendLineReply(replyToken, '❌ ไม่ได้รับสิทธิ์ในการเพิ่มวัสดุใหม่ผ่านกลุ่มไลน์นี้ครับ');
+              continue;
+            }
             const name = params.get('name')!;
             const qtyStr = params.get('qty');
             const qty = qtyStr ? parseInt(qtyStr) : null;
@@ -778,19 +798,93 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // 2. Fetch profile associated with this lineUserId
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from('profiles')
-        .select('*')
-        .eq('line_user_id', lineUserId)
-        .single();
+      // 1.2 Link LINE Group to this profile (#linkgroup)
+      if (messageText.toLowerCase() === '#linkgroup') {
+        if (!lineGroupId) {
+          await sendLineReply(replyToken, '❌ คำสั่งนี้สามารถใช้งานได้เฉพาะภายในห้องแชตกลุ่มไลน์หรือห้องแชตร่วมเท่านั้นครับ');
+          continue;
+        }
 
-      if (profileError || !profile) {
-        await sendLineReply(
-          replyToken,
-          '🔔 ยินดีต้อนรับสู่ จำจด (JumJod)!\n\nบัญชี LINE นี้ยังไม่ได้เชื่อมต่อกับระบบ เพื่อเริ่มช่วยจำกรุณาดำเนินการดังนี้:\n\n1. เข้าสู่ระบบทางหน้าเว็บจำจด\n2. ไปที่หน้าตั้งค่าและรับ "รหัสเชื่อมต่อไลน์"\n3. พิมพ์รหัสกลับมาในแชตนี้ ในรูปแบบ: #link รหัสของคุณ\n(เช่น #link ABC123D)'
-        );
+        // Fetch sender's profile
+        const { data: senderProfile, error: senderError } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('line_user_id', lineUserId)
+          .single();
+
+        if (senderError || !senderProfile) {
+          await sendLineReply(
+            replyToken,
+            '❌ บัญชีผู้ใช้งานของคุณยังไม่ได้เชื่อมต่อกับระบบจำจด กรุณาพิมพ์ #link [รหัสเชื่อมต่อ] จากหน้าเว็บของคุณก่อนในแชตส่วนตัวครับ'
+          );
+          continue;
+        }
+
+        // Link group to this profile
+        const { error: updateError } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            line_group_id: lineGroupId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', senderProfile.id);
+
+        if (updateError) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการเชื่อมต่อคลังกลุ่มกับระบบฐานข้อมูล');
+        } else {
+          await sendLineReply(
+            replyToken,
+            `✅ เชื่อมต่อกลุ่มไลน์นี้กับคลังสต็อกของอีเมล "${senderProfile.email}" เรียบร้อยแล้วครับ!\n\nสมาชิกในกลุ่มสามารถสั่งเช็กยอดหรือเบิกจ่ายวัสดุได้ร่วมกันผ่านคำสั่งแชตในกลุ่มนี้ได้ทันที`
+          );
+        }
         continue;
+      }
+
+      // Check if we are in a group chat and if it is linked to an owner's profile
+      let groupOwnerProfile: any = null;
+      if (lineGroupId) {
+        const { data: owner } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('line_group_id', lineGroupId)
+          .single();
+        if (owner) {
+          groupOwnerProfile = owner;
+        }
+      }
+
+      // If we are in a group chat, and it is NOT linked, or if the message is NOT a stock command, ignore it!
+      const isStockKeyword = /เบิก|หัก|เติม|เพิ่ม|เช็ค|เช็ก|สต็อก|คลัง|คงเหลือ|จำนวน|เหลือ|ยอด/i.test(messageText);
+      if (lineGroupId) {
+        if (!groupOwnerProfile) {
+          // Group not linked to any profile yet. Ignore all other messages to avoid spamming.
+          continue;
+        }
+        if (!isStockKeyword) {
+          // Not a stock keyword. Ignore.
+          continue;
+        }
+      }
+
+      // 2. Fetch profile associated with this lineUserId (or use groupOwnerProfile if in group)
+      let profile: any = null;
+      if (lineGroupId && groupOwnerProfile) {
+        profile = groupOwnerProfile;
+      } else {
+        const { data: senderProfile, error: profileError } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('line_user_id', lineUserId)
+          .single();
+
+        if (profileError || !senderProfile) {
+          await sendLineReply(
+            replyToken,
+            '🔔 ยินดีต้อนรับสู่ จำจด (JumJod)!\n\nบัญชี LINE นี้ยังไม่ได้เชื่อมต่อกับระบบ เพื่อเริ่มช่วยจำกรุณาดำเนินการดังนี้:\n\n1. เข้าสู่ระบบทางหน้าเว็บจำจด\n2. ไปที่หน้าตั้งค่าและรับ "รหัสเชื่อมต่อไลน์"\n3. พิมพ์รหัสกลับมาในแชตนี้ ในรูปแบบ: #link รหัสของคุณ\n(เช่น #link ABC123D)'
+          );
+          continue;
+        }
+        profile = senderProfile;
       }
 
       // Fetch user's existing items for AI context matching
@@ -890,7 +984,7 @@ export async function POST(request: Request) {
 
 
       // Check current active mode
-      const activeMode = await getUserModeState(profile, lineUserId, supabaseAdmin);
+      const activeMode = lineGroupId ? 'stock' : await getUserModeState(profile, lineUserId, supabaseAdmin);
       
       // If no mode is active, block and prompt to choose mode
       if (!activeMode) {
@@ -1560,6 +1654,11 @@ export async function POST(request: Request) {
         }
       }
 
+      // In group chats, only permit STOCK intent. If they try anything else (e.g. reminders), ignore it.
+      if (lineGroupId && parsedResult.intent !== 'STOCK') {
+        continue;
+      }
+
       switch (parsedResult.intent) {
         case 'STOCK': {
           const stockData = parsedResult.stock_data;
@@ -1683,6 +1782,10 @@ export async function POST(request: Request) {
 
           // Handle EDIT_NAME / EDIT_DESC / EDIT_MIN / EDIT_PRIORITY / EDIT_CATEGORY via AI text command
           if (['EDIT_NAME', 'EDIT_DESC', 'EDIT_MIN', 'EDIT_PRIORITY', 'EDIT_CATEGORY'].includes(stockData.action)) {
+            if (lineGroupId) {
+              await sendLineReply(replyToken, '❌ ไม่ได้รับสิทธิ์ในการแก้ไขข้อมูลรายละเอียดวัสดุผ่านกลุ่มไลน์ครับ');
+              continue;
+            }
             // Find target stock item
             let editTarget = targetStock;
             if (!editTarget) {
@@ -1787,6 +1890,13 @@ export async function POST(request: Request) {
 
           // Case 1: No match found
           if (!matchedStocks || matchedStocks.length === 0) {
+            if (lineGroupId) {
+              await sendLineReply(
+                replyToken,
+                `❌ ไม่พบวัสดุชื่อ "${searchName}" ในคลังสต็อกร่วมครับ\n(การสั่งงานผ่านกลุ่มไลน์ไม่ได้รับสิทธิ์ในการเพิ่มวัสดุใหม่ กรุณาติดต่อผู้ดูแลคลังสต็อกโดยตรงเพื่อทำการเพิ่มรายการวัสดุนี้)`
+              );
+              continue;
+            }
             if (stockData.action === 'ADD' && stockData.quantity !== null) {
               // Create immediately
               const category = searchName.includes('lab') || searchName.includes('แล็บ') || searchName.includes('สารเคมี') ? 'Laboratory' : 'อุปกรณ์สำนักงาน';
@@ -1863,6 +1973,10 @@ export async function POST(request: Request) {
           targetStock = targetStock || exactMatch || (matchedStocks.length === 1 ? matchedStocks[0] : null);
 
           if (targetStock && stockData.action === 'DELETE') {
+            if (lineGroupId) {
+              await sendLineReply(replyToken, '❌ สมาชิกกลุ่มไม่ได้รับอนุญาตให้ลบวัสดุออกจากคลังครับ');
+              continue;
+            }
             const { error: deleteError } = await supabaseAdmin
               .from('stocks')
               .delete()
@@ -1948,8 +2062,8 @@ export async function POST(request: Request) {
           const sortedStocks = matchedStocks.sort((a, b) => a.name.localeCompare(b.name));
           const bubbles = sortedStocks.slice(0, 9).map(stock => createStockFlexBubble(stock, stockData.action, stockData.quantity));
           
-          // Append option to create as new item card at the end of the carousel
-          if (searchName) {
+          // Append option to create as new item card at the end of the carousel (Only if NOT in group chat)
+          if (searchName && !lineGroupId) {
             bubbles.push(createStockCreateFlexBubble(searchName, stockData.quantity));
           }
 
