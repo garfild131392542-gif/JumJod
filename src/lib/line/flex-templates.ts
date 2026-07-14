@@ -1,4 +1,4 @@
-export function createItemFlexBubble(item: any, appUrl: string) {
+export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean = false) {
   const shortId = item.id.substring(item.id.length - 3);
   const editUrl = `${appUrl}/dashboard?edit=${item.id}`;
   
@@ -247,6 +247,48 @@ export function createItemFlexBubble(item: any, appUrl: string) {
       data: `action=request_edit&itemId=${item.id}`
     }
   });
+
+  // Snooze Actions if isAlert is true
+  if (isAlert) {
+    actions.push({
+      type: 'box',
+      layout: 'horizontal',
+      spacing: 'xs',
+      margin: 'md',
+      contents: [
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '⏳ 15 น.',
+            data: `action=snooze&itemId=${item.id}&minutes=15`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '⏰ 1 ชม.',
+            data: `action=snooze&itemId=${item.id}&minutes=60`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '📅 พรุ่งนี้เช้า',
+            data: `action=snooze&itemId=${item.id}&time=tomorrow_morning`
+          }
+        }
+      ]
+    });
+  }
 
   bubble.footer.contents = actions;
 
@@ -939,3 +981,210 @@ export function createModeSelectionFlex() {
     }
   };
 }
+
+export function createOcrStockConfirmationFlex(items: Array<{ name: string, quantity: number, unit: string }>) {
+  const contents: any[] = [
+    {
+      type: 'text',
+      text: '📸 ผลการสแกนรูปภาพวัสดุ',
+      weight: 'bold',
+      size: 'md',
+      color: '#1e293b'
+    },
+    {
+      type: 'text',
+      text: 'กรุณาคลิกเลือกเพื่อแอดวัสดุที่ตรวจพบเข้าคลังสต็อก:',
+      size: 'xs',
+      color: '#64748b',
+      margin: 'xs',
+      wrap: true
+    },
+    {
+      type: 'separator',
+      margin: 'md'
+    }
+  ];
+
+  items.forEach((item, index) => {
+    contents.push({
+      type: 'box',
+      layout: 'vertical',
+      margin: 'md',
+      spacing: 'xs',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            {
+              type: 'text',
+              text: `${index + 1}. ${item.name}`,
+              weight: 'bold',
+              size: 'sm',
+              color: '#334155',
+              flex: 7,
+              wrap: true
+            },
+            {
+              type: 'text',
+              text: `${item.quantity} ${item.unit}`,
+              size: 'sm',
+              color: '#475569',
+              flex: 3,
+              align: 'end',
+              weight: 'bold'
+            }
+          ]
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          color: '#10b981',
+          margin: 'xs',
+          action: {
+            type: 'postback',
+            label: '➕ แอดเข้าคลัง',
+            data: `action=stock_create_prompt&name=${encodeURIComponent(item.name)}&qty=${item.quantity}`
+          }
+        }
+      ]
+    });
+  });
+
+  return {
+    type: 'bubble',
+    size: 'mega',
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents
+    }
+  };
+}
+
+export function createOcrReminderConfirmationFlex(reminder: { title: string, description: string, reminder_date: string | null }) {
+  const dateText = reminder.reminder_date ? (() => {
+    const d = new Date(reminder.reminder_date);
+    const dateStr = d.toLocaleDateString('th-TH', { dateStyle: 'short', timeZone: 'Asia/Bangkok' });
+    const timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+    return `🔔 ${dateStr} (${timeStr} น.)`;
+  })() : 'ไม่มี (จดอย่างเดียว)';
+
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#f8fafc',
+      contents: [
+        {
+          type: 'text',
+          text: '📸 สแกนบันทึกช่วยจำจากภาพ',
+          weight: 'bold',
+          size: 'md',
+          color: '#8b5cf6'
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'md',
+      contents: [
+        {
+          type: 'box',
+          layout: 'vertical',
+          spacing: 'xs',
+          contents: [
+            {
+              type: 'text',
+              text: 'หัวข้อบันทึก:',
+              size: 'xs',
+              color: '#94a3b8'
+            },
+            {
+              type: 'text',
+              text: reminder.title,
+              weight: 'bold',
+              size: 'sm',
+              color: '#1e293b',
+              wrap: true
+            }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'vertical',
+          spacing: 'xs',
+          contents: [
+            {
+              type: 'text',
+              text: 'รายละเอียด:',
+              size: 'xs',
+              color: '#94a3b8'
+            },
+            {
+              type: 'text',
+              text: reminder.description || '-',
+              size: 'sm',
+              color: '#334155',
+              wrap: true
+            }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'vertical',
+          spacing: 'xs',
+          contents: [
+            {
+              type: 'text',
+              text: 'วันเวลาแจ้งเตือน:',
+              size: 'xs',
+              color: '#94a3b8'
+            },
+            {
+              type: 'text',
+              text: dateText,
+              weight: 'bold',
+              size: 'sm',
+              color: '#ef4444'
+            }
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: 'box',
+      layout: 'horizontal',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#8b5cf6',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '✅ ตกลงบันทึก',
+            data: 'action=confirm_ocr_reminder'
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '❌ ยกเลิก',
+            data: 'action=cancel_ocr_reminder'
+          }
+        }
+      ]
+    }
+  };
+}
+

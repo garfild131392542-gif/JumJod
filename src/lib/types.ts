@@ -31,6 +31,7 @@ export interface Item {
   item_request_status: 'None' | 'Pending' | 'Added';
   pr_number: string | null;
   pr_status: 'Pending' | 'Ready' | 'Issued';
+  line_group_id: string | null;
 }
 
 export interface Database {
@@ -82,6 +83,7 @@ export interface Database {
           item_request_status?: 'None' | 'Pending' | 'Added';
           pr_number?: string | null;
           pr_status?: 'Pending' | 'Ready' | 'Issued';
+          line_group_id?: string | null;
         };
         Update: {
           id?: string;
@@ -103,6 +105,7 @@ export interface Database {
           item_request_status?: 'None' | 'Pending' | 'Added';
           pr_number?: string | null;
           pr_status?: 'Pending' | 'Ready' | 'Issued';
+          line_group_id?: string | null;
         };
         Relationships: [];
       };

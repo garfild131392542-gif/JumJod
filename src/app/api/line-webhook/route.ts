@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { ItemStatus } from '@/lib/types';
-import { classifyAndParseMessageWithAI, calculateDueDate, getGeminiApiKey, parseStockMessageWithAI, regexFallbackParser, parseItemEditWithAI } from '@/lib/ai';
+import { classifyAndParseMessageWithAI, calculateDueDate, getGeminiApiKey, parseStockMessageWithAI, regexFallbackParser, parseItemEditWithAI, analyzeImageWithAI } from '@/lib/ai';
 import {
   createItemFlexBubble,
   createStockFlexBubble,
@@ -9,7 +9,9 @@ import {
   createStockEditMenuFlex,
   createStockDashboardFlex,
   createStockCreateFlexBubble,
-  createModeSelectionFlex
+  createModeSelectionFlex,
+  createOcrStockConfirmationFlex,
+  createOcrReminderConfirmationFlex
 } from '@/lib/line/flex-templates';
 import {
   verifySignature,
@@ -84,6 +86,7 @@ export async function POST(request: Request) {
     for (const event of events) {
       const replyToken = event.replyToken;
       const lineUserId = event.source.userId;
+      const lineGroupId = event.source.groupId || event.source.roomId || null;
       const messageText = event.type === 'message' && event.message.type === 'text' ? event.message.text.trim() : '';
       const markAsReadToken = event.markAsReadToken;
 
@@ -215,7 +218,169 @@ export async function POST(request: Request) {
               promptMsg = `✍️ เตรียมแก้ไขรายการ: "${item.title}"\n\nกรุณาพิมพ์รายละเอียดใหม่ที่คุณต้องการแก้ไขเข้ามาได้เลยครับ เช่น:\n- "แก้ชื่อเป็น [ชื่อใหม่]"\n- "เครดิต 60 วัน"\n- "แก้เวลาแจ้งเตือนเป็น วันที่ 15/07/26 เวลา 12:00 น."\n(บอทจะอัปเดตข้อมูลรายการนี้โดยตรง)`;
             }
 
-            await sendLineReply(replyToken, promptMsg);
+            await sendLineReply(replyToken, {
+              type: 'text',
+              text: promptMsg,
+              quickReply: {
+                items: [
+                  {
+                    type: 'action',
+                    action: {
+                      type: 'datetimepicker',
+                      label: '📅 ตั้งเวลาแจ้งเตือน',
+                      data: `action=set_reminder_date_picker&itemId=${itemId}`,
+                      mode: 'datetime'
+                    }
+                  },
+                  {
+                    type: 'action',
+                    action: {
+                      type: 'postback',
+                      label: '❌ ยกเลิกการแก้ไข',
+                      data: `action=cancel_edit`
+                    }
+                  }
+                ]
+              }
+            });
+          } else if (action === 'snooze') {
+            if (!itemId) continue;
+            const { data: item, error: fetchError } = await supabaseAdmin
+              .from('items')
+              .select('*')
+              .eq('id', itemId)
+              .single();
+
+            if (fetchError || !item) {
+              await sendLineReply(replyToken, '❌ ไม่พบรายการนี้ หรืออาจถูกลบไปแล้ว');
+              continue;
+            }
+
+            // Calculate new reminder date
+            let newReminderDate = new Date();
+            const minutesStr = params.get('minutes');
+            const timeStr = params.get('time');
+
+            if (minutesStr) {
+              const minutes = parseInt(minutesStr);
+              newReminderDate.setMinutes(newReminderDate.getMinutes() + minutes);
+            } else if (timeStr === 'tomorrow_morning') {
+              newReminderDate.setDate(newReminderDate.getDate() + 1);
+              const pad = (n: number) => String(n).padStart(2, '0');
+              const localISO = `${newReminderDate.getFullYear()}-${pad(newReminderDate.getMonth() + 1)}-${pad(newReminderDate.getDate())}T09:00:00+07:00`;
+              newReminderDate = new Date(localISO);
+            } else {
+              await sendLineReply(replyToken, '❌ รูปแบบการเลื่อนเวลาไม่ถูกต้อง');
+              continue;
+            }
+
+            const { data: updatedItem, error: updateError } = await supabaseAdmin
+              .from('items')
+              .update({
+                reminder_date: newReminderDate.toISOString(),
+                reminder_sent: false,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', itemId)
+              .select('*')
+              .single();
+
+            if (updateError || !updatedItem) {
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการเลื่อนเวลาแจ้งเตือน');
+            } else {
+              const formattedDate = newReminderDate.toLocaleDateString('th-TH', { dateStyle: 'short', timeZone: 'Asia/Bangkok' });
+              const formattedTime = newReminderDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+              await sendLineReply(
+                replyToken,
+                `⏳ เลื่อนเวลาแจ้งเตือนเรียบร้อยแล้ว!\n\nรายการ: "${updatedItem.title}"\nเวลาแจ้งเตือนใหม่: ${formattedDate} (เวลา ${formattedTime} น.)`
+              );
+            }
+          } else if (action === 'set_reminder_date_picker') {
+            const datetimeStr = event.postback.params?.datetime;
+            if (!datetimeStr) continue;
+
+            const localISO = `${datetimeStr}:00+07:00`;
+            const dateObj = new Date(localISO);
+            if (isNaN(dateObj.getTime())) continue;
+
+            const { data: updatedItem, error } = await supabaseAdmin
+              .from('items')
+              .update({
+                reminder_date: dateObj.toISOString(),
+                reminder_sent: false,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', itemId)
+              .select('*')
+              .single();
+
+            memoryStateCache.delete(lineUserId);
+
+            if (error || !updatedItem) {
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการตั้งเวลาแจ้งเตือน');
+            } else {
+              const formattedDate = dateObj.toLocaleDateString('th-TH', { dateStyle: 'short', timeZone: 'Asia/Bangkok' });
+              const formattedTime = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+              await sendLineReply(replyToken, `🔔 ตั้งเวลาแจ้งเตือนสำเร็จ!\n\nรายการ: "${updatedItem.title}"\nเวลาแจ้งเตือนใหม่: ${formattedDate} (เวลา ${formattedTime} น.)`);
+            }
+          } else if (action === 'cancel_edit') {
+            memoryStateCache.delete(lineUserId);
+            await sendLineReply(replyToken, '✅ ยกเลิกการแก้ไขรายการเรียบร้อยแล้วครับ');
+          } else if (action === 'confirm_ocr_reminder') {
+            const userState = memoryStateCache.get(lineUserId);
+            if (userState && userState.action === 'pending_ocr_reminder') {
+              const ocrData = userState.data;
+              const { data: userProfile } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('line_user_id', lineUserId)
+                .single();
+
+              if (!userProfile) {
+                await sendLineReply(replyToken, '❌ ไม่พบบัญชีผู้ใช้งานที่เชื่อมต่อ');
+                continue;
+              }
+
+              const status = ocrData.credit_term ? 'Purchasing' : 'Pending';
+              const { data: insertedItem, error: insertError } = await supabaseAdmin
+                .from('items')
+                .insert([
+                  {
+                    user_id: userProfile.id,
+                    title: ocrData.title,
+                    description: ocrData.description,
+                    status,
+                    reminder_date: ocrData.reminder_date,
+                    is_pr: false,
+                    line_group_id: lineGroupId
+                  }
+                ])
+                .select('*')
+                .single();
+
+              memoryStateCache.delete(lineUserId);
+
+              if (insertError || !insertedItem) {
+                await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+              } else {
+                const requestUrl = new URL(request.url);
+                const appUrl = requestUrl.origin;
+                const bubble = createItemFlexBubble(insertedItem, appUrl);
+                await sendLineReply(replyToken, [
+                  '✅ บันทึกช่วยจำจากภาพถ่ายเรียบร้อยแล้วครับ!',
+                  {
+                    type: 'flex',
+                    altText: `✅ บันทึกรายการ "${insertedItem.title}" สำเร็จ`,
+                    contents: bubble
+                  }
+                ]);
+              }
+            } else {
+              await sendLineReply(replyToken, '❌ ไม่พบข้อมูลการสแกนหรือข้อมูลหมดอายุแล้วครับ');
+            }
+          } else if (action === 'cancel_ocr_reminder') {
+            memoryStateCache.delete(lineUserId);
+            await sendLineReply(replyToken, '✅ ยกเลิกการบันทึกรายการแล้วครับ');
           } else if (action === 'stock_select_action') {
             // Show sub-action menu for a stock item
             const stockId = params.get('id');
@@ -491,7 +656,80 @@ export async function POST(request: Request) {
         continue;
       }
 
-      if (event.type !== 'message' || event.message.type !== 'text') {
+      if (event.type !== 'message') {
+        continue;
+      }
+
+      if (event.message.type === 'image') {
+        try {
+          const messageId = event.message.id;
+          
+          const { data: profile, error: profileErr } = await supabaseAdmin
+            .from('profiles')
+            .select('*')
+            .eq('line_user_id', lineUserId)
+            .single();
+
+          if (profileErr || !profile) {
+            await sendLineReply(
+              replyToken,
+              '🔔 ยินดีต้อนรับสู่ จำจด (JumJod)!\n\nบัญชี LINE นี้ยังไม่ได้เชื่อมต่อกับระบบ กรุณาเข้าสู่ระบบทางหน้าเว็บเพื่อเชื่อมโยงบัญชีก่อนใช้งานนะครับ'
+            );
+            continue;
+          }
+
+          const imageBuffer = await downloadLineMessageContent(messageId);
+          const imageBase64 = imageBuffer.toString('base64');
+          const mimeType = 'image/jpeg';
+
+          const apiKey = getGeminiApiKey();
+          if (!apiKey) {
+            await sendLineReply(replyToken, '❌ ไม่พบ API Key สำหรับวิเคราะห์รูปภาพครับ');
+            continue;
+          }
+
+          const activeMode = await getUserModeState(profile, lineUserId, supabaseAdmin);
+          const ocrResult = await analyzeImageWithAI(imageBase64, mimeType, activeMode, apiKey);
+          console.log('[LINE BOT] Image OCR scanning result:', ocrResult);
+
+          if (ocrResult.type === 'STOCK') {
+            const items = ocrResult.items || [];
+            if (items.length === 0) {
+              await sendLineReply(replyToken, '🔍 ไม่พบข้อมูลสิ่งของหรือวัสดุในรูปภาพนี้ครับ');
+            } else {
+              memoryStateCache.set(lineUserId, {
+                action: 'pending_ocr_stock',
+                items: items
+              });
+              const flexCard = createOcrStockConfirmationFlex(items);
+              await sendLineReply(replyToken, {
+                type: 'flex',
+                altText: '📸 ยืนยันข้อมูลสแกนวัสดุสต็อก',
+                contents: flexCard
+              });
+            }
+          } else {
+            if (!ocrResult.title) {
+              await sendLineReply(replyToken, '🔍 ไม่สามารถสแกนข้อความหรือความจำในรูปภาพนี้ได้ครับ');
+            } else {
+              memoryStateCache.set(lineUserId, {
+                action: 'pending_ocr_reminder',
+                data: ocrResult
+              });
+              const flexCard = createOcrReminderConfirmationFlex(ocrResult);
+              await sendLineReply(replyToken, {
+                type: 'flex',
+                altText: '📸 ยืนยันการบันทึกช่วยจำจากภาพ',
+                contents: flexCard
+              });
+            }
+          }
+        } catch (error: any) {
+          console.error('[LINE BOT] Error scanning image:', error);
+          await sendLineReply(replyToken, `❌ เกิดข้อผิดพลาดในการสแกนรูปภาพ: ${error.message || error}`);
+        }
+        continue;
+      } else if (event.message.type !== 'text') {
         continue;
       }
 
@@ -1901,7 +2139,8 @@ export async function POST(request: Request) {
                 po_date: createData.po_date,
                 credit_term: createData.credit_term,
                 budget_due_date: createData.budget_due_date,
-                is_pr: isPr
+                is_pr: isPr,
+                line_group_id: lineGroupId
               },
             ])
             .select('*')
@@ -1934,4 +2173,24 @@ export async function POST(request: Request) {
     console.error('LINE webhook error:', error);
     return new Response('Internal Server Error', { status: 500 });
   }
+}
+
+async function downloadLineMessageContent(messageId: string): Promise<Buffer> {
+  const channelAccessToken = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+  if (!channelAccessToken) {
+    throw new Error('Missing LINE_CHANNEL_ACCESS_TOKEN');
+  }
+
+  const response = await fetch(`https://api-data.line.me/v2/bot/message/${messageId}/content`, {
+    headers: {
+      Authorization: `Bearer ${channelAccessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to download LINE message content: status ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
 }

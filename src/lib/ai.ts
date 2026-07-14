@@ -973,3 +973,93 @@ Format the output strictly as JSON with the following structure (include only fi
   return parsed;
 }
 
+/**
+ * Analyzes an image with Gemini Multimodal API.
+ */
+export async function analyzeImageWithAI(
+  imageBase64: string,
+  mimeType: string,
+  activeMode: 'stock' | 'reminder' | null,
+  apiKey: string
+): Promise<any> {
+  const modelName = 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+  const nowUtc = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const localDate = new Date(nowUtc.getTime() + 7 * 60 * 60 * 1000);
+  const localDateTimeStr = `${localDate.getUTCFullYear()}-${pad(localDate.getUTCMonth() + 1)}-${pad(localDate.getUTCDate())}T${pad(localDate.getUTCHours())}:${pad(localDate.getUTCMinutes())}:${pad(localDate.getUTCSeconds())}+07:00`;
+
+  let prompt = '';
+  if (activeMode === 'stock') {
+    prompt = `You are a stock receipt and item parser for JodJum (จำจด).
+Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
+
+Analyze this image of a receipt, item package, or stock listing. Extract any stock materials/items.
+For each item, extract:
+- name: Clean, short name of the material (in Thai if Thai, e.g. 'กระดาษ A4')
+- quantity: Numeric quantity (integer or float)
+- unit: Unit (in Thai if Thai, e.g. 'ชิ้น', 'กล่อง', 'ขวด', 'อัน', 'แผ่น')
+
+Format the response strictly as JSON with the following structure:
+{
+  "type": "STOCK",
+  "items": [
+    {
+      "name": "Clean name of item",
+      "quantity": 10,
+      "unit": "ชิ้น"
+    }
+  ]
+}`;
+  } else {
+    prompt = `You are a reminder and task parser for JodJum (จำจด).
+Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
+
+Analyze this image of a receipt, document, or handwritten note. Extract the main task/reminder details.
+Suggest a reminder title and when to remind if specified.
+
+Format the response strictly as JSON with the following structure:
+{
+  "type": "REMINDER",
+  "title": "Clean, short, and descriptive title (in Thai, e.g. 'จ่ายค่าน้ำประปา', 'เคลียร์งบประมาณ')",
+  "description": "Short description of details extracted from the image (in Thai)",
+  "reminder_date": "ISOString in Thailand timezone (+07:00) of when to remind, or null if no specific time is found (If only date is specified, default time to 09:00:00+07:00)"
+}`;
+  }
+
+  const body = {
+    contents: [
+      {
+        parts: [
+          { text: prompt },
+          {
+            inlineData: {
+              mimeType,
+              data: imageBase64
+            }
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      responseMimeType: "application/json"
+    }
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gemini Multimodal API error: status ${response.status}`);
+  }
+
+  const data = await response.json();
+  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  return JSON.parse(rawText.trim());
+}
+
+

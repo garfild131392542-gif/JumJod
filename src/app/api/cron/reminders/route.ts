@@ -72,7 +72,16 @@ export async function GET(request: Request) {
           .eq('id', item.user_id)
           .single();
 
-        if (profileError || !profile || !profile.line_user_id) {
+        if (profileError || !profile) {
+          await supabaseAdmin
+            .from('items')
+            .update({ reminder_sent: true })
+            .eq('id', item.id);
+          continue;
+        }
+
+        const targetLineId = item.line_group_id || profile.line_user_id;
+        if (!targetLineId) {
           await supabaseAdmin
             .from('items')
             .update({ reminder_sent: true })
@@ -81,9 +90,9 @@ export async function GET(request: Request) {
         }
 
         const { createItemFlexBubble } = await import('../../../../lib/line/flex-templates');
-        const bubble = createItemFlexBubble(item, appUrl);
+        const bubble = createItemFlexBubble(item, appUrl, true);
         
-        const pushSuccess = await sendLinePush(profile.line_user_id, {
+        const pushSuccess = await sendLinePush(targetLineId, {
           type: 'flex',
           altText: `🔔 แจ้งเตือนความจำ: ${item.title}`,
           contents: bubble
