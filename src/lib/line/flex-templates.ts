@@ -158,7 +158,7 @@ export function createItemFlexBubble(item: any, appUrl: string) {
 
   // Add credit details if exists
   if (item.credit_term) {
-    const formattedDate = item.budget_due_date ? new Date(item.budget_due_date).toLocaleDateString('th-TH', { dateStyle: 'short' }) : '-';
+    const formattedDate = item.budget_due_date ? new Date(item.budget_due_date).toLocaleDateString('th-TH', { dateStyle: 'short', timeZone: 'Asia/Bangkok' }) : '-';
     bubble.body.contents[bubble.body.contents.length - 1].contents.push({
       type: 'box',
       layout: 'horizontal',
@@ -185,8 +185,8 @@ export function createItemFlexBubble(item: any, appUrl: string) {
   // Add reminder details if exists
   if (item.reminder_date) {
     const dateObj = new Date(item.reminder_date);
-    const dateStr = dateObj.toLocaleDateString('th-TH', { dateStyle: 'short' });
-    const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    const dateStr = dateObj.toLocaleDateString('th-TH', { dateStyle: 'short', timeZone: 'Asia/Bangkok' });
+    const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
     bubble.body.contents[bubble.body.contents.length - 1].contents.push({
       type: 'box',
       layout: 'horizontal',
@@ -719,7 +719,7 @@ export function createStockDashboardFlex(stocks: any[]) {
         },
         {
           type: 'text',
-          text: `อัปเดตล่าสุด: ${new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' })}`,
+          text: `อัปเดตล่าสุด: ${new Date().toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short', timeZone: 'Asia/Bangkok' })}`,
           size: 'xs',
           color: '#94a3b8',
           margin: 'xs'

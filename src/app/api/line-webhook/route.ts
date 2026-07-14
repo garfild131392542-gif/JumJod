@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { ItemStatus } from '@/lib/types';
-import { classifyAndParseMessageWithAI, calculateDueDate, getGeminiApiKey, parseStockMessageWithAI, regexFallbackParser } from '@/lib/ai';
+import { classifyAndParseMessageWithAI, calculateDueDate, getGeminiApiKey, parseStockMessageWithAI, regexFallbackParser, parseItemEditWithAI } from '@/lib/ai';
 import {
   createItemFlexBubble,
   createStockFlexBubble,
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
               .single();
 
             if (fetchError || !item) {
-              await sendLineReply(replyToken, '❌ ไม่พบรายการจัดซื้อนี้ หรืออาจถูกลบไปแล้ว');
+              await sendLineReply(replyToken, '❌ ไม่พบรายการนี้ หรืออาจถูกลบไปแล้ว');
               continue;
             }
 
@@ -142,7 +142,7 @@ export async function POST(request: Request) {
               .single();
 
             if (fetchError || !item) {
-              await sendLineReply(replyToken, '❌ ไม่พบรายการจัดซื้อนี้ หรืออาจถูกลบไปแล้ว');
+              await sendLineReply(replyToken, '❌ ไม่พบรายการนี้ หรืออาจถูกลบไปแล้ว');
               continue;
             }
 
@@ -172,7 +172,7 @@ export async function POST(request: Request) {
               .single();
 
             if (fetchError || !item) {
-              await sendLineReply(replyToken, '❌ ไม่พบรายการจัดซื้อนี้ หรืออาจถูกลบไปแล้ว');
+              await sendLineReply(replyToken, '❌ ไม่พบรายการนี้ หรืออาจถูกลบไปแล้ว');
               continue;
             }
 
@@ -182,7 +182,7 @@ export async function POST(request: Request) {
               .eq('id', itemId);
 
             if (deleteError) {
-              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการลบรายการจัดซื้อ');
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการลบรายการ');
             } else {
               await sendLineReply(replyToken, `🗑️ ลบรายการ "${item.title}" เรียบร้อยแล้วครับ!`);
             }
@@ -190,21 +190,32 @@ export async function POST(request: Request) {
             if (!itemId) continue;
             const { data: item, error: fetchError } = await supabaseAdmin
               .from('items')
-              .select('title')
+              .select('title, reminder_date, credit_term')
               .eq('id', itemId)
               .single();
 
             if (fetchError || !item) {
-              await sendLineReply(replyToken, '❌ ไม่พบรายการจัดซื้อนี้ หรืออาจถูกลบไปแล้ว');
+              await sendLineReply(replyToken, '❌ ไม่พบรายการนี้ หรืออาจถูกลบไปแล้ว');
               continue;
             }
 
+            const { data: userProfile } = await supabaseAdmin
+              .from('profiles')
+              .select('*')
+              .eq('line_user_id', lineUserId)
+              .single();
+            const activeMode = userProfile ? await getUserModeState(userProfile, lineUserId, supabaseAdmin) : null;
+
             memoryStateCache.set(lineUserId, { action: 'editing', itemId: itemId, itemTitle: item.title });
 
-            await sendLineReply(
-              replyToken,
-              `✍️ เตรียมแก้ไขรายการ: "${item.title}"\n\nกรุณาพิมพ์รายละเอียดใหม่ที่คุณต้องการแก้ไขเข้ามาได้เลยครับ เช่น:\n- "เครดิต 60 วัน"\n- "แก้ชื่อเป็น คอมพิวเตอร์ i7"\n- "แก้คำอธิบายเป็น ซื้อมาใช้ในออฟฟิศ"\n(บอทจะอัปเดตข้อมูลรายการนี้โดยตรง)`
-            );
+            let promptMsg = '';
+            if (activeMode === 'reminder' || item.reminder_date) {
+              promptMsg = `✍️ เตรียมแก้ไขรายการ: "${item.title}"\n\nกรุณาพิมพ์รายละเอียดใหม่ที่คุณต้องการแก้ไขเข้ามาได้เลยครับ เช่น:\n- "แก้ชื่อเป็น [ชื่อใหม่]"\n- "แก้เวลาแจ้งเตือนเป็น วันที่ 15/07/26 เวลา 12:00 น."\n- "แก้เวลาเป็น พรุ่งนี้ 9 โมงเช้า"\n- "ยกเลิกแจ้งเตือน" (เพื่อปิดการแจ้งเตือน)\n(บอทจะอัปเดตข้อมูลรายการนี้โดยตรง)`;
+            } else {
+              promptMsg = `✍️ เตรียมแก้ไขรายการ: "${item.title}"\n\nกรุณาพิมพ์รายละเอียดใหม่ที่คุณต้องการแก้ไขเข้ามาได้เลยครับ เช่น:\n- "แก้ชื่อเป็น [ชื่อใหม่]"\n- "เครดิต 60 วัน"\n- "แก้เวลาแจ้งเตือนเป็น วันที่ 15/07/26 เวลา 12:00 น."\n(บอทจะอัปเดตข้อมูลรายการนี้โดยตรง)`;
+            }
+
+            await sendLineReply(replyToken, promptMsg);
           } else if (action === 'stock_select_action') {
             // Show sub-action menu for a stock item
             const stockId = params.get('id');
@@ -558,7 +569,7 @@ export async function POST(request: Request) {
       if (cleanMessageText === 'บันทึกช่วยจำ') {
         memoryStateCache.delete(lineUserId);
         await setUserModeState(profile, lineUserId, 'reminder', supabaseAdmin);
-        await sendLineReply(replyToken, '📝 เข้าสู่โหมด **"บันทึกช่วยจำพร้อมแจ้งเตือน"** เรียบร้อยแล้วครับ! คุณสามารถพิมพ์จดรายการจัดซื้อหรือการแจ้งเตือนต่าง ๆ ได้ทันทีจ้า');
+        await sendLineReply(replyToken, '📝 เข้าสู่โหมด **"บันทึกช่วยจำพร้อมแจ้งเตือน"** เรียบร้อยแล้วครับ! คุณสามารถพิมพ์บันทึกข้อความหรือตั้งเวลาแจ้งเตือนต่าง ๆ ได้ทันทีจ้า');
         continue;
       }
       
@@ -1095,43 +1106,152 @@ export async function POST(request: Request) {
       }
 
       if (userState && userState.action === 'editing') {
-        let updateTitle = messageText;
-        let credit_term: any = null;
+        const { data: currentItem } = await supabaseAdmin
+          .from('items')
+          .select('*')
+          .eq('id', userState.itemId)
+          .single();
 
-        const creditMatch = messageText.match(/(?:เครดิต|credit|cr)\s*(30|60|90)\s*(?:วัน|days)?/i);
-        if (creditMatch) {
-          credit_term = Number(creditMatch[1]);
-          updateTitle = messageText.replace(/(?:เครดิต|credit|cr)\s*(30|60|90)\s*(?:วัน|days)?/i, '').trim();
-        }
-
-        updateTitle = updateTitle.replace(/^(แก้ไข|แก้|เปลี่ยน|edit|update|ชื่อ|เป็น)\s*/i, '').trim();
-
+        const apiKey = getGeminiApiKey();
         const updates: any = { updated_at: new Date().toISOString() };
-        if (updateTitle) {
-          updates.title = updateTitle;
-        }
-        if (credit_term) {
-          const poDate = new Date().toISOString().substring(0, 10);
-          updates.po_date = poDate;
-          updates.credit_term = credit_term;
-          updates.budget_due_date = calculateDueDate(poDate, credit_term);
+        let parsedByAI = false;
+
+        if (apiKey && currentItem) {
+          try {
+            const aiUpdates = await parseItemEditWithAI(messageText, currentItem, apiKey);
+            console.log('[LINE BOT] AI edit parsing result:', aiUpdates);
+            
+            if (aiUpdates.title !== undefined) {
+              if (aiUpdates.title) {
+                updates.title = aiUpdates.title;
+              }
+            }
+            if (aiUpdates.description !== undefined) {
+              updates.description = aiUpdates.description;
+            }
+            if (aiUpdates.credit_term !== undefined) {
+              updates.credit_term = aiUpdates.credit_term;
+              if (aiUpdates.po_date) updates.po_date = aiUpdates.po_date;
+              if (aiUpdates.budget_due_date) updates.budget_due_date = aiUpdates.budget_due_date;
+            }
+            if (aiUpdates.reminder_date !== undefined) {
+              updates.reminder_date = aiUpdates.reminder_date;
+              if (aiUpdates.reminder_date) {
+                updates.reminder_sent = false;
+              }
+            }
+            
+            parsedByAI = true;
+          } catch (err) {
+            console.error('[LINE BOT] Error parsing edit with AI, falling back to local:', err);
+          }
         }
 
-        const dateMatch = messageText.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
-        if (dateMatch) {
-          const day = parseInt(dateMatch[1]);
-          const month = parseInt(dateMatch[2]) - 1;
-          let year = parseInt(dateMatch[3]);
-          if (year < 100) year += 2000;
-          else if (year > 2500) year -= 543;
-          
-          const remDate = new Date(year, month, day, 9, 0, 0);
-          if (!isNaN(remDate.getTime())) {
-            updates.reminder_date = remDate.toISOString();
-            if (updates.title) {
-              updates.title = updates.title.replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g, '').trim();
-              updates.title = updates.title.replace(/(?:แจ้งเตือน|เตือน|วันจันทร์ที่|วันอังคารที่|วันพุธที่|วันพฤหัสบดีที่|วันศุกร์ที่|วันเสาร์ที่|วันอาทิตย์ที่|วันที่|วัน)\s*$/i, '').trim();
+        if (!parsedByAI) {
+          // Fallback local parsing logic
+          let updateTitle = messageText;
+          let credit_term: any = null;
+
+          const creditMatch = messageText.match(/(?:เครดิต|credit|cr)\s*(30|60|90)\s*(?:วัน|days)?/i);
+          if (creditMatch) {
+            credit_term = Number(creditMatch[1]);
+            updateTitle = messageText.replace(/(?:เครดิต|credit|cr)\s*(30|60|90)\s*(?:วัน|days)?/i, '').trim();
+          }
+
+          updateTitle = updateTitle.replace(/^(แก้ไข|แก้|เปลี่ยน|edit|update|ชื่อ|เป็น)\s*/i, '').trim();
+          updateTitle = updateTitle.replace(/^(?:ให้แจ้งเตือน|ไม่แจ้งเตือน|ช่วยแจ้งเตือน|แจ้งเตือน|ช่วยเตือน|เตือน|บันทึก|จด|เพิ่ม)\s*/i, '').trim();
+          updateTitle = updateTitle.replace(/^[:\-ー\s\.]+/, '').trim();
+
+          if (credit_term) {
+            const poDate = new Date().toISOString().substring(0, 10);
+            updates.po_date = poDate;
+            updates.credit_term = credit_term;
+            updates.budget_due_date = calculateDueDate(poDate, credit_term);
+          }
+
+          const isCancelReminder = /^(ยกเลิกแจ้งเตือน|ไม่แจ้งเตือนแล้ว|ลบวันแจ้งเตือน|ไม่เตือนแล้ว|ลบแจ้งเตือน|ไม่เตือน)/i.test(messageText.trim());
+          if (isCancelReminder) {
+            updates.reminder_date = null;
+            const cleanText = messageText.replace(/^(ยกเลิกแจ้งเตือน|ไม่แจ้งเตือนแล้ว|ลบวันแจ้งเตือน|ไม่เตือนแล้ว|ลบแจ้งเตือน|ไม่เตือน)\s*/i, '').trim();
+            if (!cleanText) {
+              updateTitle = ''; 
+            } else {
+              updateTitle = cleanText;
             }
+          } else {
+            let baseDate = new Date();
+            let matchedDate = false;
+
+            const dateMatch = messageText.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
+            if (dateMatch) {
+              const day = parseInt(dateMatch[1]);
+              const month = parseInt(dateMatch[2]) - 1;
+              let year = parseInt(dateMatch[3]);
+              if (year < 100) year += 2000;
+              else if (year > 2500) year -= 543;
+              
+              baseDate = new Date(year, month, day);
+              matchedDate = true;
+            } else if (messageText.includes('พรุ่งนี้')) {
+              baseDate.setDate(baseDate.getDate() + 1);
+              matchedDate = true;
+            } else if (messageText.includes('วันนี้')) {
+              matchedDate = true;
+            }
+
+            let hours = 9;
+            let minutes = 0;
+            let matchedTime = false;
+
+            const timeMatch = messageText.match(/(?:เวลา|at|ตอน)\s*(\d{1,2})[:.](\d{2})/i) || messageText.match(/\b(\d{1,2})[:.](\d{2})\b/);
+            if (timeMatch) {
+              hours = parseInt(timeMatch[1]);
+              minutes = parseInt(timeMatch[2]);
+              matchedTime = true;
+            } else {
+              const mongMatch = messageText.match(/(\d{1,2})\s*โมง/i);
+              if (mongMatch) {
+                let h = parseInt(mongMatch[1]);
+                if (messageText.includes('บ่าย') && h < 12) {
+                  h += 12;
+                } else if (messageText.includes('เย็น') && h < 12) {
+                  h += 12;
+                } else if (messageText.includes('ค่ำ') && h < 12) {
+                  h += 12;
+                }
+                hours = h;
+                matchedTime = true;
+              }
+            }
+
+            if (matchedDate || matchedTime) {
+              const pad = (n: number) => String(n).padStart(2, '0');
+              const localISO = `${baseDate.getFullYear()}-${pad(baseDate.getMonth() + 1)}-${pad(baseDate.getDate())}T${pad(hours)}:${pad(minutes)}:00+07:00`;
+              const remDate = new Date(localISO);
+              if (!isNaN(remDate.getTime())) {
+                updates.reminder_date = remDate.toISOString();
+                updates.reminder_sent = false;
+              }
+
+              let titleClean = updateTitle;
+              titleClean = titleClean.replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g, '').trim();
+              titleClean = titleClean.replace(/(?:เวลา|at|ตอน)\s*\d{1,2}[:.]\d{2}/gi, '').trim();
+              titleClean = titleClean.replace(/\b\d{1,2}[:.]\d{2}\b/g, '').trim();
+              titleClean = titleClean.replace(/\d{1,2}\s*โมง/g, '').trim();
+              titleClean = titleClean.replace(/(?:วันนี้|พรุ่งนี้|แจ้งเตือน|เตือน|น\.)/g, '').trim();
+              titleClean = titleClean.replace(/^[:\-ー\s\.]+/, '').trim();
+
+              const containsNameChangeKeyword = /^(แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อ|เปลี่ยนชื่อ|แก้ชื่อรายการเป็น)/.test(messageText.trim());
+              if (!containsNameChangeKeyword && !titleClean) {
+                updateTitle = ''; 
+              } else {
+                updateTitle = titleClean || updateTitle;
+              }
+            }
+          }
+
+          if (updateTitle) {
+            updates.title = updateTitle;
           }
         }
 

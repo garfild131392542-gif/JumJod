@@ -878,3 +878,98 @@ function findClosestItem(query: string, items: any[]): any | null {
   }
   return null; // Return null instead of items[0] to prevent accidental destructive actions
 }
+
+/**
+ * Extracts and parses details specifically for editing an existing item.
+ */
+export async function parseItemEditWithAI(
+  messageText: string,
+  currentItem: { title: string; description: string | null; credit_term: number | null; reminder_date: string | null },
+  apiKey: string
+): Promise<{
+  title?: string;
+  description?: string;
+  credit_term?: number | null;
+  po_date?: string | null;
+  budget_due_date?: string | null;
+  reminder_date?: string | null;
+}> {
+  const modelName = 'gemini-2.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+  const nowUtc = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const localDate = new Date(nowUtc.getTime() + 7 * 60 * 60 * 1000);
+  const localDateTimeStr = `${localDate.getUTCFullYear()}-${pad(localDate.getUTCMonth() + 1)}-${pad(localDate.getUTCDate())}T${pad(localDate.getUTCHours())}:${pad(localDate.getUTCMinutes())}:${pad(localDate.getUTCSeconds())}+07:00`;
+
+  let currentReminderStr = 'None';
+  if (currentItem.reminder_date) {
+    const d = new Date(currentItem.reminder_date);
+    const lDate = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+    currentReminderStr = `${lDate.getUTCFullYear()}-${pad(lDate.getUTCMonth() + 1)}-${pad(lDate.getUTCDate())} ${pad(lDate.getUTCHours())}:${pad(lDate.getUTCMinutes())}`;
+  }
+
+  const body = {
+    contents: [{
+      parts: [{
+        text: `You are an edit parser for JodJum (จำจด).
+Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
+
+The user is editing a specific item. Here is the current state of the item:
+- Title: "${currentItem.title}"
+- Description: "${currentItem.description || 'None'}"
+- Credit Term: ${currentItem.credit_term || 'None'} days
+- Scheduled Reminder: ${currentReminderStr}
+
+The user has sent this edit request: "${messageText}"
+
+Analyze the request to see what fields they want to change.
+Rules:
+1. If the user wants to change/set/update the reminder time (e.g., "แจ้งเตือนตอน 12:00", "แก้เวลาเป็นพรุ่งนี้ 9 โมงเช้า", "เตือนพรุ่งนี้บ่ายโมง", "แก้เวลาแจ้งเตือนใหม่", "แก้เวลาเป็น 15/07/26 เวลา 10:00", "แจ้งเตือนเวลาตอน 12:00 น."), extract/calculate the new "reminder_date" as an ISO String in Thailand timezone (+07:00).
+   - If they specify only a time (e.g. "ตอน 12:00 น.", "แก้เวลาเป็น 10:00"), keep the date of today (or tomorrow if the time has already passed today, but default to today first) or keep the current reminder's date if appropriate.
+   - If they specify a time edit but it has no date/time information at all (e.g. just "แก้เวลาแจ้งเตือนใหม่" without any time), do not change the reminder_date or the title. Leave both unchanged.
+   - If they say "ยกเลิกแจ้งเตือน" / "ไม่เตือนแล้ว" / "ลบวันแจ้งเตือน" / "ไม่แจ้งเตือนแล้ว", set "reminder_date" to null.
+2. If the user wants to change the title (e.g. "แก้ชื่อเป็น คอมพิวเตอร์ i7", "เปลี่ยนชื่อรายการเป็น ซื้ออุปกรณ์สำนักงาน", "แก้ชื่อเป็น สมุดโน้ต", or they type a clear new name like "กระดาษ A4 10 กล่อง" without referencing dates/times or credit terms), set the "title" field.
+   - CRITICAL: Never include keyword prefixes like 'แจ้งเตือน', 'ให้แจ้งเตือน', 'ไม่แจ้งเตือน', 'เตือน', 'ช่วยเตือน', 'ช่วยแจ้งเตือน', 'บันทึก', 'จด', 'เพิ่ม', 'แก้ชื่อเป็น', 'เปลี่ยนชื่อเป็น' in the title. Remove them.
+3. If they only requested to change the reminder date/time (e.g., "แจ้งเตือนเวลาตอน 12:00 น.") or the credit term, and did NOT request a title change, do NOT return the "title" field in your JSON output (or set it to null), so that the existing title is preserved! E.g. for "แจ้งเตือนเวลาตอน 12:00 น.", the user wants to update the reminder_date, NOT change the title to "แจ้งเตือนเวลาตอน 12:00 น.".
+4. If they want to change the credit term (e.g., "เครดิต 60 วัน"), set "credit_term" (30 | 60 | 90) and set "po_date" to today's date "YYYY-MM-DD" and "budget_due_date" to "YYYY-MM-DD" (po_date + credit_term).
+5. If the request is a mix of changes (e.g., "แก้ชื่อเป็น คอมพิวเตอร์ และเตือนพรุ่งนี้ 9 โมง"), return both "title" and "reminder_date" fields.
+
+Format the output strictly as JSON with the following structure (include only fields that are being updated):
+{
+  "title": "New title if updated (or null/omit if title should not be changed)",
+  "description": "New description if updated (or null/omit)",
+  "credit_term": 30 | 60 | 90 | null (if updated, otherwise omit),
+  "po_date": "YYYY-MM-DD (if credit_term updated, otherwise omit)",
+  "budget_due_date": "YYYY-MM-DD (if credit_term updated, otherwise omit)",
+  "reminder_date": "ISOString with +07:00 offset (if reminder date/time is updated/added), or null (if user requested to delete/clear the reminder), or omit if no changes to reminder"
+}`
+      }]
+    }],
+    generationConfig: {
+      responseMimeType: "application/json"
+    }
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Item edit parser API error: status ${response.status}`);
+  }
+
+  const data = await response.json();
+  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const parsed = JSON.parse(rawText.trim());
+
+  if (parsed.title) {
+    parsed.title = parsed.title.replace(/^(?:ให้แจ้งเตือน|ไม่แจ้งเตือน|ช่วยแจ้งเตือน|แจ้งเตือน|ช่วยเตือน|เตือน|บันทึก|จด|เพิ่ม|แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อ|เปลี่ยนชื่อ|แก้|เปลี่ยน)\s*/i, '').trim();
+    parsed.title = parsed.title.replace(/^[:\-ー\s\.]+/, '').trim();
+  }
+
+  return parsed;
+}
+
