@@ -1,11 +1,9 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Image as ImageIcon, Loader2, AlertCircle, FileText } from 'lucide-react';
-import { Item, ItemStatus } from '@/lib/types';
-import { createClient } from '@/lib/supabase/client';
-import { uploadItemImage } from '@/lib/supabase/storage';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { createClient } from '@/lib/supabase/client';
+import { Item, ItemStatus } from '@/lib/types';
+import { uploadItemImage } from '@/lib/supabase/storage';
+import { X, Calendar, Image as ImageIcon, FileText, AlertCircle, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 
 interface ItemModalProps {
@@ -15,24 +13,10 @@ interface ItemModalProps {
   itemToEdit?: Item | null;
 }
 
-function calculateDueDate(poDateStr: string | null, creditTerm: number | null): string | null {
-  if (!poDateStr || !creditTerm) return null;
-  const date = new Date(poDateStr);
-  if (isNaN(date.getTime())) return null;
-
-  // Add credit term days
-  date.setDate(date.getDate() + creditTerm);
-
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const dd = String(date.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-}
-
 function toLocalISOString(dateString: string): string {
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return '';
-  const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
+  const tzOffset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
 }
 
@@ -44,17 +28,6 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<ItemStatus>('Pending');
   const [reminderDate, setReminderDate] = useState('');
-  const [poDate, setPoDate] = useState('');
-  const [creditTerm, setCreditTerm] = useState<30 | 60 | 90 | null>(null);
-  const [budgetDueDate, setBudgetDueDate] = useState<string | null>(null);
-
-  // PR & AX Item States
-  const [isPr, setIsPr] = useState(false);
-  const [hasItemNumber, setHasItemNumber] = useState(false);
-  const [itemNumber, setItemNumber] = useState('');
-  const [itemRequestStatus, setItemRequestStatus] = useState<'None' | 'Pending' | 'Added'>('None');
-  const [prNumber, setPrNumber] = useState('');
-  const [prStatus, setPrStatus] = useState<'Pending' | 'Ready' | 'Issued'>('Pending');
 
   // Image Upload States
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -74,64 +47,23 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
         setDescription(itemToEdit.description || '');
         setStatus(itemToEdit.status);
         setReminderDate(itemToEdit.reminder_date ? toLocalISOString(itemToEdit.reminder_date) : '');
-        setPoDate(itemToEdit.po_date || '');
-        setCreditTerm(itemToEdit.credit_term);
-        setBudgetDueDate(itemToEdit.budget_due_date);
         setExistingImageUrl(itemToEdit.image_url);
         setImagePreview(itemToEdit.image_url);
         setFileName(itemToEdit.image_url ? itemToEdit.image_url.split('/').pop()?.split('-').slice(1).join('-') || 'เอกสารแนบ' : null);
-        
-        // PR fields from DB
-        setIsPr(itemToEdit.is_pr || false);
-        setHasItemNumber(itemToEdit.has_item_number || false);
-        setItemNumber(itemToEdit.item_number || '');
-        setItemRequestStatus(itemToEdit.item_request_status || 'None');
-        setPrNumber(itemToEdit.pr_number || '');
-        setPrStatus(itemToEdit.pr_status || 'Pending');
       } else {
         // Reset form for new item
         setTitle('');
         setDescription('');
         setStatus('Pending');
         setReminderDate('');
-        setPoDate('');
-        setCreditTerm(null);
-        setBudgetDueDate(null);
         setExistingImageUrl(null);
         setImagePreview(null);
         setFileName(null);
-        
-        // Reset PR fields
-        setIsPr(false);
-        setHasItemNumber(false);
-        setItemNumber('');
-        setItemRequestStatus('None');
-        setPrNumber('');
-        setPrStatus('Pending');
       }
       setImageFile(null);
       setError(null);
     }
   }, [isOpen, itemToEdit]);
-
-  // Auto-calculate budget due date when poDate or creditTerm changes
-  useEffect(() => {
-    if (poDate && creditTerm) {
-      const calculated = calculateDueDate(poDate, creditTerm);
-      setBudgetDueDate(calculated);
-    } else {
-      setBudgetDueDate(null);
-    }
-  }, [poDate, creditTerm]);
-
-  // Adjust credit terms and PO dates when status changes
-  useEffect(() => {
-    // If not in a PO stage, reset PO-related fields
-    if (status === 'Pending') {
-      setPoDate('');
-      setCreditTerm(null);
-    }
-  }, [status]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -146,7 +78,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
         };
         reader.readAsDataURL(file);
       } else {
-        setImagePreview(null); // Clear image preview if not an image
+        setImagePreview(null);
       }
     }
   };
@@ -165,7 +97,6 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
 
       let imageUrl = existingImageUrl;
 
-      // Upload new image if present
       if (imageFile) {
         imageUrl = await uploadItemImage(imageFile, userId);
       }
@@ -177,16 +108,17 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
         status,
         image_url: imageUrl,
         reminder_date: reminderDate ? new Date(reminderDate).toISOString() : null,
-        po_date: poDate ? poDate : null,
-        credit_term: creditTerm,
-        budget_due_date: budgetDueDate,
         updated_at: new Date().toISOString(),
-        is_pr: isPr,
-        has_item_number: hasItemNumber,
-        item_number: hasItemNumber ? (itemNumber || null) : null,
-        item_request_status: hasItemNumber ? 'Added' : itemRequestStatus,
-        pr_number: prNumber || null,
-        pr_status: prStatus,
+        // Clear all PR/PO/Credit Term legacy fields
+        is_pr: false,
+        has_item_number: false,
+        item_number: null,
+        item_request_status: 'None',
+        pr_number: null,
+        pr_status: 'Pending',
+        po_date: null,
+        credit_term: null,
+        budget_due_date: null,
       };
 
       if (itemToEdit) {
@@ -229,8 +161,6 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
 
   if (!isOpen) return null;
 
-  const isPoStage = status === 'Purchasing' || status === 'Issuing Item';
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Glass backdrop overlay */}
@@ -272,7 +202,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="เช่น ซื้อเซิร์ฟเวอร์, ค่าลิขสิทธิ์ซอฟต์แวร์"
+              placeholder="กรอกหัวข้อบันทึกช่วยจำ..."
               className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-slate-805 dark:text-slate-200"
               required
             />
@@ -280,13 +210,13 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-slate-505 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
               รายละเอียดเพิ่มเติม (Description)
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="กรอกรายละเอียด เช่น สเปก อุปกรณ์ จำนวน หรือข้อมูลอ้างอิง"
+              placeholder="กรอกรายละเอียดบันทึกช่วยจำ..."
               rows={3}
               className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-slate-808 dark:text-slate-200 resize-none"
             />
@@ -294,8 +224,8 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
 
           {/* Status Selection */}
           <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-              สถานะ (Status Pipeline)
+            <label className="block text-xs font-semibold text-slate-505 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+              สถานะ (Status)
             </label>
             <div className="grid grid-cols-2 gap-2">
               {(['Pending', 'Issuing Item'] as ItemStatus[]).map((s) => {
@@ -324,186 +254,9 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
             </div>
           </div>
 
-          {/* PR Toggle Switch */}
-          <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40">
-            <div>
-              <label className="block text-xs font-bold text-slate-650 dark:text-slate-200 uppercase tracking-wider">
-                รายการขอซื้อ PR (PR Record)
-              </label>
-              <p className="text-[10px] text-slate-450 dark:text-slate-500 mt-0.5">
-                เปิดเพื่อบันทึกติดตามการออก PR และขอรหัส Item จากจัดซื้อ
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsPr(!isPr)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                isPr ? 'bg-violet-600' : 'bg-slate-200 dark:bg-slate-800'
-              }`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                  isPr ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* PR Details Section */}
-          {isPr && (
-            <div className="p-4 rounded-xl border border-violet-500/10 bg-violet-500/5 dark:bg-violet-950/5 space-y-4 animate-fade-in">
-              <h3 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-2">
-                ข้อมูลการออก PR และขอรหัส Item (AX)
-              </h3>
-
-              {/* Has Item Number Radio */}
-              <div>
-                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">
-                  มีเลข Item ในระบบ AX หรือยัง?
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    key="no-item"
-                    type="button"
-                    onClick={() => {
-                      setHasItemNumber(false);
-                      setPrStatus('Pending');
-                    }}
-                    className={`py-2 px-3 border rounded-xl text-xs font-bold transition-all duration-200 ${
-                      !hasItemNumber
-                        ? 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                        : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900/50'
-                    }`}
-                  >
-                    ยังไม่มีเลข Item
-                  </button>
-                  <button
-                    key="has-item"
-                    type="button"
-                    onClick={() => {
-                      setHasItemNumber(true);
-                      if (prStatus === 'Pending') setPrStatus('Ready');
-                    }}
-                    className={`py-2 px-3 border rounded-xl text-xs font-bold transition-all duration-200 ${
-                      hasItemNumber
-                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900/50'
-                    }`}
-                  >
-                    มีเลข Item แล้ว
-                  </button>
-                </div>
-              </div>
-
-              {/* If NO Item Number */}
-              {!hasItemNumber && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">
-                      สถานะการขอเพิ่ม Item กับจัดซื้อ
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setItemRequestStatus('None')}
-                        className={`py-1.5 px-2.5 border rounded-lg text-xs font-semibold transition-all duration-200 ${
-                          itemRequestStatus === 'None'
-                            ? 'border-slate-300 dark:border-slate-500/50 bg-slate-150 dark:bg-slate-800 text-slate-850 dark:text-slate-200'
-                            : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/50'
-                        }`}
-                      >
-                        ยังไม่ได้แจ้งเรื่อง
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setItemRequestStatus('Pending')}
-                        className={`py-1.5 px-2.5 border rounded-lg text-xs font-semibold transition-all duration-200 ${
-                          itemRequestStatus === 'Pending'
-                            ? 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                            : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/50'
-                        }`}
-                      >
-                        แจ้งจัดซื้อแล้ว (รอแอด Item)
-                      </button>
-                    </div>
-                  </div>
-                  {itemRequestStatus === 'Pending' && (
-                    <div className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/5 p-2 rounded-lg border border-amber-500/10 leading-relaxed">
-                      ⏳ กำลังอยู่ในขั้นตอนจัดซื้อแอดไอเทมเข้าระบบ AX (เมื่อแอดเสร็จแล้วจึงจะออก PR ได้)
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* If HAS Item Number */}
-              {hasItemNumber && (
-                <div className="grid grid-cols-2 gap-4 animate-fade-in">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">
-                      รหัส Item (AX Code)
-                    </label>
-                    <input
-                      type="text"
-                      value={itemNumber}
-                      onChange={(e) => setItemNumber(e.target.value)}
-                      placeholder="เช่น ITM-00123"
-                      className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-800 dark:text-slate-200"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">
-                      เลขที่ PR (PR Number)
-                    </label>
-                    <input
-                      type="text"
-                      value={prNumber}
-                      onChange={(e) => setPrNumber(e.target.value)}
-                      placeholder="เช่น PR26-0045"
-                      className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-800 dark:text-slate-200"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* PR Status selection */}
-              {hasItemNumber && (
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">
-                    สถานะการออก PR
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPrStatus('Ready')}
-                      className={`py-1.5 px-2.5 border rounded-lg text-xs font-semibold transition-all duration-200 ${
-                        prStatus === 'Ready'
-                          ? 'border-violet-500/50 bg-violet-500/10 text-violet-600 dark:text-violet-400'
-                          : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/50'
-                      }`}
-                    >
-                      พร้อมออก PR (มีรหัส Item)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPrStatus('Issued')}
-                      className={`py-1.5 px-2.5 border rounded-lg text-xs font-semibold transition-all duration-200 ${
-                        prStatus === 'Issued'
-                          ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                          : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/50'
-                      }`}
-                    >
-                      ออก PR เรียบร้อยแล้ว
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-
           {/* Reminder Date */}
           <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-slate-55 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
               วันแจ้งเตือนการดำเนินการ (Reminder Date)
             </label>
             <div className="relative">
@@ -512,61 +265,10 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                 type="datetime-local"
                 value={reminderDate}
                 onChange={(e) => setReminderDate(e.target.value)}
-                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-slate-800 dark:text-slate-200"
+                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-slate-808 dark:text-slate-200"
               />
             </div>
           </div>
-
-          {/* PO & Credit Term Logic */}
-          {isPoStage && (
-            <div className="p-4 rounded-xl border border-violet-500/10 bg-violet-505/5 dark:bg-violet-950/10 space-y-4 animate-fade-in">
-              <h3 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-2">
-                ข้อมูลเครดิตและการชำระเงิน (PO & Credit Term)
-              </h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* PO Date */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">
-                    วันที่จัดส่ง PO (PO Date)
-                  </label>
-                  <input
-                    type="date"
-                    value={poDate}
-                    onChange={(e) => setPoDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-800 dark:text-slate-200"
-                    required={isPoStage}
-                  />
-                </div>
-
-                {/* Credit Term */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">
-                    ระยะเวลาเครดิต (Credit Term)
-                  </label>
-                  <select
-                    value={creditTerm || ''}
-                    onChange={(e) => setCreditTerm(e.target.value ? Number(e.target.value) as 30 | 60 | 90 : null)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-800 dark:text-slate-200"
-                    required={isPoStage}
-                  >
-                    <option value="" disabled>เลือกเครดิตเทอม</option>
-                    <option value={30}>30 วัน</option>
-                    <option value={60}>60 วัน</option>
-                    <option value={90}>90 วัน</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Auto-Calculated Budget Due Date */}
-              {budgetDueDate && (
-                <div className="pt-2 flex items-center justify-between border-t border-slate-200 dark:border-slate-800/80">
-                  <span className="text-xs text-slate-500 dark:text-slate-400">วันครบกำหนดชำระจริง (Calculated Due Date):</span>
-                  <span className="text-sm font-bold text-emerald-650 dark:text-emerald-400">{budgetDueDate}</span>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Image/File Attachment */}
           <div>
@@ -614,7 +316,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                   </button>
                 </div>
               ) : (
-                <label className="w-20 h-20 rounded-xl border border-dashed border-slate-300 dark:border-slate-800 hover:border-violet-500/50 flex flex-col items-center justify-center cursor-pointer bg-slate-50 dark:bg-slate-950/50 text-slate-450 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-450 transition-colors shrink-0">
+                <label className="w-20 h-20 rounded-xl border border-dashed border-slate-300 dark:border-slate-800 hover:border-violet-500/50 flex flex-col items-center justify-center cursor-pointer bg-slate-50 dark:bg-slate-950/50 text-slate-450 dark:text-slate-55 hover:text-slate-650 dark:hover:text-slate-450 transition-colors shrink-0">
                   <ImageIcon className="w-5 h-5 mb-1" />
                   <span className="text-[10px]">เลือกไฟล์</span>
                   <input

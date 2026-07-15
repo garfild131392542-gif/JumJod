@@ -8,8 +8,7 @@ import { Item, ItemStatus, Profile } from '@/lib/types';
 import ItemModal from '@/components/dashboard/item-modal';
 import {
   Plus, Search, Edit2, Trash2, Calendar,
-  ArrowRight, ArrowLeft, Image as ImageIcon,
-  FileText, Clock, CreditCard, ChevronRight, AlertCircle, CheckCircle2
+  Image as ImageIcon, FileText, Clock, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -18,16 +17,14 @@ export default function DashboardPage() {
   const queryClient = useQueryClient();
   const supabase = createClient();
 
-  // Search & Filter state
+  // Search state
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'pr'>('all');
 
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
 
-  // Drag-and-Drop & Toast states
-  const [activeDragColumn, setActiveDragColumn] = useState<ItemStatus | null>(null);
+  // Toast and audited items states
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const [auditedItems, setAuditedItems] = useState<Record<string, boolean>>({});
 
@@ -50,27 +47,10 @@ export default function DashboardPage() {
     return () => clearTimeout(timer);
   };
 
-  const isImageFile = (url: string | null) => {
-    if (!url) return false;
-    const ext = url.split('.').pop()?.toLowerCase();
-    return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext || '');
-  };
-
-  function calculateDueDate(poDateStr: string | null, creditTerm: number | null): string | null {
-    if (!poDateStr || !creditTerm) return null;
-    const date = new Date(poDateStr);
-    if (isNaN(date.getTime())) return null;
-    date.setDate(date.getDate() + creditTerm);
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
-
-  // Subscribe to Supabase Realtime updates
+  // Realtime subscription for items
   useEffect(() => {
     const channel = supabase
-      .channel('schema-db-changes')
+      .channel('realtime_items_dashboard')
       .on(
         'postgres_changes',
         {
@@ -88,9 +68,7 @@ export default function DashboardPage() {
             const updatedItem = payload.new as Item;
             const oldItem = payload.old as Item;
             if (oldItem && oldItem.status !== updatedItem.status) {
-              const statusName =
-                updatedItem.status === 'Pending' ? 'กำลังดำเนินการ' :
-                  updatedItem.status === 'Purchasing' ? 'ติดต่อจัดซื้อ' : 'สำเร็จ';
+              const statusName = updatedItem.status === 'Pending' ? 'กำลังดำเนินการ' : 'สำเร็จ';
               showToast(`🔄 อัปเดตรายการ: "${updatedItem.title}" เป็น "${statusName}"`, 'info');
             }
           }
@@ -103,37 +81,7 @@ export default function DashboardPage() {
     };
   }, [supabase, queryClient]);
 
-  // Drag and Drop handlers
-  const handleDragStart = (e: React.DragEvent, itemId: string) => {
-    e.dataTransfer.setData('text/plain', itemId);
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-  };
-
-  const handleDragEnter = (e: React.DragEvent, status: ItemStatus) => {
-    e.preventDefault();
-    setActiveDragColumn(status);
-  };
-
-  const handleDragLeave = () => {
-    setActiveDragColumn(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, nextStatus: ItemStatus) => {
-    e.preventDefault();
-    setActiveDragColumn(null);
-    const itemId = e.dataTransfer.getData('text/plain');
-    if (itemId) {
-      const item = items.find((i) => i.id === itemId);
-      if (item && item.status !== nextStatus) {
-        moveStatusMutation.mutate({ itemId, nextStatus });
-      }
-    }
-  };
-
-  // Fetch user profile using React Query
+  // Fetch user profile
   const { data: profile, refetch: refetchProfile } = useQuery<Profile>({
     queryKey: ['profile'],
     queryFn: async () => {
@@ -153,7 +101,7 @@ export default function DashboardPage() {
   const generateLinkCodeMutation = useMutation({
     mutationFn: async () => {
       const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -206,26 +154,6 @@ export default function DashboardPage() {
 
       const currentItem = items.find(i => i.id === itemId);
 
-      // Reset PO details if moved back to Pending
-      if (nextStatus === 'Pending') {
-        updates.po_date = null;
-        updates.credit_term = null;
-        updates.budget_due_date = null;
-      } else if (nextStatus === 'Purchasing') {
-        if (currentItem) {
-          // If it doesn't have a PO date, default to today
-          const finalPoDate = currentItem.po_date || new Date().toISOString().substring(0, 10);
-          // If it doesn't have a credit term, default to 30 days
-          const finalCreditTerm = currentItem.credit_term || 30;
-          // Calculate budget due date
-          const calculatedDueDate = calculateDueDate(finalPoDate, finalCreditTerm);
-
-          updates.po_date = finalPoDate;
-          updates.credit_term = finalCreditTerm;
-          updates.budget_due_date = calculatedDueDate;
-        }
-      }
-
       const { error } = await supabase
         .from('items')
         .update(updates)
@@ -236,35 +164,16 @@ export default function DashboardPage() {
       return {
         title: currentItem?.title || '',
         nextStatus,
-        calculatedDueDate: updates.budget_due_date,
-        creditTerm: updates.credit_term
       };
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['items'] });
-      if (data?.calculatedDueDate) {
-        const dateStr = new Date(data.calculatedDueDate).toLocaleDateString('en-GB');
-        showToast(`อัปเดตเครดิต ${data.creditTerm} วันสำเร็จ! ครบกำหนดชำระจริงวันที่: ${dateStr}`);
-      } else if (data?.nextStatus !== 'Issuing Item') {
-        const statusName =
-          data?.nextStatus === 'Pending' ? 'กำลังดำเนินการ' : 'ติดต่อจัดซื้อ';
-        showToast(`ย้ายสถานะเป็น "${statusName}" เรียบร้อยแล้ว`);
-      }
+      showToast('ย้ายรายการไปยังห้องประวัติสำเร็จเรียบร้อยแล้ว');
     },
   });
 
-  const handleEditItem = (item: Item) => {
-    setSelectedItem(item);
-    setModalOpen(true);
-  };
-
-  const handleAddItem = () => {
-    setSelectedItem(null);
-    setModalOpen(true);
-  };
-
   const handleDeleteItem = (itemId: string) => {
-    if (confirm('คุณต้องการลบรายการจัดซื้อนี้ใช่หรือไม่?')) {
+    if (confirm('คุณต้องการลบรายการจดบันทึกนี้ใช่หรือไม่?')) {
       deleteMutation.mutate(itemId);
     }
   };
@@ -290,44 +199,40 @@ export default function DashboardPage() {
     }
   };
 
+  const handleEditItem = (item: Item) => {
+    setSelectedItem(item);
+    setModalOpen(true);
+  };
 
+  const handleAddItem = () => {
+    setSelectedItem(null);
+    setModalOpen(true);
+  };
 
-  // Filter items by search query and exclude audited items
-  let filteredItems = items.filter(
+  const isImageFile = (url: string | null) => {
+    if (!url) return false;
+    const ext = url.split('.').pop()?.toLowerCase();
+    return ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext || '');
+  };
+
+  // Filter items by search query and exclude completed (audited) items
+  const filteredItems = items.filter(
     (item) =>
       !auditedItems[item.id] &&
+      (item.status === 'Pending' || item.status === 'Purchasing') &&
       (item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
-  if (filterType === 'pr') {
-    filteredItems = filteredItems.filter(item => item.is_pr);
-  }
-
-  // Sort items: earliest reminder_date first (most urgent).
-  // Items without a reminder_date will be placed at the bottom, sorted by created_at descending (newest first).
+  // Sort items: earliest reminder_date first
   filteredItems.sort((a, b) => {
     if (a.reminder_date && b.reminder_date) {
       return new Date(a.reminder_date).getTime() - new Date(b.reminder_date).getTime();
     }
-    if (a.reminder_date) return -1; // a has reminder, b doesn't -> a comes first
-    if (b.reminder_date) return 1;  // b has reminder, a doesn't -> b comes first
-    
-    // Fallback: both have no reminder, sort by created_at descending (newest first)
+    if (a.reminder_date) return -1;
+    if (b.reminder_date) return 1;
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
-
-
-
-  const columns: { status: ItemStatus; title: string; subtitle: string; colorClass: string; borderClass: string }[] = [
-    {
-      status: 'Pending',
-      title: 'กำลังดำเนินการ (Pending)',
-      subtitle: 'รายการบันทึกช่วยจำที่กำลังดำเนินการอยู่',
-      colorClass: 'text-amber-600 dark:text-amber-400 bg-amber-500/10',
-      borderClass: 'border-amber-500/20',
-    },
-  ];
 
   return (
     <div className="space-y-6">
@@ -338,7 +243,7 @@ export default function DashboardPage() {
             บันทึกช่วยจำ
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            ระบบบันทึกช่วยจำ สำหรับการเปิด PR / PO / เพิ่ม Item
+            ระบบบันทึกช่วยจำและตั้งเวลาแจ้งเตือนส่วนตัว
           </p>
         </div>
         <button
@@ -365,11 +270,11 @@ export default function DashboardPage() {
               </h4>
               {profile.line_user_id ? (
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
-                  🟢 บัญชี LINE เชื่อมต่อแล้ว! สั่งจำจดจัดซื้อพิมพ์บอกบอททางแชตได้ทุกที่
+                  🟢 บัญชี LINE เชื่อมต่อแล้ว! สั่งจำจดพิมพ์บอกบอททางแชตได้ทุกที่
                 </p>
               ) : (
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  เชื่อมต่อเพื่อสั่งบันทึกการจัดซื้อหรือแจ้งเตือนเครดิตทางการเงินผ่านข้อความ LINE
+                  เชื่อมต่อเพื่อสั่งบันทึกการช่วยจำหรือแจ้งเตือนเครดิตผ่านข้อความ LINE
                 </p>
               )}
             </div>
@@ -403,33 +308,8 @@ export default function DashboardPage() {
         </div>
       )}
 
-
-      {/* Filter and Search Bar */}
+      {/* Search Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 p-3 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl backdrop-blur-sm shadow-sm">
-        {/* Tab switcher */}
-        <div className="flex bg-slate-105 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
-          <button
-            onClick={() => setFilterType('all')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              filterType === 'all'
-                ? 'bg-white dark:bg-slate-900 text-violet-600 dark:text-violet-400 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-            }`}
-          >
-            รายการทั้งหมด
-          </button>
-          <button
-            onClick={() => setFilterType('pr')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              filterType === 'pr'
-                ? 'bg-white dark:bg-slate-900 text-violet-600 dark:text-violet-400 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-            }`}
-          >
-            เฉพาะรายการ PR
-          </button>
-        </div>
-
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
           <input
@@ -442,7 +322,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Main Kanban Board */}
+      {/* Main Kanban Board (Single Column List) */}
       {isLoading ? (
         <div className="h-[60vh] flex flex-col items-center justify-center gap-3">
           <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
@@ -455,206 +335,116 @@ export default function DashboardPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400">{(error as any)?.message || 'โปรดตรวจสอบสิทธิ์เชื่อมต่อหรือรีเฟรชหน้าเว็บ'}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
-          {columns.map((column) => {
-            const columnItems = filteredItems.filter((item) => item.status === 'Pending' || item.status === 'Purchasing');
-            const isColumnHovered = activeDragColumn === column.status;
+        <div className="max-w-4xl mx-auto flex flex-col rounded-2xl min-h-[60vh] p-4 bg-slate-100/40 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800/50">
+          {/* Title */}
+          <div className="mb-4 pb-3 border-b border-slate-200 dark:border-slate-800/50 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                  {filteredItems.length}
+                </span>
+                <span>รายการกำลังดำเนินการ (Active Memos)</span>
+              </h3>
+            </div>
+          </div>
 
-            return (
-              <div
-                key={column.status}
-                onDragOver={handleDragOver}
-                onDragEnter={(e) => handleDragEnter(e, column.status)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, column.status)}
-                className={`flex flex-col rounded-2xl min-h-[60vh] p-4 transition-all duration-200 ${isColumnHovered
-                  ? 'bg-violet-500/5 dark:bg-violet-500/10 border-2 border-dashed border-violet-500/40'
-                  : 'bg-slate-100/40 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800/50'
-                  }`}
-              >
-                {/* Column Title */}
-                <div className="mb-4 pb-3 border-b border-slate-200 dark:border-slate-800/50 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider uppercase ${column.colorClass}`}>
-                        {columnItems.length}
-                      </span>
-                      <span>{column.title.split(' ')[0]}</span>
-                    </h3>
-                    <p className="text-[10px] text-slate-500 mt-0.5">{column.subtitle}</p>
-                  </div>
-                </div>
-
-                {/* Cards List */}
-                <div className="flex-1 overflow-y-auto max-h-[calc(100vh-320px)] min-h-[380px] pr-1 grid grid-cols-1 md:grid-cols-2 gap-4 content-start">
-                  {columnItems.length === 0 ? (
-                    <div className="col-span-full h-28 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center text-center p-4">
-                      <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">ไม่มีรายการในสถานะนี้</span>
-                    </div>
-                  ) : (
-                    columnItems.map((item) => (
-                      <div
-                        key={item.id}
-                        draggable
-                        onDragStart={(e) => handleDragStart(e, item.id)}
-                        className="group relative backdrop-blur-sm bg-white dark:bg-slate-900/55 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 shadow-sm hover:shadow-md dark:shadow-none hover:border-slate-400 dark:hover:border-slate-700/80 transition-all duration-200 flex flex-col justify-between gap-3 cursor-grab active:cursor-grabbing"
-                      >
-                        {/* Image or File Attachment Preview */}
-                        {item.image_url && (
-                          isImageFile(item.image_url) ? (
-                            <div className="relative w-full h-36 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 mb-2 shrink-0">
-                              <Image
-                                src={item.image_url}
-                                alt={item.title}
-                                fill
-                                sizes="(max-width: 768px) 100vw, 30vw"
-                                className="object-cover transition-transform duration-300 group-hover:scale-102"
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 mb-2 shrink-0">
-                              <FileText className="w-6 h-6 text-violet-500 shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-[9px] text-slate-500 uppercase font-extrabold leading-none">เอกสารแนบ</p>
-                                <a
-                                  href={item.image_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:underline truncate block mt-1"
-                                >
-                                  เปิดดูไฟล์แนบ
-                                </a>
-                              </div>
-                            </div>
-                          )
-                        )}
-
-                        {/* Title and Description */}
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors line-clamp-1 flex-1">
-                              {item.title}
-                            </h4>
-                            <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-[9px] font-extrabold text-slate-500 select-all shrink-0">
-                              #{item.id.substring(item.id.length - 3)}
-                            </span>
-                          </div>
-                          {item.description && (
-                            <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 line-clamp-2 leading-relaxed">
-                              {item.description}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Badges and Dates */}
-                        <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800/40">
-                          {/* PR Badges */}
-                          {item.is_pr && (
-                            <div className="space-y-1.5 pb-1">
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-600/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
-                                🏷️ รายการ PR
-                              </span>
-                              {item.has_item_number ? (
-                                <div className="space-y-1">
-                                  <div className="text-[10px] text-emerald-650 dark:text-emerald-450 bg-emerald-500/10 px-2 py-0.5 rounded-md w-fit font-bold border border-emerald-500/20 flex items-center gap-1">
-                                    <span>📦 Item: {item.item_number || 'มีเลขแล้ว'}</span>
-                                  </div>
-                                  {item.pr_number ? (
-                                    <div className="text-[10px] text-emerald-600 dark:text-emerald-450 bg-emerald-500/5 px-2 py-0.5 rounded-md w-fit font-semibold border border-emerald-500/10 flex items-center gap-1">
-                                      <span>📄 PR #: {item.pr_number} (ออก PR แล้ว)</span>
-                                    </div>
-                                  ) : (
-                                    <div className="text-[10px] text-violet-650 dark:text-violet-400 bg-violet-500/5 px-2 py-0.5 rounded-md w-fit font-semibold border border-violet-500/10 flex items-center gap-1">
-                                      <span>📄 พร้อมออก PR</span>
-                                    </div>
-                                  )}
-                                </div>
-                              ) : (
-                                <div>
-                                  {item.item_request_status === 'Pending' ? (
-                                    <div className="text-[10px] text-amber-650 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md w-fit font-bold border border-amber-500/20 flex items-center gap-1">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                                      <span>⏳ รอจัดซื้อแอด Item ใน AX</span>
-                                    </div>
-                                  ) : (
-                                    <div className="text-[10px] text-red-650 dark:text-red-400 bg-red-500/5 px-2 py-0.5 rounded-md w-fit font-semibold border border-red-500/10 flex items-center gap-1">
-                                      <span>⚠️ ยังไม่มีเลข Item (ยังไม่ได้แจ้งจัดซื้อ)</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Reminder Badge */}
-                          {item.reminder_date && (
-                            <div className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/5 px-2 py-0.5 rounded-md w-fit font-semibold border border-amber-500/10">
-                              <Clock className="w-3.5 h-3.5" />
-                              <span>แจ้งเตือน: {new Date(item.reminder_date).toLocaleDateString('en-GB')}</span>
-                            </div>
-                          )}
-
-                          {/* PO Date Badge */}
-                          {item.po_date && (
-                            <div className="flex items-center gap-1.5 text-[10px] text-violet-600 dark:text-violet-400 bg-violet-500/5 px-2 py-0.5 rounded-md w-fit font-semibold border border-violet-500/10">
-                              <FileText className="w-3.5 h-3.5" />
-                              <span>PO: {new Date(item.po_date).toLocaleDateString('en-GB')}</span>
-                            </div>
-                          )}
-
-                          {/* Credit Term Badge */}
-                          {item.credit_term && (
-                            <div className="flex items-center gap-1.5 text-[10px] text-indigo-650 dark:text-indigo-400 bg-indigo-500/5 px-2 py-0.5 rounded-md w-fit font-semibold border border-indigo-500/10">
-                              <CreditCard className="w-3.5 h-3.5" />
-                              <span>เครดิต: {item.credit_term} วัน</span>
-                            </div>
-                          )}
-
-                          {/* Budget Due Date Badge */}
-                          {item.budget_due_date && (
-                            <div className="flex items-center gap-1.5 text-[10px] text-emerald-650 dark:text-emerald-450 bg-emerald-500/10 px-2 py-0.5 rounded-md w-fit font-extrabold border border-emerald-500/20">
-                              <Calendar className="w-3.5 h-3.5" />
-                              <span>วันครบกำหนด: {new Date(item.budget_due_date).toLocaleDateString('en-GB')}</span>
-                            </div>
-                          )}
-
-                        </div>
-
-                        {/* Controls & Actions */}
-                        <div className="flex items-center justify-end mt-1 pt-1.5 border-t border-slate-100 dark:border-slate-800/40">
-                          {/* CRUD Actions */}
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleCompleteItem(item)}
-                              className="p-1 rounded-md bg-slate-100 dark:bg-slate-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-650/30 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-450 transition-colors cursor-pointer"
-                              title="ทำเครื่องหมายว่าสำเร็จ"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleEditItem(item)}
-                              className="p-1 rounded-md bg-slate-100 dark:bg-slate-800/50 hover:bg-violet-100 dark:hover:bg-violet-650/30 text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-300 transition-colors cursor-pointer"
-                              title="แก้ไขรายการ"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteItem(item.id)}
-                              className="p-1 rounded-md bg-slate-100 dark:bg-slate-800/50 hover:bg-red-100 dark:hover:bg-red-650/30 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-450 transition-colors cursor-pointer"
-                              title="ลบรายการ"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+          {/* Cards Grid */}
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 content-start">
+            {filteredItems.length === 0 ? (
+              <div className="col-span-full h-32 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center text-center p-4">
+                <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">ไม่มีรายการจดบันทึกในขณะนี้</span>
+              </div>
+            ) : (
+              filteredItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="group relative backdrop-blur-sm bg-white dark:bg-slate-900/55 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 shadow-sm hover:shadow-md dark:shadow-none hover:border-slate-400 dark:hover:border-slate-700/80 transition-all duration-200 flex flex-col justify-between gap-3"
+                >
+                  {/* File Attachment Preview */}
+                  {item.image_url && (
+                    isImageFile(item.image_url) ? (
+                      <div className="relative w-full h-36 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 mb-2 shrink-0">
+                        <Image
+                          src={item.image_url}
+                          alt={item.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 30vw"
+                          className="object-cover transition-transform duration-300 group-hover:scale-102"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-55 dark:bg-slate-950/40 mb-2 shrink-0">
+                        <FileText className="w-6 h-6 text-violet-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[9px] text-slate-500 uppercase font-extrabold leading-none">เอกสารแนบ</p>
+                          <a
+                            href={item.image_url}
+                            target="_blank; noreferrer"
+                            rel="noopener noreferrer"
+                            className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:underline truncate block mt-1"
+                          >
+                            เปิดดูไฟล์แนบ
+                          </a>
                         </div>
                       </div>
-                    ))
+                    )
                   )}
+
+                  {/* Title and Description */}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors line-clamp-1 flex-1">
+                        {item.title}
+                      </h4>
+                      <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-[9px] font-extrabold text-slate-500 select-all shrink-0">
+                        #{item.id.substring(item.id.length - 3)}
+                      </span>
+                    </div>
+                    {item.description && (
+                      <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 line-clamp-2 leading-relaxed">
+                        {item.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Reminder Badge */}
+                  {item.reminder_date && (
+                    <div className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/5 px-2 py-0.5 rounded-md w-fit font-semibold border border-amber-500/10">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>แจ้งเตือน: {new Date(item.reminder_date).toLocaleDateString('en-GB')}</span>
+                    </div>
+                  )}
+
+                  {/* Controls & Actions */}
+                  <div className="flex items-center justify-end mt-1 pt-1.5 border-t border-slate-100 dark:border-slate-800/40">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleCompleteItem(item)}
+                        className="p-1 rounded-md bg-slate-100 dark:bg-slate-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-655/30 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-450 transition-colors cursor-pointer"
+                        title="ทำเครื่องหมายว่าสำเร็จ"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleEditItem(item)}
+                        className="p-1 rounded-md bg-slate-100 dark:bg-slate-800/50 hover:bg-violet-100 dark:hover:bg-violet-650/30 text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-300 transition-colors cursor-pointer"
+                        title="แก้ไขรายการ"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteItem(item.id)}
+                        className="p-1 rounded-md bg-slate-100 dark:bg-slate-800/50 hover:bg-red-100 dark:hover:bg-red-650/30 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-455 transition-colors cursor-pointer"
+                        title="ลบรายการ"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              ))
+            )}
+          </div>
         </div>
       )}
 
@@ -668,11 +458,14 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* Toast Alert */}
+      {/* Floating Toast Notification */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white shadow-2xl animate-slide-in backdrop-blur-md">
-          <div className={`w-2 h-2 rounded-full ${toast.type === 'success' ? 'bg-emerald-500 animate-pulse' : 'bg-violet-500 animate-pulse'}`} />
-          <span className="text-xs font-semibold leading-relaxed">{toast.message}</span>
+        <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4.5 py-3 rounded-2xl border text-sm font-bold shadow-xl animate-fade-in-up ${
+          toast.type === 'success'
+            ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-650 dark:text-emerald-400'
+            : 'bg-indigo-500/10 border-indigo-500/25 text-indigo-650 dark:text-indigo-400'
+        }`}>
+          <span>{toast.message}</span>
         </div>
       )}
     </div>

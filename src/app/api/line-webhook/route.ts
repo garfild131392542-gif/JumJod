@@ -216,12 +216,7 @@ export async function POST(request: Request) {
 
             memoryStateCache.set(lineUserId, { action: 'editing', itemId: itemId, itemTitle: item.title });
 
-            let promptMsg = '';
-            if (activeMode === 'reminder' || item.reminder_date) {
-              promptMsg = `✍️ เตรียมแก้ไขรายการ: "${item.title}"\n\nกรุณาพิมพ์รายละเอียดใหม่ที่คุณต้องการแก้ไขเข้ามาได้เลยครับ เช่น:\n- "แก้ชื่อเป็น [ชื่อใหม่]"\n- "แก้เวลาแจ้งเตือนเป็น วันที่ 15/07/26 เวลา 12:00 น."\n- "แก้เวลาเป็น พรุ่งนี้ 9 โมงเช้า"\n- "ยกเลิกแจ้งเตือน" (เพื่อปิดการแจ้งเตือน)\n(บอทจะอัปเดตข้อมูลรายการนี้โดยตรง)`;
-            } else {
-              promptMsg = `✍️ เตรียมแก้ไขรายการ: "${item.title}"\n\nกรุณาพิมพ์รายละเอียดใหม่ที่คุณต้องการแก้ไขเข้ามาได้เลยครับ เช่น:\n- "แก้ชื่อเป็น [ชื่อใหม่]"\n- "เครดิต 60 วัน"\n- "แก้เวลาแจ้งเตือนเป็น วันที่ 15/07/26 เวลา 12:00 น."\n(บอทจะอัปเดตข้อมูลรายการนี้โดยตรง)`;
-            }
+            const promptMsg = `✍️ เตรียมแก้ไขรายการ: "${item.title}"\n\nกรุณาพิมพ์รายละเอียดใหม่ที่คุณต้องการแก้ไขเข้ามาได้เลยครับ เช่น:\n- "แก้ชื่อเป็น [ชื่อใหม่]"\n- "แก้เวลาแจ้งเตือนเป็น วันที่ 15/07/26 เวลา 12:00 น."\n- "แก้เวลาเป็น พรุ่งนี้ 9 โมงเช้า"\n- "ยกเลิกแจ้งเตือน" (เพื่อปิดการแจ้งเตือน)\n(บอทจะอัปเดตข้อมูลรายการนี้โดยตรง)`;
 
             await sendLineReply(replyToken, {
               type: 'text',
@@ -1393,11 +1388,6 @@ export async function POST(request: Request) {
             if (aiUpdates.description !== undefined) {
               updates.description = aiUpdates.description;
             }
-            if (aiUpdates.credit_term !== undefined) {
-              updates.credit_term = aiUpdates.credit_term;
-              if (aiUpdates.po_date) updates.po_date = aiUpdates.po_date;
-              if (aiUpdates.budget_due_date) updates.budget_due_date = aiUpdates.budget_due_date;
-            }
             if (aiUpdates.reminder_date !== undefined) {
               updates.reminder_date = aiUpdates.reminder_date;
               if (aiUpdates.reminder_date) {
@@ -1414,24 +1404,7 @@ export async function POST(request: Request) {
         if (!parsedByAI) {
           // Fallback local parsing logic
           let updateTitle = messageText;
-          let credit_term: any = null;
-
-          const creditMatch = messageText.match(/(?:เครดิต|credit|cr)\s*(30|60|90)\s*(?:วัน|days)?/i);
-          if (creditMatch) {
-            credit_term = Number(creditMatch[1]);
-            updateTitle = messageText.replace(/(?:เครดิต|credit|cr)\s*(30|60|90)\s*(?:วัน|days)?/i, '').trim();
-          }
-
-          updateTitle = updateTitle.replace(/^(แก้ไข|แก้|เปลี่ยน|edit|update|ชื่อ|เป็น)\s*/i, '').trim();
-          updateTitle = updateTitle.replace(/^(?:ให้แจ้งเตือน|ไม่แจ้งเตือน|ช่วยแจ้งเตือน|แจ้งเตือน|ช่วยเตือน|เตือน|บันทึก|จด|เพิ่ม)\s*/i, '').trim();
-          updateTitle = updateTitle.replace(/^[:\-ー\s\.]+/, '').trim();
-
-          if (credit_term) {
-            const poDate = new Date().toISOString().substring(0, 10);
-            updates.po_date = poDate;
-            updates.credit_term = credit_term;
-            updates.budget_due_date = calculateDueDate(poDate, credit_term);
-          }
+            // Credit terms matching logic removed
 
           const isCancelReminder = /^(ยกเลิกแจ้งเตือน|ไม่แจ้งเตือนแล้ว|ลบวันแจ้งเตือน|ไม่เตือนแล้ว|ลบแจ้งเตือน|ไม่เตือน)/i.test(messageText.trim());
           if (isCancelReminder) {
@@ -2117,13 +2090,7 @@ export async function POST(request: Request) {
             if (itemToUpdate) {
               const updates: any = { ...parsedResult.update_data };
               
-              // Handle credit terms update if credit term provided
-              if (updates.credit_term) {
-                const finalPoDate = updates.po_date || itemToUpdate.po_date || new Date().toISOString().substring(0, 10);
-                const finalCreditTerm = updates.credit_term;
-                updates.po_date = finalPoDate;
-                updates.budget_due_date = calculateDueDate(finalPoDate, finalCreditTerm);
-              }
+              // Credit terms calculation logic removed
               updates.updated_at = new Date().toISOString();
 
               const { data: updatedItem, error: updateError } = await supabaseAdmin
@@ -2155,7 +2122,7 @@ export async function POST(request: Request) {
         }
 
         case 'UNKNOWN': {
-          const helpMessage = parsedResult.message || `💡 ยินดีต้อนรับสู่ จำจด (JumJod) แชตบอต!\n\nคุณสามารถแชตสั่งบันทึกหรือจัดการได้ง่ายๆ ดังนี้:\n\n➕ **จดบันทึกใหม่:** พิมพ์ได้เลย เช่น "ซื้อหมึกพิมพ์ 5 กล่อง เครดิต 30 วัน"\n🔍 **ค้นหา/ดูรายการ:** พิมพ์คำว่า "ค้นหา" หรือรหัสท้าย 3 ตัว เช่น "ค้นหา หมึก" หรือพิมพ์ "#7fa"\n⏳ **แจ้งเรื่องส่งจัดซื้อ:** พิมพ์ "แจ้งจัดซื้อ [รหัสท้าย 3 ตัว]" เช่น "แจ้งจัดซื้อ 7fa"\n🎉 **แจ้งเสร็จสิ้น:** พิมพ์ "สำเร็จ [รหัสท้าย 3 ตัว]" เช่น "สำเร็จ 7fa"\n🗑️ **ลบรายการ:** พิมพ์ "ลบ [รหัสท้าย 3 ตัว]" เช่น "ลบ 7fa"`;
+          const helpMessage = parsedResult.message || `💡 ยินดีต้อนรับสู่ จำจด (JumJod) แชตบอตบันทึกช่วยจำ!\n\nคุณสามารถส่งข้อความหาบอทเพื่อช่วยจดจำสิ่งต่างๆ ได้ดังนี้:\n\n➕ **จดบันทึกใหม่:** พิมพ์สิ่งที่คุณต้องการบันทึกและวันเวลาที่ต้องการเตือนได้เลย เช่น "นัดประชุมพรุ่งนี้ 10 โมงเช้า" หรือ "จ่ายค่าน้ำประปา วันที่ 20/07/26 เวลา 14:00"\n🔍 **ค้นหาบันทึก:** พิมพ์คำว่า "ค้นหา" หรือรหัสท้าย 3 ตัว เช่น "ค้นหา ประชุม" หรือ "#7fa"\n🎉 **ทำเสร็จแล้ว:** พิมพ์ "สำเร็จ [รหัสท้าย 3 ตัว]" เช่น "สำเร็จ 7fa"\n🗑️ **ลบรายการ:** พิมพ์ "ลบ [รหัสท้าย 3 ตัว]" เช่น "ลบ 7fa"`;
           await sendLineReply(replyToken, helpMessage);
           break;
         }
@@ -2168,12 +2135,6 @@ export async function POST(request: Request) {
             continue;
           }
 
-          // Determine initial status based on credit_term
-          const status = 'Pending';
-          const hasPrKeyword = messageText.toLowerCase().includes('pr') || messageText.toLowerCase().includes('ax') || messageText.toLowerCase().includes('ซื้อ');
-          const isTrainingOrMeeting = /อบรม|ประชุม|นัด|เรียน|คุย|สัมมนา/i.test(messageText);
-          const isPr = hasPrKeyword && !isTrainingOrMeeting;
-
           // Insert directly into items table
           const { data: insertedItem, error: insertError } = await supabaseAdmin
             .from('items')
@@ -2182,12 +2143,9 @@ export async function POST(request: Request) {
                 user_id: profile.id,
                 title: createData.title,
                 description: createData.description || `บันทึกผ่าน LINE Bot: ${messageText}`,
-                status,
+                status: 'Pending',
                 reminder_date: createData.reminder_date,
-                po_date: createData.po_date,
-                credit_term: createData.credit_term,
-                budget_due_date: createData.budget_due_date,
-                is_pr: isPr,
+                is_pr: false,
                 line_group_id: lineGroupId
               },
             ])

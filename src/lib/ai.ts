@@ -3,9 +3,6 @@ import { ItemStatus } from './types';
 export interface ParsedProcurementData {
   title: string;
   description: string;
-  credit_term: 30 | 60 | 90 | null;
-  po_date: string | null;
-  budget_due_date: string | null;
   reminder_date: string | null;
 }
 
@@ -17,10 +14,8 @@ export interface GeminiParsedOutput {
   update_data?: {
     title?: string;
     description?: string;
-    credit_term?: 30 | 60 | 90 | null;
-    po_date?: string | null;
-    budget_due_date?: string | null;
-    status?: 'Pending' | 'Purchasing' | 'Issuing Item';
+    status?: 'Pending' | 'Issuing Item';
+    reminder_date?: string | null;
   };
   stock_data?: {
     action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK' | 'EDIT_NAME' | 'EDIT_DESC' | 'EDIT_MIN' | 'EDIT_PRIORITY' | 'EDIT_CATEGORY' | 'CONFIRM_NEEDED';
@@ -517,23 +512,11 @@ export async function classifyAndParseMessageWithAI(
     if (/(ลบ|ยกเลิก|delete|remove)/i.test(text)) {
       return { intent: 'DELETE', item_id: matchedItem.id };
     }
-    if (/(แจ้งจัดซื้อ|ขอไอเทม|แอดไอเทม|ส่งจัดซื้อ)/i.test(text)) {
-      return {
-        intent: 'UPDATE',
-        item_id: matchedItem.id,
-        update_data: {
-          item_request_status: 'Pending',
-          status: 'Purchasing'
-        } as any
-      };
-    }
     if (/(แก้ไข|แก้|update|edit)/i.test(text)) {
-      const creditMatch = text.match(/(?:เครดิต|credit)\s*(30|60|90)/i);
-      const credit_term = creditMatch ? Number(creditMatch[1]) as 30 | 60 | 90 : null;
       return {
         intent: 'UPDATE',
         item_id: matchedItem.id,
-        update_data: credit_term ? { credit_term } : {}
+        update_data: {}
       };
     }
     // If just typing short ID, treat as search
@@ -781,58 +764,28 @@ export function regexFallbackParser(messageText: string, existingItems: any[]): 
   }
 
   // 3. COMPLETE intent
-  if (text.startsWith('เสร็จแล้ว') || text.startsWith('สำเร็จ') || text.startsWith('complete') || text.includes('เสร็จ') || text.includes('สำเร็จ') || text.includes('ออกรหัส') || text.includes('ออกไอเทม')) {
-    const query = messageText.replace(/^(เสร็จแล้ว|สำเร็จ|complete|เสร็จ|ออกรหัส|ออกไอเทม)\s*/i, '').trim();
+  if (text.startsWith('เสร็จแล้ว') || text.startsWith('สำเร็จ') || text.startsWith('complete') || text.includes('เสร็จ') || text.includes('สำเร็จ')) {
+    const query = messageText.replace(/^(เสร็จแล้ว|สำเร็จ|complete|เสร็จ)\s*/i, '').trim();
     const matched = findClosestItem(query, existingItems);
     return { intent: 'COMPLETE', item_id: matched?.id || undefined };
   }
 
-  // 4. Request AX Item intent
-  if (text.startsWith('แจ้งจัดซื้อ') || text.startsWith('ขอไอเทม') || text.startsWith('แอดไอเทม') || text.startsWith('ส่งจัดซื้อ')) {
-    const query = messageText.replace(/^(แจ้งจัดซื้อ|ขอไอเทม|แอดไอเทม|ส่งจัดซื้อ)\s*/i, '').trim();
-    const matched = findClosestItem(query, existingItems);
-    return {
-      intent: 'UPDATE',
-      item_id: matched?.id || undefined,
-      update_data: {
-        item_request_status: 'Pending',
-        status: 'Purchasing'
-      } as any
-    };
-  }
-
-  // 5. UPDATE intent
+  // 4. UPDATE intent
   if (text.startsWith('แก้ไข') || text.startsWith('แก้') || text.startsWith('edit') || text.startsWith('update')) {
     const query = messageText.replace(/^(แก้ไข|แก้|edit|update)\s*/i, '').trim();
-    const creditMatch = query.match(/(?:เครดิต|credit)\s*(30|60|90)/i);
-    const credit_term = creditMatch ? Number(creditMatch[1]) as 30 | 60 | 90 : null;
-
-    let targetQuery = query.replace(/(?:เครดิต|credit)\s*(30|60|90)/i, '').trim();
-    const matched = findClosestItem(targetQuery, existingItems);
+    const matched = findClosestItem(query, existingItems);
 
     return {
       intent: 'UPDATE',
       item_id: matched?.id || undefined,
-      update_data: credit_term ? { credit_term } : {}
+      update_data: {}
     };
   }
 
-  // 6. CREATE intent (default fallback)
-  let credit_term: 30 | 60 | 90 | null = null;
-  let po_date: string | null = null;
-  let budget_due_date: string | null = null;
-
-  const creditMatch = messageText.match(/(?:เครดิต|credit|cr)\s*(30|60|90)\s*(?:วัน|days)?/i);
-  if (creditMatch) {
-    credit_term = Number(creditMatch[1]) as 30 | 60 | 90;
-    po_date = new Date().toISOString().substring(0, 10);
-    budget_due_date = calculateDueDate(po_date, credit_term);
-  }
-
+  // 5. CREATE intent (default fallback)
   const reminder_date = extractReminderDate(messageText);
 
-  let title = messageText.replace(/(?:เครดิต|credit|cr)\s*(30|60|90)\s*(?:วัน|days)?/i, '').trim();
-  title = title.replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g, '').trim();
+  let title = messageText.replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g, '').trim();
   title = title.replace(/(?:แจ้งเตือน|เตือน|วันจันทร์ที่|วันอังคารที่|วันพุธที่|วันพฤหัสบดีที่|วันศุกร์ที่|วันเสาร์ที่|วันอาทิตย์ที่|วันที่|วัน)\s*$/i, '').trim();
   title = title.replace(/^(เพิ่ม)\s*/i, '').trim();
   
@@ -846,9 +799,6 @@ export function regexFallbackParser(messageText: string, existingItems: any[]): 
     create_data: {
       title: title || messageText,
       description: `บันทึกผ่าน LINE Bot: ${messageText}`,
-      credit_term,
-      po_date,
-      budget_due_date,
       reminder_date
     }
   };
@@ -888,14 +838,12 @@ function findClosestItem(query: string, items: any[]): any | null {
  */
 export async function parseItemEditWithAI(
   messageText: string,
-  currentItem: { title: string; description: string | null; credit_term: number | null; reminder_date: string | null },
+  currentItem: { title: string; description: string | null; reminder_date: string | null },
   apiKey: string
 ): Promise<{
   title?: string;
   description?: string;
-  credit_term?: number | null;
-  po_date?: string | null;
-  budget_due_date?: string | null;
+  status?: 'Pending' | 'Issuing Item';
   reminder_date?: string | null;
 }> {
   const modelName = 'gemini-2.5-flash';
@@ -922,7 +870,6 @@ Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
 The user is editing a specific item. Here is the current state of the item:
 - Title: "${currentItem.title}"
 - Description: "${currentItem.description || 'None'}"
-- Credit Term: ${currentItem.credit_term || 'None'} days
 - Scheduled Reminder: ${currentReminderStr}
 
 The user has sent this edit request: "${messageText}"
@@ -935,17 +882,13 @@ Rules:
    - If they say "ยกเลิกแจ้งเตือน" / "ไม่เตือนแล้ว" / "ลบวันแจ้งเตือน" / "ไม่แจ้งเตือนแล้ว", set "reminder_date" to null.
 2. If the user wants to change the title (e.g. "แก้ชื่อเป็น คอมพิวเตอร์ i7", "เปลี่ยนชื่อรายการเป็น ซื้ออุปกรณ์สำนักงาน", "แก้ชื่อเป็น สมุดโน้ต", or they type a clear new name like "กระดาษ A4 10 กล่อง" without referencing dates/times or credit terms), set the "title" field.
    - CRITICAL: Never include keyword prefixes like 'แจ้งเตือน', 'ให้แจ้งเตือน', 'ไม่แจ้งเตือน', 'เตือน', 'ช่วยเตือน', 'ช่วยแจ้งเตือน', 'บันทึก', 'จด', 'เพิ่ม', 'แก้ชื่อเป็น', 'เปลี่ยนชื่อเป็น' in the title. Remove them.
-3. If they only requested to change the reminder date/time (e.g., "แจ้งเตือนเวลาตอน 12:00 น.") or the credit term, and did NOT request a title change, do NOT return the "title" field in your JSON output (or set it to null), so that the existing title is preserved! E.g. for "แจ้งเตือนเวลาตอน 12:00 น.", the user wants to update the reminder_date, NOT change the title to "แจ้งเตือนเวลาตอน 12:00 น.".
-4. If they want to change the credit term (e.g., "เครดิต 60 วัน"), set "credit_term" (30 | 60 | 90) and set "po_date" to today's date "YYYY-MM-DD" and "budget_due_date" to "YYYY-MM-DD" (po_date + credit_term).
-5. If the request is a mix of changes (e.g., "แก้ชื่อเป็น คอมพิวเตอร์ และเตือนพรุ่งนี้ 9 โมง"), return both "title" and "reminder_date" fields.
+3. If they only requested to change the reminder date/time (e.g., "แจ้งเตือนเวลาตอน 12:00 น.") and did NOT request a title change, do NOT return the "title" field in your JSON output (or set it to null), so that the existing title is preserved! E.g. for "แจ้งเตือนเวลาตอน 12:00 น.", the user wants to update the reminder_date, NOT change the title to "แจ้งเตือนเวลาตอน 12:00 น.".
+4. If the request is a mix of changes (e.g., "แก้ชื่อเป็น คอมพิวเตอร์ และเตือนพรุ่งนี้ 9 โมง"), return both "title" and "reminder_date" fields.
 
 Format the output strictly as JSON with the following structure (include only fields that are being updated):
 {
   "title": "New title if updated (or null/omit if title should not be changed)",
   "description": "New description if updated (or null/omit)",
-  "credit_term": 30 | 60 | 90 | null (if updated, otherwise omit),
-  "po_date": "YYYY-MM-DD (if credit_term updated, otherwise omit)",
-  "budget_due_date": "YYYY-MM-DD (if credit_term updated, otherwise omit)",
   "reminder_date": "ISOString with +07:00 offset (if reminder date/time is updated/added), or null (if user requested to delete/clear the reminder), or omit if no changes to reminder"
 }`
       }]

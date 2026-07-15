@@ -17,7 +17,7 @@ import { useTheme } from '@/components/providers/theme-provider';
 import { Item } from '@/lib/types';
 import { 
   X, Calendar as CalendarIcon, Clock, 
-  FileText, CreditCard, Image as ImageIcon, AlertCircle 
+  FileText, Image as ImageIcon, AlertCircle 
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -142,20 +142,6 @@ export default function CalendarPage() {
         end: remEndDate,
         allDay: false,
         type: 'reminder',
-        item,
-      });
-    }
-
-    // 2. Map Budget Due Date (PO Date + Credit Term)
-    if (item.budget_due_date) {
-      const dueDate = new Date(item.budget_due_date);
-      events.push({
-        id: `${item.id}-due`,
-        title: isCompleted ? `✅ ชำระแล้ว: ${item.title} (${item.credit_term} วัน)` : `💰 ครบชำระ: ${item.title} (${item.credit_term} วัน)`,
-        start: dueDate,
-        end: dueDate,
-        allDay: true,
-        type: 'budget_due',
         item,
       });
     }
@@ -341,61 +327,19 @@ export default function CalendarPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider mb-1">
-                      สถานะงานปัจจุบัน
+                    <label className="block text-[10px] font-bold text-slate-450 dark:text-slate-500 tracking-wider mb-1">
+                      สถานะปัจจุบัน
                     </label>
                     <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide uppercase ${
                       selectedEvent.item.status === 'Pending' ? 'text-amber-700 bg-amber-500/10' :
-                      selectedEvent.item.status === 'Purchasing' ? 'text-violet-700 dark:text-violet-400 bg-violet-500/10' :
                       'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10'
                     }`}>
-                      {selectedEvent.item.status === 'Pending' ? 'กำลังดำเนินการ' :
-                       selectedEvent.item.status === 'Purchasing' ? 'ติดต่อจัดซื้อ' :
-                       'สำเร็จ'}
+                      {selectedEvent.item.status === 'Pending' ? 'กำลังดำเนินการ' : 'สำเร็จ'}
                     </span>
                   </div>
-
-                  {selectedEvent.item.credit_term && (
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider mb-1">
-                        เงื่อนไขเครดิตชำระ
-                      </label>
-                      <span className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-bold">
-                        <CreditCard className="w-3.5 h-3.5" />
-                        <span>{selectedEvent.item.credit_term} วัน</span>
-                      </span>
-                    </div>
-                  )}
                 </div>
-
-                {(selectedEvent.item.po_date || selectedEvent.item.budget_due_date) && (
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800/60">
-                    {selectedEvent.item.po_date && (
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                          วันที่ออก PO
-                        </label>
-                        <span className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300 font-medium">
-                          <FileText className="w-3.5 h-3.5 text-slate-500" />
-                          <span>{moment(selectedEvent.item.po_date).format('DD/MM/YYYY')}</span>
-                        </span>
-                      </div>
-                    )}
-                    {selectedEvent.item.budget_due_date && (
-                      <div>
-                        <label className="block text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider mb-1">
-                          วันที่จ่ายเงินจริง
-                        </label>
-                        <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-bold">
-                          <CalendarIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500" />
-                          <span>{moment(selectedEvent.item.budget_due_date).format('DD/MM/YYYY')}</span>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Uploaded image details */}
                 {selectedEvent.item.image_url && (

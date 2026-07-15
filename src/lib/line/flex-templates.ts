@@ -3,28 +3,8 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
   const editUrl = `${appUrl}/dashboard?edit=${item.id}`;
   
   // Determine Status text and badge color
-  let statusText = item.status === 'Pending' ? 'กำลังดำเนินการ' 
-    : item.status === 'Purchasing' ? 'ติดต่อที่จัดซื้อ' 
-    : 'สำเร็จ';
-  let statusColor = item.status === 'Pending' ? '#f59e0b'
-    : item.status === 'Purchasing' ? '#8b5cf6'
-    : '#10b981';
-  let infoText = '';
-  
-  if (item.is_pr) {
-    if (item.has_item_number) {
-      infoText = `📦 AX Item: ${item.item_number || 'มีเลขแล้ว'}`;
-      if (item.pr_number) {
-        infoText += ` (PR: #${item.pr_number})`;
-      }
-    } else {
-      if (item.item_request_status === 'Pending') {
-        infoText = '⏳ ส่งเรื่องจัดซื้อเรียบร้อยแล้ว (รอแอด Item)';
-      } else {
-        infoText = '⚠️ รอดำเนินการแจ้งเรื่องจัดซื้อ';
-      }
-    }
-  }
+  let statusText = item.status === 'Pending' ? 'กำลังดำเนินการ' : 'สำเร็จ';
+  let statusColor = item.status === 'Pending' ? '#f59e0b' : '#10b981';
 
   const bubble: any = {
     type: 'bubble',
@@ -39,10 +19,10 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
           contents: [
             {
               type: 'text',
-              text: item.is_pr ? '🏷️ รายการ PR' : '📌 บันทึกทั่วไป',
+              text: '📌 บันทึกช่วยจำ',
               weight: 'bold',
               size: 'xs',
-              color: item.is_pr ? '#8b5cf6' : '#64748b',
+              color: '#64748b',
               flex: 1
             },
             {
@@ -118,56 +98,6 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
       ]
     }
   );
-
-  if (infoText) {
-    bubble.body.contents[bubble.body.contents.length - 1].contents.push({
-      type: 'box',
-      layout: 'horizontal',
-      contents: [
-        {
-          type: 'text',
-          text: 'ข้อมูล:',
-          size: 'xs',
-          color: '#94a3b8',
-          flex: 2
-        },
-        {
-          type: 'text',
-          text: infoText,
-          size: 'xs',
-          color: '#334155',
-          flex: 8,
-          wrap: true
-        }
-      ]
-    });
-  }
-
-  // Add credit details if exists
-  if (item.credit_term) {
-    const formattedDate = item.budget_due_date ? new Date(item.budget_due_date).toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' }) : '-';
-    bubble.body.contents[bubble.body.contents.length - 1].contents.push({
-      type: 'box',
-      layout: 'horizontal',
-      contents: [
-        {
-          type: 'text',
-          text: 'เครดิต:',
-          size: 'xs',
-          color: '#94a3b8',
-          flex: 2
-        },
-        {
-          type: 'text',
-          text: `${item.credit_term} วัน (ครบกำหนด: ${formattedDate})`,
-          size: 'xs',
-          color: '#ef4444',
-          weight: 'bold',
-          flex: 8
-        }
-      ]
-    });
-  }
 
   // Add reminder details if exists
   if (item.reminder_date) {
