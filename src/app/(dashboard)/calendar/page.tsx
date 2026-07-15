@@ -127,6 +127,8 @@ export default function CalendarPage() {
   const events: CustomEvent[] = [];
 
   items.forEach((item) => {
+    const isCompleted = item.status === 'Issuing Item';
+
     // 1. Map Reminder Date
     if (item.reminder_date) {
       const remDate = new Date(item.reminder_date);
@@ -135,7 +137,7 @@ export default function CalendarPage() {
       
       events.push({
         id: `${item.id}-reminder`,
-        title: `🔔 เตือน: ${item.title}`,
+        title: isCompleted ? `✅ สำเร็จ: ${item.title}` : `🔔 เตือน: ${item.title}`,
         start: remDate,
         end: remEndDate,
         allDay: false,
@@ -149,7 +151,7 @@ export default function CalendarPage() {
       const dueDate = new Date(item.budget_due_date);
       events.push({
         id: `${item.id}-due`,
-        title: `💰 ครบชำระ: ${item.title} (${item.credit_term} วัน)`,
+        title: isCompleted ? `✅ ชำระแล้ว: ${item.title} (${item.credit_term} วัน)` : `💰 ครบชำระ: ${item.title} (${item.credit_term} วัน)`,
         start: dueDate,
         end: dueDate,
         allDay: true,
@@ -163,11 +165,21 @@ export default function CalendarPage() {
   const eventStyleGetter = (event: CustomEvent) => {
     if (!event || !event.type) return {};
     const isDark = theme === 'dark';
+    const isCompleted = event.item.status === 'Issuing Item';
+
     let backgroundColor = '';
     let textColor = '';
     let border = '';
+    let textDecoration = '';
+    let opacity = 1;
 
-    if (event.type === 'reminder') {
+    if (isCompleted) {
+      backgroundColor = isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(241, 245, 249, 0.85)'; // grey/slate
+      textColor = isDark ? '#64748b' : '#94a3b8';
+      border = isDark ? '1px dashed rgba(148, 163, 184, 0.2)' : '1px dashed rgba(203, 213, 225, 1)';
+      textDecoration = 'line-through';
+      opacity = 0.7;
+    } else if (event.type === 'reminder') {
       backgroundColor = isDark ? 'rgba(217, 119, 6, 0.15)' : 'rgba(217, 119, 6, 0.08)'; // amber-600
       textColor = isDark ? '#fbbf24' : '#b45309'; // amber-400 / amber-700
       border = isDark ? '1px solid rgba(217, 119, 6, 0.3)' : '1px solid rgba(217, 119, 6, 0.2)';
@@ -182,6 +194,8 @@ export default function CalendarPage() {
         backgroundColor,
         color: textColor,
         border,
+        textDecoration,
+        opacity,
         display: 'block',
       },
     };

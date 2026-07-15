@@ -243,7 +243,7 @@ export default function DashboardPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['items'] });
       if (data?.calculatedDueDate) {
-        const dateStr = new Date(data.calculatedDueDate).toLocaleDateString('th-TH', { dateStyle: 'medium' });
+        const dateStr = new Date(data.calculatedDueDate).toLocaleDateString('en-GB');
         showToast(`อัปเดตเครดิต ${data.creditTerm} วันสำเร็จ! ครบกำหนดชำระจริงวันที่: ${dateStr}`);
       } else if (data?.nextStatus !== 'Issuing Item') {
         const statusName =
@@ -323,16 +323,9 @@ export default function DashboardPage() {
     {
       status: 'Pending',
       title: 'กำลังดำเนินการ (Pending)',
-      subtitle: 'รายการขอซื้อเริ่มต้น / ตรวจสอบสเปก',
+      subtitle: 'รายการบันทึกช่วยจำที่กำลังดำเนินการอยู่',
       colorClass: 'text-amber-600 dark:text-amber-400 bg-amber-500/10',
       borderClass: 'border-amber-500/20',
-    },
-    {
-      status: 'Purchasing',
-      title: 'ติดต่อที่จัดซื้อ (Purchasing)',
-      subtitle: 'ประสานงาน PO / เลือกเงื่อนไขเครดิต',
-      colorClass: 'text-violet-600 dark:text-violet-400 bg-violet-500/10',
-      borderClass: 'border-violet-500/20',
     },
   ];
 
@@ -462,9 +455,9 @@ export default function DashboardPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400">{(error as any)?.message || 'โปรดตรวจสอบสิทธิ์เชื่อมต่อหรือรีเฟรชหน้าเว็บ'}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 max-w-4xl mx-auto">
           {columns.map((column) => {
-            const columnItems = filteredItems.filter((item) => item.status === column.status);
+            const columnItems = filteredItems.filter((item) => item.status === 'Pending' || item.status === 'Purchasing');
             const isColumnHovered = activeDragColumn === column.status;
 
             return (
@@ -598,7 +591,7 @@ export default function DashboardPage() {
                           {item.reminder_date && (
                             <div className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/5 px-2 py-0.5 rounded-md w-fit font-semibold border border-amber-500/10">
                               <Clock className="w-3.5 h-3.5" />
-                              <span>แจ้งเตือน: {new Date(item.reminder_date).toLocaleDateString('th-TH', { dateStyle: 'short' })}</span>
+                              <span>แจ้งเตือน: {new Date(item.reminder_date).toLocaleDateString('en-GB')}</span>
                             </div>
                           )}
 
@@ -606,7 +599,7 @@ export default function DashboardPage() {
                           {item.po_date && (
                             <div className="flex items-center gap-1.5 text-[10px] text-violet-600 dark:text-violet-400 bg-violet-500/5 px-2 py-0.5 rounded-md w-fit font-semibold border border-violet-500/10">
                               <FileText className="w-3.5 h-3.5" />
-                              <span>PO: {new Date(item.po_date).toLocaleDateString('th-TH', { dateStyle: 'short' })}</span>
+                              <span>PO: {new Date(item.po_date).toLocaleDateString('en-GB')}</span>
                             </div>
                           )}
 
@@ -622,7 +615,7 @@ export default function DashboardPage() {
                           {item.budget_due_date && (
                             <div className="flex items-center gap-1.5 text-[10px] text-emerald-650 dark:text-emerald-450 bg-emerald-500/10 px-2 py-0.5 rounded-md w-fit font-extrabold border border-emerald-500/20">
                               <Calendar className="w-3.5 h-3.5" />
-                              <span>วันครบกำหนด: {new Date(item.budget_due_date).toLocaleDateString('th-TH', { dateStyle: 'short' })}</span>
+                              <span>วันครบกำหนด: {new Date(item.budget_due_date).toLocaleDateString('en-GB')}</span>
                             </div>
                           )}
 

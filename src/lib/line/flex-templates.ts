@@ -3,40 +3,27 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
   const editUrl = `${appUrl}/dashboard?edit=${item.id}`;
   
   // Determine Status text and badge color
-  let statusText = 'บันทึกทั่วไป';
-  let statusColor = '#64748b'; // slate
+  let statusText = item.status === 'Pending' ? 'กำลังดำเนินการ' 
+    : item.status === 'Purchasing' ? 'ติดต่อที่จัดซื้อ' 
+    : 'สำเร็จ';
+  let statusColor = item.status === 'Pending' ? '#f59e0b'
+    : item.status === 'Purchasing' ? '#8b5cf6'
+    : '#10b981';
   let infoText = '';
   
   if (item.is_pr) {
     if (item.has_item_number) {
+      infoText = `📦 AX Item: ${item.item_number || 'มีเลขแล้ว'}`;
       if (item.pr_number) {
-        statusText = `ออก PR แล้ว (#${item.pr_number})`;
-        statusColor = '#10b981'; // green
-        infoText = `📦 AX Item: ${item.item_number || 'มีเลขแล้ว'}`;
-      } else {
-        statusText = 'พร้อมออก PR';
-        statusColor = '#8b5cf6'; // violet
-        infoText = `📦 AX Item: ${item.item_number || 'มีเลขแล้ว'}`;
+        infoText += ` (PR: #${item.pr_number})`;
       }
     } else {
       if (item.item_request_status === 'Pending') {
-        statusText = 'รอจัดซื้อแอด Item ใน AX';
-        statusColor = '#f59e0b'; // amber
         infoText = '⏳ ส่งเรื่องจัดซื้อเรียบร้อยแล้ว (รอแอด Item)';
       } else {
-        statusText = 'ยังไม่มีเลข Item';
-        statusColor = '#ef4444'; // red
         infoText = '⚠️ รอดำเนินการแจ้งเรื่องจัดซื้อ';
       }
     }
-  } else {
-    // Non-PR status
-    statusText = item.status === 'Pending' ? 'กำลังดำเนินการ' 
-      : item.status === 'Purchasing' ? 'ติดต่อที่จัดซื้อ' 
-      : 'สำเร็จ';
-    statusColor = item.status === 'Pending' ? '#f59e0b'
-      : item.status === 'Purchasing' ? '#8b5cf6'
-      : '#10b981';
   }
 
   const bubble: any = {

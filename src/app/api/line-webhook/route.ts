@@ -158,7 +158,7 @@ export async function POST(request: Request) {
               .from('items')
               .update({
                 item_request_status: 'Pending',
-                status: 'Purchasing',
+                status: 'Pending',
                 updated_at: new Date().toISOString()
               })
               .eq('id', itemId);
@@ -168,7 +168,7 @@ export async function POST(request: Request) {
             } else {
               await sendLineReply(
                 replyToken, 
-                `⏳ แจ้งจัดซื้อแอดไอเทมเรียบร้อย!\nอัปเดตรายการ "${item.title}" เป็น "รอจัดซื้อแอด Item ใน AX" และย้ายไปคอลัมน์ "ติดต่อที่จัดซื้อ" บนบอร์ดแล้วครับ`
+                `⏳ แจ้งจัดซื้อแอดไอเทมเรียบร้อย!\nอัปเดตรายการ "${item.title}" เป็น "รอจัดซื้อแอด Item ใน AX" เรียบร้อยแล้วครับ`
               );
             }
           } else if (action === 'delete') {
@@ -346,7 +346,7 @@ export async function POST(request: Request) {
                 continue;
               }
 
-              const status = ocrData.credit_term ? 'Purchasing' : 'Pending';
+              const status = 'Pending';
               const { data: insertedItem, error: insertError } = await supabaseAdmin
                 .from('items')
                 .insert([
@@ -2169,8 +2169,10 @@ export async function POST(request: Request) {
           }
 
           // Determine initial status based on credit_term
-          const status = createData.credit_term ? 'Purchasing' : 'Pending';
-          const isPr = messageText.toLowerCase().includes('pr') || messageText.toLowerCase().includes('ax') || messageText.toLowerCase().includes('ซื้อ');
+          const status = 'Pending';
+          const hasPrKeyword = messageText.toLowerCase().includes('pr') || messageText.toLowerCase().includes('ax') || messageText.toLowerCase().includes('ซื้อ');
+          const isTrainingOrMeeting = /อบรม|ประชุม|นัด|เรียน|คุย|สัมมนา/i.test(messageText);
+          const isPr = hasPrKeyword && !isTrainingOrMeeting;
 
           // Insert directly into items table
           const { data: insertedItem, error: insertError } = await supabaseAdmin

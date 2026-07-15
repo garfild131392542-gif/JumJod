@@ -240,15 +240,15 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
       />
 
       {/* Modal Box */}
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[90vh]">
+      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[90vh] text-slate-800 dark:text-slate-200">
         {/* Header */}
-        <div className="p-6 border-b border-slate-800/80 flex items-center justify-between">
-          <h2 className="text-xl font-bold bg-gradient-to-r from-violet-400 to-indigo-200 bg-clip-text text-transparent">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
+          <h2 className="text-xl font-bold bg-gradient-to-r from-violet-650 to-indigo-650 dark:from-violet-400 dark:to-indigo-200 bg-clip-text text-transparent">
             {itemToEdit ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่'}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -265,7 +265,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
 
           {/* Title */}
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
               หัวข้อรายการ <span className="text-violet-500">*</span>
             </label>
             <input
@@ -273,14 +273,14 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="เช่น ซื้อเซิร์ฟเวอร์, ค่าลิขสิทธิ์ซอฟต์แวร์"
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-slate-200"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-slate-805 dark:text-slate-200"
               required
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
               รายละเอียดเพิ่มเติม (Description)
             </label>
             <textarea
@@ -288,28 +288,26 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
               onChange={(e) => setDescription(e.target.value)}
               placeholder="กรอกรายละเอียด เช่น สเปก อุปกรณ์ จำนวน หรือข้อมูลอ้างอิง"
               rows={3}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-slate-200 resize-none"
+              className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-slate-808 dark:text-slate-200 resize-none"
             />
           </div>
 
           {/* Status Selection */}
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
               สถานะ (Status Pipeline)
             </label>
-            <div className="grid grid-cols-3 gap-2">
-              {(['Pending', 'Purchasing', 'Issuing Item'] as ItemStatus[]).map((s) => {
+            <div className="grid grid-cols-2 gap-2">
+              {(['Pending', 'Issuing Item'] as ItemStatus[]).map((s) => {
                 const isSelected = status === s;
                 let thaiName = 'กำลังดำเนินการ';
-                let style = 'border-slate-800 text-slate-400 bg-slate-950 hover:bg-slate-900/50';
+                let style = 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900/50';
 
-                if (s === 'Purchasing') thaiName = 'ติดต่อที่จัดซื้อ';
                 if (s === 'Issuing Item') thaiName = 'สำเร็จ';
 
                 if (isSelected) {
-                  if (s === 'Pending') style = 'border-amber-500/50 bg-amber-500/10 text-amber-400';
-                  if (s === 'Purchasing') style = 'border-violet-500/50 bg-violet-500/10 text-violet-400';
-                  if (s === 'Issuing Item') style = 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400';
+                  if (s === 'Pending') style = 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400';
+                  if (s === 'Issuing Item') style = 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
                 }
 
                 return (
@@ -327,12 +325,12 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
           </div>
 
           {/* PR Toggle Switch */}
-          <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-800 bg-slate-950/40">
+          <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40">
             <div>
-              <label className="block text-xs font-bold text-slate-250 uppercase tracking-wider">
+              <label className="block text-xs font-bold text-slate-650 dark:text-slate-200 uppercase tracking-wider">
                 รายการขอซื้อ PR (PR Record)
               </label>
-              <p className="text-[10px] text-slate-500 mt-0.5">
+              <p className="text-[10px] text-slate-450 dark:text-slate-500 mt-0.5">
                 เปิดเพื่อบันทึกติดตามการออก PR และขอรหัส Item จากจัดซื้อ
               </p>
             </div>
@@ -340,7 +338,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
               type="button"
               onClick={() => setIsPr(!isPr)}
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                isPr ? 'bg-violet-600' : 'bg-slate-800'
+                isPr ? 'bg-violet-600' : 'bg-slate-200 dark:bg-slate-800'
               }`}
             >
               <span
@@ -353,14 +351,14 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
 
           {/* PR Details Section */}
           {isPr && (
-            <div className="p-4 rounded-xl border border-violet-500/10 bg-violet-950/5 space-y-4 animate-fade-in">
-              <h3 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-2">
+            <div className="p-4 rounded-xl border border-violet-500/10 bg-violet-500/5 dark:bg-violet-950/5 space-y-4 animate-fade-in">
+              <h3 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-2">
                 ข้อมูลการออก PR และขอรหัส Item (AX)
               </h3>
 
               {/* Has Item Number Radio */}
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">
+                <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">
                   มีเลข Item ในระบบ AX หรือยัง?
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -373,8 +371,8 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                     }}
                     className={`py-2 px-3 border rounded-xl text-xs font-bold transition-all duration-200 ${
                       !hasItemNumber
-                        ? 'border-amber-500/50 bg-amber-500/10 text-amber-400'
-                        : 'border-slate-800 text-slate-400 bg-slate-950 hover:bg-slate-900/50'
+                        ? 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                        : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900/50'
                     }`}
                   >
                     ยังไม่มีเลข Item
@@ -388,8 +386,8 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                     }}
                     className={`py-2 px-3 border rounded-xl text-xs font-bold transition-all duration-200 ${
                       hasItemNumber
-                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
-                        : 'border-slate-800 text-slate-400 bg-slate-950 hover:bg-slate-900/50'
+                        ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900/50'
                     }`}
                   >
                     มีเลข Item แล้ว
@@ -401,7 +399,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
               {!hasItemNumber && (
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">
+                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">
                       สถานะการขอเพิ่ม Item กับจัดซื้อ
                     </label>
                     <div className="grid grid-cols-2 gap-2">
@@ -410,8 +408,8 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                         onClick={() => setItemRequestStatus('None')}
                         className={`py-1.5 px-2.5 border rounded-lg text-xs font-semibold transition-all duration-200 ${
                           itemRequestStatus === 'None'
-                            ? 'border-slate-500/50 bg-slate-800 text-slate-200'
-                            : 'border-slate-800 text-slate-400 bg-slate-950/50'
+                            ? 'border-slate-300 dark:border-slate-500/50 bg-slate-150 dark:bg-slate-800 text-slate-850 dark:text-slate-200'
+                            : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/50'
                         }`}
                       >
                         ยังไม่ได้แจ้งเรื่อง
@@ -421,8 +419,8 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                         onClick={() => setItemRequestStatus('Pending')}
                         className={`py-1.5 px-2.5 border rounded-lg text-xs font-semibold transition-all duration-200 ${
                           itemRequestStatus === 'Pending'
-                            ? 'border-amber-500/50 bg-amber-500/10 text-amber-400'
-                            : 'border-slate-800 text-slate-400 bg-slate-950/50'
+                            ? 'border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                            : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/50'
                         }`}
                       >
                         แจ้งจัดซื้อแล้ว (รอแอด Item)
@@ -430,7 +428,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                     </div>
                   </div>
                   {itemRequestStatus === 'Pending' && (
-                    <div className="text-[10px] text-amber-400 bg-amber-500/5 p-2 rounded-lg border border-amber-500/10 leading-relaxed">
+                    <div className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/5 p-2 rounded-lg border border-amber-500/10 leading-relaxed">
                       ⏳ กำลังอยู่ในขั้นตอนจัดซื้อแอดไอเทมเข้าระบบ AX (เมื่อแอดเสร็จแล้วจึงจะออก PR ได้)
                     </div>
                   )}
@@ -441,7 +439,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
               {hasItemNumber && (
                 <div className="grid grid-cols-2 gap-4 animate-fade-in">
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">
+                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">
                       รหัส Item (AX Code)
                     </label>
                     <input
@@ -449,11 +447,11 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                       value={itemNumber}
                       onChange={(e) => setItemNumber(e.target.value)}
                       placeholder="เช่น ITM-00123"
-                      className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-200"
+                      className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-800 dark:text-slate-200"
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">
+                    <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">
                       เลขที่ PR (PR Number)
                     </label>
                     <input
@@ -461,7 +459,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                       value={prNumber}
                       onChange={(e) => setPrNumber(e.target.value)}
                       placeholder="เช่น PR26-0045"
-                      className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-200"
+                      className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-800 dark:text-slate-200"
                     />
                   </div>
                 </div>
@@ -470,7 +468,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
               {/* PR Status selection */}
               {hasItemNumber && (
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 mb-1.5 uppercase">
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">
                     สถานะการออก PR
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -479,8 +477,8 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                       onClick={() => setPrStatus('Ready')}
                       className={`py-1.5 px-2.5 border rounded-lg text-xs font-semibold transition-all duration-200 ${
                         prStatus === 'Ready'
-                          ? 'border-violet-500/50 bg-violet-500/10 text-violet-400'
-                          : 'border-slate-800 text-slate-400 bg-slate-950/50'
+                          ? 'border-violet-500/50 bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                          : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/50'
                       }`}
                     >
                       พร้อมออก PR (มีรหัส Item)
@@ -490,8 +488,8 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                       onClick={() => setPrStatus('Issued')}
                       className={`py-1.5 px-2.5 border rounded-lg text-xs font-semibold transition-all duration-200 ${
                         prStatus === 'Issued'
-                          ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
-                          : 'border-slate-800 text-slate-400 bg-slate-950/50'
+                          ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/50'
                       }`}
                     >
                       ออก PR เรียบร้อยแล้ว
@@ -505,7 +503,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
 
           {/* Reminder Date */}
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
               วันแจ้งเตือนการดำเนินการ (Reminder Date)
             </label>
             <div className="relative">
@@ -514,42 +512,42 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                 type="datetime-local"
                 value={reminderDate}
                 onChange={(e) => setReminderDate(e.target.value)}
-                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-slate-200"
+                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-slate-800 dark:text-slate-200"
               />
             </div>
           </div>
 
           {/* PO & Credit Term Logic */}
           {isPoStage && (
-            <div className="p-4 rounded-xl border border-violet-500/10 bg-violet-950/10 space-y-4 animate-fade-in">
-              <h3 className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-2">
+            <div className="p-4 rounded-xl border border-violet-500/10 bg-violet-505/5 dark:bg-violet-950/10 space-y-4 animate-fade-in">
+              <h3 className="text-xs font-bold text-violet-600 dark:text-violet-400 uppercase tracking-wider mb-2">
                 ข้อมูลเครดิตและการชำระเงิน (PO & Credit Term)
               </h3>
 
               <div className="grid grid-cols-2 gap-4">
                 {/* PO Date */}
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">
                     วันที่จัดส่ง PO (PO Date)
                   </label>
                   <input
                     type="date"
                     value={poDate}
                     onChange={(e) => setPoDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-200"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-800 dark:text-slate-200"
                     required={isPoStage}
                   />
                 </div>
 
                 {/* Credit Term */}
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 mb-1 uppercase">
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 uppercase">
                     ระยะเวลาเครดิต (Credit Term)
                   </label>
                   <select
                     value={creditTerm || ''}
                     onChange={(e) => setCreditTerm(e.target.value ? Number(e.target.value) as 30 | 60 | 90 : null)}
-                    className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-200"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-xs text-slate-800 dark:text-slate-200"
                     required={isPoStage}
                   >
                     <option value="" disabled>เลือกเครดิตเทอม</option>
@@ -562,9 +560,9 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
 
               {/* Auto-Calculated Budget Due Date */}
               {budgetDueDate && (
-                <div className="pt-2 flex items-center justify-between border-t border-violet-950/50">
-                  <span className="text-xs text-slate-400">วันครบกำหนดชำระจริง (Calculated Due Date):</span>
-                  <span className="text-sm font-bold text-emerald-400">{budgetDueDate}</span>
+                <div className="pt-2 flex items-center justify-between border-t border-slate-200 dark:border-slate-800/80">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">วันครบกำหนดชำระจริง (Calculated Due Date):</span>
+                  <span className="text-sm font-bold text-emerald-650 dark:text-emerald-400">{budgetDueDate}</span>
                 </div>
               )}
             </div>
@@ -572,12 +570,12 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
 
           {/* Image/File Attachment */}
           <div>
-            <label className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider">
+            <label className="block text-xs font-semibold text-slate-505 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
               แนบเอกสาร/รูปภาพประกอบ (Attachment)
             </label>
             <div className="flex items-center gap-4">
               {imagePreview && (imageFile ? imageFile.type.startsWith('image/') : (!existingImageUrl || isImageFile(existingImageUrl))) ? (
-                <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-800 shrink-0">
+                <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shrink-0">
                   <Image
                     src={imagePreview}
                     alt="Preview"
@@ -593,15 +591,15 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                       setExistingImageUrl(null);
                       setFileName(null);
                     }}
-                    className="absolute top-1 right-1 p-0.5 rounded-full bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white"
+                    className="absolute top-1 right-1 p-0.5 rounded-full bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-300 hover:text-white"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 </div>
               ) : (imageFile || existingImageUrl) ? (
-                <div className="relative w-20 h-20 rounded-xl border border-slate-800 bg-slate-950/50 flex flex-col items-center justify-center p-2 text-center shrink-0">
+                <div className="relative w-20 h-20 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex flex-col items-center justify-center p-2 text-center shrink-0">
                   <FileText className="w-6 h-6 text-violet-500 mb-1" />
-                  <span className="text-[8px] text-slate-405 dark:text-slate-400 truncate w-full px-1">{fileName || 'เอกสารแนบ'}</span>
+                  <span className="text-[8px] text-slate-500 dark:text-slate-400 truncate w-full px-1">{fileName || 'เอกสารแนบ'}</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -610,13 +608,13 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
                       setExistingImageUrl(null);
                       setFileName(null);
                     }}
-                    className="absolute top-1 right-1 p-0.5 rounded-full bg-slate-950/80 border border-slate-800 text-slate-300 hover:text-white"
+                    className="absolute top-1 right-1 p-0.5 rounded-full bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-slate-300 hover:text-white"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 </div>
               ) : (
-                <label className="w-20 h-20 rounded-xl border border-dashed border-slate-800 hover:border-violet-500/50 flex flex-col items-center justify-center cursor-pointer bg-slate-950/50 text-slate-500 hover:text-slate-400 transition-colors shrink-0">
+                <label className="w-20 h-20 rounded-xl border border-dashed border-slate-300 dark:border-slate-800 hover:border-violet-500/50 flex flex-col items-center justify-center cursor-pointer bg-slate-50 dark:bg-slate-950/50 text-slate-450 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-450 transition-colors shrink-0">
                   <ImageIcon className="w-5 h-5 mb-1" />
                   <span className="text-[10px]">เลือกไฟล์</span>
                   <input
@@ -636,11 +634,11 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
         </form>
 
         {/* Footer Actions */}
-        <div className="p-6 border-t border-slate-800/80 bg-slate-950/20 flex items-center justify-end gap-3">
+        <div className="p-6 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors"
+            className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-450 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
           >
             ยกเลิก
           </button>
@@ -648,7 +646,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
             type="button"
             onClick={handleSubmit}
             disabled={submitting}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-indigo-600/10 active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-650 to-indigo-650 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-indigo-600/10 active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
           >
             {submitting ? (
               <>

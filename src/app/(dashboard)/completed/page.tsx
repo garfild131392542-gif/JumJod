@@ -54,7 +54,7 @@ export default function CompletedItemsPage() {
       const { error } = await supabase
         .from('items')
         .update({ 
-          status: 'Purchasing', 
+          status: 'Pending', 
           updated_at: new Date().toISOString() 
         })
         .eq('id', itemId);
