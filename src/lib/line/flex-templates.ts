@@ -158,7 +158,7 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
 
   // Add credit details if exists
   if (item.credit_term) {
-    const formattedDate = item.budget_due_date ? new Date(item.budget_due_date).toLocaleDateString('th-TH', { dateStyle: 'short', timeZone: 'Asia/Bangkok' }) : '-';
+    const formattedDate = item.budget_due_date ? new Date(item.budget_due_date).toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' }) : '-';
     bubble.body.contents[bubble.body.contents.length - 1].contents.push({
       type: 'box',
       layout: 'horizontal',
@@ -185,7 +185,7 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
   // Add reminder details if exists
   if (item.reminder_date) {
     const dateObj = new Date(item.reminder_date);
-    const dateStr = dateObj.toLocaleDateString('th-TH', { dateStyle: 'short', timeZone: 'Asia/Bangkok' });
+    const dateStr = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' });
     const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
     bubble.body.contents[bubble.body.contents.length - 1].contents.push({
       type: 'box',
@@ -1067,7 +1067,7 @@ export function createOcrStockConfirmationFlex(items: Array<{ name: string, quan
 export function createOcrReminderConfirmationFlex(reminder: { title: string, description: string, reminder_date: string | null }) {
   const dateText = reminder.reminder_date ? (() => {
     const d = new Date(reminder.reminder_date);
-    const dateStr = d.toLocaleDateString('th-TH', { dateStyle: 'short', timeZone: 'Asia/Bangkok' });
+    const dateStr = d.toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' });
     const timeStr = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
     return `🔔 ${dateStr} (${timeStr} น.)`;
   })() : 'ไม่มี (จดอย่างเดียว)';

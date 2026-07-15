@@ -152,12 +152,12 @@ Analyze this message from the user to extract details for creating a new item: "
 
 Extract the following fields and format strictly as JSON:
 {
-  "title": "Clean, short, and descriptive title of the procurement or task. CRITICAL: Never include keyword prefixes like 'แจ้งเตือน', 'ให้แจ้งเตือน', 'ไม่แจ้งเตือน', 'เตือน', 'ช่วยเตือน', 'ช่วยแจ้งเตือน', 'บันทึก', 'จด', 'เพิ่ม' in the title. Remove them and any leading colons/dashes. E.g. for 'บันทึก เคลียร์ไฟล์งบประมาณ ให้พี่เทียม' the title is 'เคลียร์ไฟล์งบประมาณ ให้พี่เทียม', for 'แจ้งเตือนซื้อหมึกพิมพ์' the title is 'ซื้อหมึกพิมพ์'",
+  "title": "Clean, short, and descriptive title of the procurement or task. CRITICAL: Never include keyword prefixes or suffixes related to dates, times, or reminder instructions in the title. Strip any phrases like 'แจ้งเตือนวันที่...', 'ตอน...', 'เตือน...', 'วันจันทร์หน้า', 'เวลา...' entirely. E.g. for 'มีอบรมการเพิ่มไอเทมในระบบAX แจ้งเตือนวันที่ 17/07/26 ตอน 07.00 น.' the title MUST BE ONLY 'มีอบรมการเพิ่มไอเทมในระบบAX', for 'บันทึก เคลียร์ไฟล์งบประมาณ ให้พี่เทียม' the title is 'เคลียร์ไฟล์งบประมาณ ให้พี่เทียม'",
   "description": "Full description details (optional)",
   "credit_term": 30 | 60 | 90 | null (if mentioned, e.g. เครดิต 30 วัน, otherwise null),
   "po_date": "YYYY-MM-DD (default to today if credit term is matched, otherwise null)",
   "budget_due_date": "YYYY-MM-DD (calculated as po_date + credit_term if matched, otherwise null)",
-  "reminder_date": "ISOString in Thailand timezone (+07:00) or UTC (optional reminder date and time. Parse if message mentions when to remind, including time if specified, e.g. 'วันจันทร์หน้า', 'พรุ่งนี้ 10:30', '30/07/26 ตอนบ่ายสอง', 'อีก 2 ชั่วโมง'. Always convert relative times accurately based on today's date/time. If only date is specified, default time to 09:00:00+07:00)"
+  "reminder_date": "ISOString in Thailand timezone (+07:00) or UTC (optional reminder date and time. Parse if message mentions when to remind, including time if specified. Pay close attention to Thai time formats like 'ตอน 07.00 น.' (which is 07:00:00), 'ตอน 7 โมงเช้า' (which is 07:00:00), 'ตอนบ่ายสาม' (which is 15:00:00). Always convert relative times accurately based on today's date/time. If only date is specified, default time to 09:00:00+07:00. Note: Thai short year like '26' in '17/07/26' means 2026 C.E. (not 2069 or 2026 B.E. B.E. 2569 is C.E. 2026))"
 }`
       }]
     }],
@@ -180,10 +180,14 @@ Extract the following fields and format strictly as JSON:
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const parsed = JSON.parse(rawText.trim()) as ParsedProcurementData;
 
-  // Clean title prefix just in case Gemini missed it
+  // Clean title prefix and suffix just in case Gemini missed it
   if (parsed.title) {
     parsed.title = parsed.title.replace(/^(?:ให้แจ้งเตือน|ไม่แจ้งเตือน|ช่วยแจ้งเตือน|แจ้งเตือน|ช่วยเตือน|เตือน|บันทึก|จด|เพิ่ม)\s*/i, '').trim();
+    parsed.title = parsed.title.replace(/(?:แจ้งเตือน)?วันที่\s*\d+[\/\.\-]\d+[\/\.\-]\d+(?:\s*(?:ตอน|เวลา)?\s*\d+[\.\:]\d+\s*น\.?)?$/i, '').trim();
+    parsed.title = parsed.title.replace(/(?:แจ้งเตือน)?วันที่\s*\d+[\/\.\-]\d+[\/\.\-]\d+$/i, '').trim();
+    parsed.title = parsed.title.replace(/(?:\s*(?:ตอน|เวลา)?\s*\d+[\.\:]\d+\s*น\.?)$/i, '').trim();
     parsed.title = parsed.title.replace(/^[:\-ー\s\.]+/, '').trim();
+    parsed.title = parsed.title.replace(/[:\-ー\s\.]+$/, '').trim();
   }
 
   return parsed;

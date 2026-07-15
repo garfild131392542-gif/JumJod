@@ -80,7 +80,7 @@ export async function GET(request: Request) {
           continue;
         }
 
-        const targetLineId = item.line_group_id || profile.line_user_id;
+        const targetLineId = profile.line_user_id;
         if (!targetLineId) {
           await supabaseAdmin
             .from('items')

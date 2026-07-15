@@ -86,7 +86,12 @@ export async function POST(request: Request) {
     for (const event of events) {
       const replyToken = event.replyToken;
       const lineUserId = event.source.userId;
-      const lineGroupId = event.source.groupId || event.source.roomId || null;
+      
+      if (event.source.type === 'group' || event.source.type === 'room') {
+        continue;
+      }
+      
+      const lineGroupId = null;
       const messageText = event.type === 'message' && event.message.type === 'text' ? event.message.text.trim() : '';
       const markAsReadToken = event.markAsReadToken;
 
@@ -288,7 +293,7 @@ export async function POST(request: Request) {
             if (updateError || !updatedItem) {
               await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการเลื่อนเวลาแจ้งเตือน');
             } else {
-              const formattedDate = newReminderDate.toLocaleDateString('th-TH', { dateStyle: 'short', timeZone: 'Asia/Bangkok' });
+              const formattedDate = newReminderDate.toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' });
               const formattedTime = newReminderDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
               await sendLineReply(
                 replyToken,
@@ -319,7 +324,7 @@ export async function POST(request: Request) {
             if (error || !updatedItem) {
               await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการตั้งเวลาแจ้งเตือน');
             } else {
-              const formattedDate = dateObj.toLocaleDateString('th-TH', { dateStyle: 'short', timeZone: 'Asia/Bangkok' });
+              const formattedDate = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' });
               const formattedTime = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
               await sendLineReply(replyToken, `🔔 ตั้งเวลาแจ้งเตือนสำเร็จ!\n\nรายการ: "${updatedItem.title}"\nเวลาแจ้งเตือนใหม่: ${formattedDate} (เวลา ${formattedTime} น.)`);
             }
@@ -798,94 +803,21 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // 1.2 Link LINE Group to this profile (#linkgroup)
-      if (messageText.toLowerCase() === '#linkgroup') {
-        if (!lineGroupId) {
-          await sendLineReply(replyToken, '❌ คำสั่งนี้สามารถใช้งานได้เฉพาะภายในห้องแชตกลุ่มไลน์หรือห้องแชตร่วมเท่านั้นครับ');
-          continue;
-        }
+      // 2. Fetch profile associated with this lineUserId
+      const { data: senderProfile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('line_user_id', lineUserId)
+        .single();
 
-        // Fetch sender's profile
-        const { data: senderProfile, error: senderError } = await supabaseAdmin
-          .from('profiles')
-          .select('*')
-          .eq('line_user_id', lineUserId)
-          .single();
-
-        if (senderError || !senderProfile) {
-          await sendLineReply(
-            replyToken,
-            '❌ บัญชีผู้ใช้งานของคุณยังไม่ได้เชื่อมต่อกับระบบจำจด กรุณาพิมพ์ #link [รหัสเชื่อมต่อ] จากหน้าเว็บของคุณก่อนในแชตส่วนตัวครับ'
-          );
-          continue;
-        }
-
-        // Link group to this profile
-        const { error: updateError } = await supabaseAdmin
-          .from('profiles')
-          .update({
-            line_group_id: lineGroupId,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', senderProfile.id);
-
-        if (updateError) {
-          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการเชื่อมต่อคลังกลุ่มกับระบบฐานข้อมูล');
-        } else {
-          await sendLineReply(
-            replyToken,
-            `✅ เชื่อมต่อกลุ่มไลน์นี้กับคลังสต็อกของอีเมล "${senderProfile.email}" เรียบร้อยแล้วครับ!\n\nสมาชิกในกลุ่มสามารถสั่งเช็กยอดหรือเบิกจ่ายวัสดุได้ร่วมกันผ่านคำสั่งแชตในกลุ่มนี้ได้ทันที`
-          );
-        }
+      if (profileError || !senderProfile) {
+        await sendLineReply(
+          replyToken,
+          '🔔 ยินดีต้อนรับสู่ จำจด (JumJod)!\n\nบัญชี LINE นี้ยังไม่ได้เชื่อมต่อกับระบบ เพื่อเริ่มช่วยจำกรุณาดำเนินการดังนี้:\n\n1. เข้าสู่ระบบทางหน้าเว็บจำจด\n2. ไปที่หน้าตั้งค่าและรับ "รหัสเชื่อมต่อไลน์"\n3. พิมพ์รหัสกลับมาในแชตนี้ ในรูปแบบ: #link รหัสของคุณ\n(เช่น #link ABC123D)'
+        );
         continue;
       }
-
-      // Check if we are in a group chat and if it is linked to an owner's profile
-      let groupOwnerProfile: any = null;
-      if (lineGroupId) {
-        const { data: owner } = await supabaseAdmin
-          .from('profiles')
-          .select('*')
-          .eq('line_group_id', lineGroupId)
-          .single();
-        if (owner) {
-          groupOwnerProfile = owner;
-        }
-      }
-
-      // If we are in a group chat, and it is NOT linked, or if the message is NOT a stock command, ignore it!
-      const isStockKeyword = /เบิก|หัก|เติม|เพิ่ม|เช็ค|เช็ก|สต็อก|คลัง|คงเหลือ|จำนวน|เหลือ|ยอด/i.test(messageText);
-      if (lineGroupId) {
-        if (!groupOwnerProfile) {
-          // Group not linked to any profile yet. Ignore all other messages to avoid spamming.
-          continue;
-        }
-        if (!isStockKeyword) {
-          // Not a stock keyword. Ignore.
-          continue;
-        }
-      }
-
-      // 2. Fetch profile associated with this lineUserId (or use groupOwnerProfile if in group)
-      let profile: any = null;
-      if (lineGroupId && groupOwnerProfile) {
-        profile = groupOwnerProfile;
-      } else {
-        const { data: senderProfile, error: profileError } = await supabaseAdmin
-          .from('profiles')
-          .select('*')
-          .eq('line_user_id', lineUserId)
-          .single();
-
-        if (profileError || !senderProfile) {
-          await sendLineReply(
-            replyToken,
-            '🔔 ยินดีต้อนรับสู่ จำจด (JumJod)!\n\nบัญชี LINE นี้ยังไม่ได้เชื่อมต่อกับระบบ เพื่อเริ่มช่วยจำกรุณาดำเนินการดังนี้:\n\n1. เข้าสู่ระบบทางหน้าเว็บจำจด\n2. ไปที่หน้าตั้งค่าและรับ "รหัสเชื่อมต่อไลน์"\n3. พิมพ์รหัสกลับมาในแชตนี้ ในรูปแบบ: #link รหัสของคุณ\n(เช่น #link ABC123D)'
-          );
-          continue;
-        }
-        profile = senderProfile;
-      }
+      const profile = senderProfile;
 
       // Fetch user's existing items for AI context matching
       const { data: itemsData } = await supabaseAdmin
