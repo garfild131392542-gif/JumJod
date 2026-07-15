@@ -164,11 +164,11 @@ export async function POST(request: Request) {
               .eq('id', itemId);
 
             if (updateError) {
-              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูลแจ้งจัดซื้อ');
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูลรายการ');
             } else {
               await sendLineReply(
                 replyToken, 
-                `⏳ แจ้งจัดซื้อแอดไอเทมเรียบร้อย!\nอัปเดตรายการ "${item.title}" เป็น "รอจัดซื้อแอด Item ใน AX" เรียบร้อยแล้วครับ`
+                `⏳ บันทึกข้อมูลเรียบร้อย!\nอัปเดตรายการ "${item.title}" เรียบร้อยแล้วครับ`
               );
             }
           } else if (action === 'delete') {
@@ -558,7 +558,7 @@ export async function POST(request: Request) {
             const bubbles = itemsList.map(item => createItemFlexBubble(item, appUrl));
             const flexMessage = {
               type: 'flex',
-              altText: `📋 รายการจัดซื้อ`,
+              altText: `📋 รายการบันทึก`,
               contents: {
                 type: 'carousel',
                 contents: bubbles.slice(0, 10) // Carousel limit is 10 bubbles
@@ -823,7 +823,7 @@ export async function POST(request: Request) {
         } else {
           await sendLineReply(
             replyToken,
-            `✅ เชื่อมต่อบัญชีเรียบร้อยแล้ว!\nอีเมลที่เชื่อมต่อ: ${profile.email}\n\nคุณสามารถพิมพ์บันทึกรายการจัดซื้อผ่านแชตนี้ได้ทันที`
+            `✅ เชื่อมต่อบัญชีเรียบร้อยแล้ว!\nอีเมลที่เชื่อมต่อ: ${profile.email}\n\nคุณสามารถพิมพ์บันทึกข้อความหรือแจ้งเตือนผ่านแชตนี้ได้ทันที`
           );
         }
         continue;
@@ -2147,7 +2147,7 @@ export async function POST(request: Request) {
               await sendLineReply(replyToken, '❌ ไม่พบรายการที่ระบุสำหรับการแก้ไข');
             }
           } else {
-            await sendLineReply(replyToken, '❌ ไม่พบรายการจัดซื้อหรือข้อมูลที่ต้องการแก้ไข กรุณาระบุชื่อ/รหัสย่อและข้อมูลที่ต้องการแก้ไขครับ');
+            await sendLineReply(replyToken, '❌ ไม่พบรายการบันทึกหรือข้อมูลที่ต้องการแก้ไข กรุณาระบุชื่อ/รหัสย่อและข้อมูลที่ต้องการแก้ไขครับ');
           }
           break;
         }
@@ -2162,7 +2162,7 @@ export async function POST(request: Request) {
         default: {
           const createData = parsedResult.create_data;
           if (!createData) {
-            await sendLineReply(replyToken, '❌ ไม่เข้าใจคำสั่งซื้อ กรุณาลองพิมพ์ข้อความใหม่อีกครั้ง');
+            await sendLineReply(replyToken, '❌ ไม่เข้าใจรูปแบบบันทึก กรุณาลองพิมพ์ข้อความใหม่อีกครั้ง');
             continue;
           }
 

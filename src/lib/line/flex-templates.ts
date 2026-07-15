@@ -879,7 +879,7 @@ export function createModeSelectionFlex() {
           height: 'sm',
           action: {
             type: 'message',
-            label: '📝 โหมดบันทึกช่วยจำ & แจ้งเตือน',
+            label: '📝 โหมดบันทึกช่วยจำ',
             text: 'บันทึกช่วยจำ'
           }
         },
@@ -890,7 +890,7 @@ export function createModeSelectionFlex() {
           height: 'sm',
           action: {
             type: 'message',
-            label: '📦 โหมดสต็อก & คลังวัสดุ',
+            label: '📦 โหมดสต็อก',
             text: 'สต็อก'
           }
         }

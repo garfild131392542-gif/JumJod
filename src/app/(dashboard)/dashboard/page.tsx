@@ -274,7 +274,7 @@ export default function DashboardPage() {
                 </p>
               ) : (
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  เชื่อมต่อเพื่อสั่งบันทึกการช่วยจำหรือแจ้งเตือนเครดิตผ่านข้อความ LINE
+                  เชื่อมต่อเพื่อสั่งบันทึกการช่วยจำหรือแจ้งเตือนความจำผ่านข้อความ LINE
                 </p>
               )}
             </div>

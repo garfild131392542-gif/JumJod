@@ -154,7 +154,7 @@ export async function GET(request: Request) {
         if (diffDays < 0) dayText = `ที่ผ่านมาแล้ว (เกินกำหนดชำระ ${Math.abs(diffDays)} วัน)`;
 
         const pushSuccess = await sendLinePush(profile.line_user_id, [
-          `🚨 **แจ้งเตือนใบจัดซื้อใกล้ครบกำหนดเครดิตเทอมชำระเงิน!**\n\n📄 รายการ: "${item.title}"\n📅 วันที่ครบกำหนด: ${item.budget_due_date} (${dayText})\n💵 เครดิตเทอม: ${item.credit_term} วัน\n⚠️ สถานะปัจจุบัน: ${item.status}\n\nกรุณาเร่งรัดการจ่ายเงินหรือตรวจเช็กเอกสารจัดซื้อด้วยครับ`
+          `🚨 **แจ้งเตือนรายการใกล้ถึงกำหนด!**\n\n📄 รายการ: "${item.title}"\n📅 วันที่ครบกำหนด: ${item.budget_due_date} (${dayText})\n⚠️ สถานะปัจจุบัน: ${item.status}\n\nกรุณาตรวจสอบและดำเนินการด้วยครับ`
         ]);
 
         if (pushSuccess) {
