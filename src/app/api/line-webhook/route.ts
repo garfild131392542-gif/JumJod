@@ -351,6 +351,7 @@ export async function POST(request: Request) {
                     description: ocrData.description,
                     status,
                     reminder_date: ocrData.reminder_date,
+                    image_url: ocrData.imageUrl || null,
                     is_pr: false,
                     line_group_id: lineGroupId
                   }
@@ -702,6 +703,33 @@ export async function POST(request: Request) {
           const imageBase64 = imageBuffer.toString('base64');
           const mimeType = 'image/jpeg';
 
+          // Upload original image to Supabase Storage bucket 'item-attachments'
+          const uniqueId = Math.random().toString(36).substring(2, 10);
+          const filePath = `${profile.id}/line-${uniqueId}-${Date.now()}.jpg`;
+          
+          let imageUrl: string | null = null;
+          try {
+            const { error: storageError } = await supabaseAdmin.storage
+              .from('item-attachments')
+              .upload(filePath, imageBuffer, {
+                contentType: 'image/jpeg',
+                cacheControl: '3600',
+                upsert: false
+              });
+
+            if (!storageError) {
+              const { data } = supabaseAdmin.storage
+                .from('item-attachments')
+                .getPublicUrl(filePath);
+              imageUrl = data.publicUrl;
+              console.log('[LINE BOT] Successfully uploaded line image to storage:', imageUrl);
+            } else {
+              console.error('[LINE BOT] Failed to upload image to storage:', storageError);
+            }
+          } catch (storageErr) {
+            console.error('[LINE BOT] Exception during image upload to storage:', storageErr);
+          }
+
           const apiKey = getGeminiApiKey();
           if (!apiKey) {
             await sendLineReply(replyToken, '❌ ไม่พบ API Key สำหรับวิเคราะห์รูปภาพครับ');
@@ -734,7 +762,10 @@ export async function POST(request: Request) {
             } else {
               memoryStateCache.set(lineUserId, {
                 action: 'pending_ocr_reminder',
-                data: ocrResult
+                data: {
+                  ...ocrResult,
+                  imageUrl: imageUrl
+                }
               });
               const flexCard = createOcrReminderConfirmationFlex(ocrResult);
               await sendLineReply(replyToken, {

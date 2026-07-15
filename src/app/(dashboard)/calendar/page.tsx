@@ -26,7 +26,7 @@ const localizer = momentLocalizer(moment);
 
 interface CustomEvent extends CalendarEvent {
   id: string;
-  type: 'reminder' | 'budget_due';
+  type: 'reminder' | 'completed';
   item: Item;
 }
 
@@ -141,7 +141,7 @@ export default function CalendarPage() {
         start: remDate,
         end: remEndDate,
         allDay: false,
-        type: 'reminder',
+        type: isCompleted ? 'completed' : 'reminder',
         item,
       });
     }
@@ -151,7 +151,6 @@ export default function CalendarPage() {
   const eventStyleGetter = (event: CustomEvent) => {
     if (!event || !event.type) return {};
     const isDark = theme === 'dark';
-    const isCompleted = event.item.status === 'Issuing Item';
 
     let backgroundColor = '';
     let textColor = '';
@@ -159,20 +158,14 @@ export default function CalendarPage() {
     let textDecoration = '';
     let opacity = 1;
 
-    if (isCompleted) {
-      backgroundColor = isDark ? 'rgba(148, 163, 184, 0.1)' : 'rgba(241, 245, 249, 0.85)'; // grey/slate
-      textColor = isDark ? '#64748b' : '#94a3b8';
-      border = isDark ? '1px dashed rgba(148, 163, 184, 0.2)' : '1px dashed rgba(203, 213, 225, 1)';
-      textDecoration = 'line-through';
-      opacity = 0.7;
-    } else if (event.type === 'reminder') {
+    if (event.type === 'completed') {
+      backgroundColor = isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)'; // emerald-500/10
+      textColor = isDark ? '#34d399' : '#047857'; // emerald-400 / emerald-700
+      border = isDark ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(16, 185, 129, 0.2)';
+    } else { // 'reminder'
       backgroundColor = isDark ? 'rgba(217, 119, 6, 0.15)' : 'rgba(217, 119, 6, 0.08)'; // amber-600
       textColor = isDark ? '#fbbf24' : '#b45309'; // amber-400 / amber-700
       border = isDark ? '1px solid rgba(217, 119, 6, 0.3)' : '1px solid rgba(217, 119, 6, 0.2)';
-    } else if (event.type === 'budget_due') {
-      backgroundColor = isDark ? 'rgba(5, 150, 105, 0.15)' : 'rgba(5, 150, 105, 0.08)'; // emerald-600
-      textColor = isDark ? '#34d399' : '#047857'; // emerald-400 / emerald-700
-      border = isDark ? '1px solid rgba(5, 150, 105, 0.3)' : '1px solid rgba(5, 150, 105, 0.2)';
     }
 
     return {
@@ -192,23 +185,23 @@ export default function CalendarPage() {
       {/* Header Panel */}
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-transparent dark:bg-gradient-to-r dark:from-white dark:via-slate-100 dark:to-slate-400 dark:bg-clip-text">
-          ปฏิทินวางแผนจัดซื้อ & ความจำ (Procurement Calendar)
+          ปฏิทินบันทึกช่วยจำ & การแจ้งเตือน (Memos & Reminders Calendar)
         </h1>
         <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-          ติดตามวันเตือนทำงานจัดซื้อ และวันครบกำหนดชำระจริง (PO Credit Terms)
+          วางแผนและติดตามวันแจ้งเตือนการบันทึกช่วยจำส่วนตัวของคุณ
         </p>
       </div>
 
       {/* Legend / Key indicator */}
       <div className="flex flex-wrap items-center gap-4 p-4 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm text-xs font-semibold">
-        <span className="text-slate-500 dark:text-slate-400 font-bold">สัญลักษณ์กิจกรรม:</span>
+        <span className="text-slate-500 dark:text-slate-400 font-bold">สัญลักษณ์ปฏิทิน:</span>
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
           <span className="w-2 h-2 rounded-full bg-amber-600 dark:bg-amber-400 animate-ping" />
-          <span>🔔 วันแจ้งเตือนความจำ (Reminder Dates)</span>
+          <span>🔔 เตือน (กำลังดำเนินการ)</span>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
           <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-ping" />
-          <span>💰 วันชำระเงินเครดิตเทอม (Budget Due Dates)</span>
+          <span>✅ สำเร็จ (ดำเนินการแล้ว)</span>
         </div>
       </div>
 
@@ -269,8 +262,8 @@ export default function CalendarPage() {
           <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col z-10 animate-scale-up max-h-[85vh] overflow-y-auto">
             {/* Close and Title */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800/80 mb-6 shrink-0">
-              <h2 className="text-lg font-bold bg-gradient-to-r from-violet-650 to-indigo-650 dark:from-violet-400 dark:to-indigo-200 bg-clip-text text-transparent">
-                รายละเอียดกิจกรรมจัดซื้อ
+              <h2 className="text-lg font-bold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-200 bg-clip-text text-transparent">
+                รายละเอียดบันทึกช่วยจำ
               </h2>
               <button
                 onClick={() => setSelectedEvent(null)}
@@ -296,11 +289,11 @@ export default function CalendarPage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
-                    <CalendarIcon className="w-5 h-5 shrink-0" />
+                    <Clock className="w-5 h-5 shrink-0" />
                     <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider">วันครบกำหนดชำระจริง</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-wider">วันแจ้งเตือน (ดำเนินการสำเร็จแล้ว)</h4>
                       <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-semibold">
-                        {moment(selectedEvent.start).format('DD MMMM YYYY')} (ชำระตามเครดิตเทอม)
+                        {moment(selectedEvent.start).format('DD MMMM YYYY, HH:mm น.')}
                       </p>
                     </div>
                   </div>
