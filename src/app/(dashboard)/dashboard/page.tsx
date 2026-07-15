@@ -335,7 +335,7 @@ export default function DashboardPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400">{(error as any)?.message || 'โปรดตรวจสอบสิทธิ์เชื่อมต่อหรือรีเฟรชหน้าเว็บ'}</p>
         </div>
       ) : (
-        <div className="max-w-4xl mx-auto flex flex-col rounded-2xl min-h-[60vh] p-4 bg-slate-100/40 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800/50">
+        <div className="w-full flex flex-col rounded-2xl min-h-[60vh] p-4 bg-slate-100/40 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800/50">
           {/* Title */}
           <div className="mb-4 pb-3 border-b border-slate-200 dark:border-slate-800/50 flex items-center justify-between">
             <div>
@@ -349,7 +349,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Cards Grid */}
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 content-start">
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 content-start">
             {filteredItems.length === 0 ? (
               <div className="col-span-full h-32 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center text-center p-4">
                 <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">ไม่มีรายการจดบันทึกในขณะนี้</span>
