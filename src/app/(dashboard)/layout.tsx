@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useTheme } from '@/components/providers/theme-provider';
-import { ClipboardList, Calendar, LogOut, User as UserIcon, Menu, Sun, Moon, CheckSquare, Package } from 'lucide-react';
+import { ClipboardList, Calendar, LogOut, User as UserIcon, Menu, Sun, Moon, CheckSquare, Package, FileText, Scale } from 'lucide-react';
 import Image from 'next/image';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -27,6 +27,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       name: 'บอร์ดรายการ',
       href: '/dashboard',
       icon: ClipboardList,
+    },
+    {
+      name: 'ติดตาม PR',
+      href: '/pr-tracker',
+      icon: FileText,
+    },
+    {
+      name: 'Calibrate เครื่องมือ',
+      href: '/calibration',
+      icon: Scale,
     },
     {
       name: 'สต็อกวัสดุ',

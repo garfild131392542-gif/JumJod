@@ -142,3 +142,33 @@ export interface StockItem {
   updated_at: string;
 }
 
+export type PrStatus = 'Pending' | 'PR Issued' | 'PO Issued' | 'Completed';
+
+export interface PrRequest {
+  id: string;
+  user_id: string;
+  title: string;
+  pr_no: string | null;
+  po_no: string | null;
+  qt_no: string | null;
+  status: PrStatus;
+  created_at: string;
+  updated_at: string;
+  notes?: string | null;
+}
+
+export type CalStatus = 'Normal' | 'Due Soon' | 'Overdue';
+
+export interface LabCalibration {
+  id: string;
+  user_id: string;
+  name: string;              // 1. ชื่อเครื่องมือ
+  last_cal_date: string | null; // 2. ครั้งก่อนที่ส่ง Cal (YYYY-MM-DD)
+  next_cal_date: string;     // 3. ครั้งถัดไปที่จะทำการ Cal (YYYY-MM-DD)
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+
+

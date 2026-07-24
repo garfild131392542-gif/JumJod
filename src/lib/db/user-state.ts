@@ -4,7 +4,7 @@ export async function getUserModeState(
   profile: any,
   lineUserId: string,
   supabaseAdmin: any
-): Promise<'reminder' | 'stock' | null> {
+): Promise<'reminder' | 'stock' | 'pr' | 'calibration' | null> {
   const now = new Date();
   
   // Check memory cache first
@@ -58,7 +58,7 @@ export async function getUserModeState(
 export async function setUserModeState(
   profile: any,
   lineUserId: string,
-  mode: 'reminder' | 'stock' | null,
+  mode: 'reminder' | 'stock' | 'pr' | 'calibration' | null,
   supabaseAdmin: any
 ) {
   const now = new Date();

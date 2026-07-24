@@ -926,7 +926,7 @@ Format the output strictly as JSON with the following structure (include only fi
 export async function analyzeImageWithAI(
   imageBase64: string,
   mimeType: string,
-  activeMode: 'stock' | 'reminder' | null,
+  activeMode: 'stock' | 'reminder' | 'pr' | 'calibration' | null,
   apiKey: string
 ): Promise<any> {
   const modelName = 'gemini-2.5-flash';

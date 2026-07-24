@@ -11,7 +11,9 @@ import {
   createStockCreateFlexBubble,
   createModeSelectionFlex,
   createOcrStockConfirmationFlex,
-  createOcrReminderConfirmationFlex
+  createOcrReminderConfirmationFlex,
+  createPrFlexBubble,
+  createCalibrationFlexBubble
 } from '@/lib/line/flex-templates';
 import {
   verifySignature,
@@ -870,6 +872,20 @@ export async function POST(request: Request) {
         continue;
       }
 
+      if (cleanMessageText === 'ติดตาม pr' || cleanMessageText === 'ติดตามpr' || cleanMessageText === 'โหมด pr' || cleanMessageText === 'เปิด pr') {
+        memoryStateCache.delete(lineUserId);
+        await setUserModeState(profile, lineUserId, 'pr', supabaseAdmin);
+        await sendLineReply(replyToken, '📄 เข้าสู่โหมด **"ติดตามการออก PR"** เรียบร้อยแล้วครับ!\n\nคุณสามารถพิมพ์หัวข้อที่ต้องการตั้งเรื่องเปิด PR มาในแชตนี้ได้ทันที (ไม่จำเป็นต้องมีเลข PR ในทันที) ระบบจะบันทึกหัวข้อและลงวันที่สร้างให้อัตโนมัติครับ');
+        continue;
+      }
+
+      if (cleanMessageText === 'calibrate' || cleanMessageText === 'โหมด calibrate' || cleanMessageText === 'โหมด cal' || cleanMessageText === 'แคล' || cleanMessageText === 'เครื่องมือ') {
+        memoryStateCache.delete(lineUserId);
+        await setUserModeState(profile, lineUserId, 'calibration', supabaseAdmin);
+        await sendLineReply(replyToken, '🔬 เข้าสู่โหมด **"ติดตามรอบ Calibrate เครื่องมือ"** เรียบร้อยแล้วครับ!\n\nคุณสามารถพิมพ์ชื่อเครื่องมือพร้อมกำหนดวัน Calibrate มาในแชตนี้ได้ทันที เช่น "เครื่องชั่งดิจิทัล 4 ตำแหน่ง ครั้งถัดไป 15/08/2026" ระบบจะบันทึกและแสดง 3 ค่าหลักให้อัตโนมัติครับ');
+        continue;
+      }
+
       if (cleanMessageText === 'รีเซ็ตโหมด' || cleanMessageText === 'ออกโหมด') {
         memoryStateCache.delete(lineUserId);
         await setUserModeState(profile, lineUserId, null, supabaseAdmin);
@@ -940,9 +956,161 @@ export async function POST(request: Request) {
         continue;
       }
 
+      // Check if message is a request to view PR list
+      const isCheckAllPrs = /^(ดู|เช็ก|เช็ค|รายการ|แสดง)?\s*(pr|รายการpr|ติดตามpr|รายการติดตามpr)$/i.test(cleanMessageText) ||
+        ['ดูpr', 'เช็กpr', 'เช็คpr', 'รายการpr', 'ติดตามpr', 'ดู pr', 'เช็ก pr', 'เช็ค pr'].includes(cleanMessageText);
+
+      if (isCheckAllPrs) {
+        const requestUrl = new URL(request.url);
+        const appUrl = requestUrl.origin;
+        const { data: matchedPrs, error: searchPrErr } = await supabaseAdmin
+          .from('pr_requests')
+          .select('*')
+          .eq('user_id', profile.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (searchPrErr || !matchedPrs || matchedPrs.length === 0) {
+          await sendLineReply(replyToken, '📑 ไม่พบรายการติดตาม PR ของคุณในระบบครับ สามารถพิมพ์ตั้งเรื่อง PR ใหม่ได้เลยครับ');
+          continue;
+        }
+
+        const bubbles = matchedPrs.map(pr => createPrFlexBubble(pr, appUrl));
+        await sendLineReply(replyToken, {
+          type: 'flex',
+          altText: '📑 รายการติดตามการออก PR ของคุณ',
+          contents: {
+            type: 'carousel',
+            contents: bubbles
+          }
+        });
+        continue;
+      }
 
       // Check current active mode
       const activeMode = lineGroupId ? 'stock' : await getUserModeState(profile, lineUserId, supabaseAdmin);
+
+      // Handle PR creation if in PR mode or explicit PR command
+      if (activeMode === 'pr' || /^pr[:\s]/i.test(messageText.trim()) || /^เปิด\s*pr[:\s]?/i.test(messageText.trim())) {
+        let titleText = messageText.trim();
+        titleText = titleText.replace(/^(?:เปิด|ติดตาม)?\s*pr[:\s]*/i, '').trim();
+        if (!titleText) {
+          titleText = messageText.trim();
+        }
+
+        const requestUrl = new URL(request.url);
+        const appUrl = requestUrl.origin;
+
+        const { data: insertedPr, error: insertPrError } = await supabaseAdmin
+          .from('pr_requests')
+          .insert([
+            {
+              user_id: profile.id,
+              title: titleText,
+              status: 'Pending',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }
+          ])
+          .select('*')
+          .single();
+
+        if (insertPrError || !insertedPr) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการบันทึกรายการติดตาม PR กรุณาลองใหม่อีกครั้ง');
+        } else {
+          const bubble = createPrFlexBubble(insertedPr, appUrl);
+          await sendLineReply(replyToken, {
+            type: 'flex',
+            altText: `📑 ตั้งเรื่องติดตาม PR "${insertedPr.title}" เรียบร้อยแล้ว`,
+            contents: bubble
+          });
+        }
+        continue;
+      }
+
+      // Check if message is a request to view Calibration list
+      const isCheckAllCals = /^(ดู|เช็ก|เช็ค|รายการ|แสดง)?\s*(cal|calibrate|การแคล|แคล|เครื่องมือ|เครื่องชั่ง)$/i.test(cleanMessageText) ||
+        ['ดูcal', 'เช็กcal', 'เช็คcal', 'รายการcal', 'ดู cal', 'เช็ก cal', 'เช็ค cal', 'ดูเครื่องมือ', 'เช็กเครื่องมือ'].includes(cleanMessageText);
+
+      if (isCheckAllCals) {
+        const requestUrl = new URL(request.url);
+        const appUrl = requestUrl.origin;
+        const { data: matchedCals, error: searchCalErr } = await supabaseAdmin
+          .from('lab_calibrations')
+          .select('*')
+          .eq('user_id', profile.id)
+          .order('next_cal_date', { ascending: true })
+          .limit(10);
+
+        if (searchCalErr || !matchedCals || matchedCals.length === 0) {
+          await sendLineReply(replyToken, '🔬 ไม่พบรายการ Calibrate เครื่องมือของคุณในระบบครับ สามารถพิมพ์เพิ่มเครื่องมือใหม่ได้เลยครับ');
+          continue;
+        }
+
+        const bubbles = matchedCals.map(cal => createCalibrationFlexBubble(cal, appUrl));
+        await sendLineReply(replyToken, {
+          type: 'flex',
+          altText: '🔬 รายการ Calibrate เครื่องมือวัด Lab ของคุณ',
+          contents: {
+            type: 'carousel',
+            contents: bubbles
+          }
+        });
+        continue;
+      }
+
+      // Handle Calibration creation if in Calibration mode or explicit Cal command
+      if (activeMode === 'calibration' || /^cal[:\s]/i.test(messageText.trim()) || /^calibrate[:\s]/i.test(messageText.trim())) {
+        let textToParse = messageText.trim().replace(/^(?:calibrate|cal)[:\s]*/i, '').trim();
+        if (!textToParse) textToParse = messageText.trim();
+
+        const today = new Date();
+        const nextYear = new Date(today.setFullYear(today.getFullYear() + 1));
+        const pad = (n: number) => String(n).padStart(2, '0');
+        let defaultNextDate = `${nextYear.getFullYear()}-${pad(nextYear.getMonth() + 1)}-${pad(nextYear.getDate())}`;
+
+        const dateMatch = textToParse.match(/(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/);
+        if (dateMatch) {
+          let day = pad(parseInt(dateMatch[1]));
+          let month = pad(parseInt(dateMatch[2]));
+          let yearNum = parseInt(dateMatch[3]);
+          if (yearNum < 100) yearNum += 2000;
+          if (yearNum > 2500) yearNum -= 543;
+          defaultNextDate = `${yearNum}-${month}-${day}`;
+        }
+
+        let calName = textToParse.replace(/(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/, '').replace(/(?:ครั้งถัดไป|ครั้งก่อน|วันที่|cal|calibrate)/gi, '').trim();
+        if (!calName) calName = textToParse;
+
+        const requestUrl = new URL(request.url);
+        const appUrl = requestUrl.origin;
+
+        const { data: insertedCal, error: insertCalError } = await supabaseAdmin
+          .from('lab_calibrations')
+          .insert([
+            {
+              user_id: profile.id,
+              name: calName,
+              next_cal_date: defaultNextDate,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }
+          ])
+          .select('*')
+          .single();
+
+        if (insertCalError || !insertedCal) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการบันทึกรายการ Calibrate เครื่องมือ กรุณาลองใหม่อีกครั้ง');
+        } else {
+          const bubble = createCalibrationFlexBubble(insertedCal, appUrl);
+          await sendLineReply(replyToken, {
+            type: 'flex',
+            altText: `🔬 บันทึกเครื่องมือ "${insertedCal.name}" สำหรับ Calibrate เรียบร้อยแล้ว`,
+            contents: bubble
+          });
+        }
+        continue;
+      }
       
       // If no mode is active, block and prompt to choose mode
       if (!activeMode) {

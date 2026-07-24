@@ -893,6 +893,283 @@ export function createModeSelectionFlex() {
             label: '📦 โหมดสต็อก',
             text: 'สต็อก'
           }
+        },
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#6366f1',
+          height: 'sm',
+          action: {
+            type: 'message',
+            label: '📄 โหมดติดตาม PR',
+            text: 'ติดตาม PR'
+          }
+        },
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#0d9488',
+          height: 'sm',
+          action: {
+            type: 'message',
+            label: '🔬 โหมด Calibrate',
+            text: 'Calibrate'
+          }
+        }
+      ]
+    }
+  };
+}
+
+export function createCalibrationFlexBubble(item: any, appUrl: string) {
+  const shortId = item.id.substring(item.id.length - 4);
+  const editUrl = `${appUrl}/calibration`;
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'ไม่ระบุ';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const nextDate = new Date(item.next_cal_date);
+  nextDate.setHours(0, 0, 0, 0);
+
+  const diffTime = nextDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  let statusText = '🟢 ปกติ';
+  let statusColor = '#10b981';
+  if (diffDays < 0) {
+    statusText = `🔴 เกินกำหนด (${Math.abs(diffDays)} วัน)`;
+    statusColor = '#ef4444';
+  } else if (diffDays <= 14) {
+    statusText = `🟡 ใกล้ถึงกำหนด (ใน ${diffDays} วัน)`;
+    statusColor = '#f59e0b';
+  }
+
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#f8fafc',
+      paddingAll: '15px',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            {
+              type: 'text',
+              text: '🔬 Calibrate เครื่องมือวัด Lab',
+              weight: 'bold',
+              size: 'xs',
+              color: '#64748b',
+              flex: 1
+            },
+            {
+              type: 'text',
+              text: `#LAB-${shortId}`,
+              weight: 'bold',
+              size: 'xs',
+              color: '#94a3b8',
+              align: 'end',
+              flex: 0
+            }
+          ]
+        },
+        {
+          type: 'text',
+          text: `1. ${item.name}`,
+          weight: 'bold',
+          size: 'md',
+          margin: 'sm',
+          wrap: true,
+          color: '#1e293b'
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: 'สถานะ:', size: 'xs', color: '#94a3b8', flex: 4 },
+            { type: 'text', text: statusText, size: 'xs', weight: 'bold', color: statusColor, flex: 6 }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: '2. ครั้งก่อนส่ง Cal:', size: 'xs', color: '#94a3b8', flex: 4 },
+            { type: 'text', text: formatDate(item.last_cal_date), size: 'xs', weight: 'bold', color: '#475569', flex: 6 }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: '3. ครั้งถัดไปส่ง Cal:', size: 'xs', color: '#94a3b8', flex: 4 },
+            { type: 'text', text: formatDate(item.next_cal_date), size: 'xs', weight: 'bold', color: '#0d9488', flex: 6 }
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'button',
+          style: 'primary',
+          height: 'sm',
+          color: '#0d9488',
+          action: {
+            type: 'uri',
+            label: '✍️ แก้ไขวันที่บนเว็บ',
+            uri: editUrl
+          }
+        }
+      ]
+    }
+  };
+}
+
+export function createPrFlexBubble(prItem: any, appUrl: string) {
+  const shortId = prItem.id.substring(prItem.id.length - 4);
+  const dateObj = new Date(prItem.created_at);
+  const dateStr = dateObj.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric' });
+  const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+  const editUrl = `${appUrl}/pr-tracker`;
+
+  let statusText = '⏳ รอเลข PR';
+  let statusColor = '#f59e0b';
+  if (prItem.status === 'PR Issued') {
+    statusText = '📄 ออก PR แล้ว';
+    statusColor = '#3b82f6';
+  } else if (prItem.status === 'PO Issued') {
+    statusText = '📑 ออก PO แล้ว';
+    statusColor = '#8b5cf6';
+  } else if (prItem.status === 'Completed') {
+    statusText = '✅ เสร็จสมบูรณ์';
+    statusColor = '#10b981';
+  }
+
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#f8fafc',
+      paddingAll: '15px',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            {
+              type: 'text',
+              text: '📑 ติดตามการออก PR',
+              weight: 'bold',
+              size: 'xs',
+              color: '#64748b',
+              flex: 1
+            },
+            {
+              type: 'text',
+              text: `#${shortId}`,
+              weight: 'bold',
+              size: 'xs',
+              color: '#94a3b8',
+              align: 'end',
+              flex: 0
+            }
+          ]
+        },
+        {
+          type: 'text',
+          text: prItem.title,
+          weight: 'bold',
+          size: 'md',
+          margin: 'sm',
+          wrap: true,
+          color: '#1e293b'
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: 'สถานะ:', size: 'xs', color: '#94a3b8', flex: 3 },
+            { type: 'text', text: statusText, size: 'xs', weight: 'bold', color: statusColor, flex: 7 }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: 'เลข PR:', size: 'xs', color: '#94a3b8', flex: 3 },
+            { type: 'text', text: prItem.pr_no || '(ยังไม่ระบุ)', size: 'xs', weight: prItem.pr_no ? 'bold' : 'regular', color: prItem.pr_no ? '#8b5cf6' : '#94a3b8', flex: 7 }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: 'เลข PO:', size: 'xs', color: '#94a3b8', flex: 3 },
+            { type: 'text', text: prItem.po_no || '(ยังไม่ระบุ)', size: 'xs', weight: prItem.po_no ? 'bold' : 'regular', color: prItem.po_no ? '#a855f7' : '#94a3b8', flex: 7 }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: 'เลข QT:', size: 'xs', color: '#94a3b8', flex: 3 },
+            { type: 'text', text: prItem.qt_no || '(ยังไม่ระบุ)', size: 'xs', weight: prItem.qt_no ? 'bold' : 'regular', color: prItem.qt_no ? '#10b981' : '#94a3b8', flex: 7 }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            { type: 'text', text: 'ทำรายการ:', size: 'xs', color: '#94a3b8', flex: 3 },
+            { type: 'text', text: `${dateStr} (${timeStr} น.)`, size: 'xs', color: '#64748b', flex: 7 }
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'button',
+          style: 'primary',
+          height: 'sm',
+          color: '#6366f1',
+          action: {
+            type: 'uri',
+            label: '✍️ เติมเลข PR/PO/QT บนเว็บ',
+            uri: editUrl
+          }
         }
       ]
     }
