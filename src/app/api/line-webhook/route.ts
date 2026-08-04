@@ -1115,28 +1115,28 @@ export async function POST(request: Request) {
       if (cleanMessageText === 'บันทึกช่วยจำ') {
         memoryStateCache.delete(lineUserId);
         await setUserModeState(profile, lineUserId, 'reminder', supabaseAdmin);
-        await sendLineReply(replyToken, '📝 เข้าสู่โหมด **"บันทึกช่วยจำพร้อมแจ้งเตือน"** เรียบร้อยแล้วครับ! คุณสามารถพิมพ์บันทึกข้อความหรือตั้งเวลาแจ้งเตือนต่าง ๆ ได้ทันทีจ้า');
+        await sendLineReply(replyToken, '📝 เข้าสู่โหมด **"บันทึกช่วยจำ"** เรียบร้อยครับ!\n\n⚡ **คำสั่งคีย์ลัด:**\n• พิมพ์ข้อความเพื่อบันทึก (เช่น "ประชุม 10 โมง")\n• `รายการ` : ดูรายการบันทึกทั้งหมด\n• `ออกโหมด` : รีเซ็ตกลับโหมดเริ่มต้น');
         continue;
       }
       
       if (cleanMessageText === 'สต็อก' || cleanMessageText === 'สต๊อก') {
         memoryStateCache.delete(lineUserId);
         await setUserModeState(profile, lineUserId, 'stock', supabaseAdmin);
-        await sendLineReply(replyToken, '📦 เข้าสู่โหมด **"สต็อกวัสดุคงเหลือ"** เรียบร้อยแล้วครับ! คุณสามารถพิมพ์ทำรายการเบิก/หัก/เติม/ปรับยอดวัสดุต่าง ๆ ได้ทันทีจ้า');
+        await sendLineReply(replyToken, '📦 เข้าสู่โหมด **"สต็อกวัสดุ"** เรียบร้อยครับ!\n\n⚡ **คำสั่งคีย์ลัด:**\n• พิมพ์ทำรายการ (เช่น "เบิก แอลกอฮอล์ 5")\n• `รายการ` : ดูรายการสต็อกทั้งหมด\n• `ออกโหมด` : รีเซ็ตกลับโหมดเริ่มต้น');
         continue;
       }
 
       if (cleanMessageText === 'ติดตาม pr' || cleanMessageText === 'ติดตามpr' || cleanMessageText === 'โหมด pr' || cleanMessageText === 'เปิด pr') {
         memoryStateCache.delete(lineUserId);
         await setUserModeState(profile, lineUserId, 'pr', supabaseAdmin);
-        await sendLineReply(replyToken, '📄 เข้าสู่โหมด **"ติดตามการออก PR"** เรียบร้อยแล้วครับ!\n\nคุณสามารถพิมพ์หัวข้อที่ต้องการตั้งเรื่องเปิด PR มาในแชตนี้ได้ทันที (ไม่จำเป็นต้องมีเลข PR ในทันที) ระบบจะบันทึกหัวข้อและลงวันที่สร้างให้อัตโนมัติครับ');
+        await sendLineReply(replyToken, '📄 เข้าสู่โหมด **"ติดตาม PR"** เรียบร้อยครับ!\n\n⚡ **คำสั่งคีย์ลัด:**\n• พิมพ์หัวข้อเพื่อเปิด PR (เช่น "ซื้อคอมพิวเตอร์")\n• `รายการ` : ดูรายการติดตาม PR ทั้งหมด\n• `ออกโหมด` : รีเซ็ตกลับโหมดเริ่มต้น');
         continue;
       }
 
       if (cleanMessageText === 'calibrate' || cleanMessageText === 'โหมด calibrate' || cleanMessageText === 'โหมด cal' || cleanMessageText === 'แคล' || cleanMessageText === 'เครื่องมือ') {
         memoryStateCache.delete(lineUserId);
         await setUserModeState(profile, lineUserId, 'calibration', supabaseAdmin);
-        await sendLineReply(replyToken, '🔬 เข้าสู่โหมด **"ติดตามรอบ Calibrate เครื่องมือ"** เรียบร้อยแล้วครับ!\n\nคุณสามารถพิมพ์ชื่อเครื่องมือพร้อมกำหนดวัน Calibrate มาในแชตนี้ได้ทันที เช่น "เครื่องชั่งดิจิทัล 4 ตำแหน่ง ครั้งถัดไป 15/08/2026" ระบบจะบันทึกและแสดง 3 ค่าหลักให้อัตโนมัติครับ');
+        await sendLineReply(replyToken, '🔬 เข้าสู่โหมด **"ติดตาม Calibrate"** เรียบร้อยครับ!\n\n⚡ **คำสั่งคีย์ลัด:**\n• พิมพ์ชื่อเครื่องมือ + วันที่ (เช่น "เครื่องชั่ง 15/08/2026")\n• `รายการ` : ดูรายการเครื่องมือทั้งหมด\n• `ออกโหมด` : รีเซ็ตกลับโหมดเริ่มต้น');
         continue;
       }
 
