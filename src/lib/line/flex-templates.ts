@@ -1033,10 +1033,41 @@ export function createCalibrationFlexBubble(item: any, appUrl: string) {
           type: 'button',
           style: 'primary',
           height: 'sm',
+          color: '#10b981',
+          action: {
+            type: 'postback',
+            label: '✅ Cal แล้ว (อัปเดตรอบถัดไป)',
+            data: `action=cal_complete&itemId=${item.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '✍️ แก้ไขรายการ',
+            data: `action=request_cal_edit&itemId=${item.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '🗑️ ลบรายการ',
+            data: `action=cal_delete&itemId=${item.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
           color: '#0d9488',
           action: {
             type: 'uri',
-            label: '✍️ แก้ไขวันที่บนเว็บ',
+            label: '🌐 เปิดดูบนเว็บ',
             uri: editUrl
           }
         }
@@ -1064,6 +1095,55 @@ export function createPrFlexBubble(prItem: any, appUrl: string) {
     statusText = '✅ เสร็จสมบูรณ์';
     statusColor = '#10b981';
   }
+
+  const footerActions: any[] = [];
+  if (prItem.status !== 'Completed') {
+    footerActions.push({
+      type: 'button',
+      style: 'primary',
+      height: 'sm',
+      color: '#10b981',
+      action: {
+        type: 'postback',
+        label: '✅ ทำรายการเสร็จสิ้น',
+        data: `action=pr_complete&itemId=${prItem.id}`
+      }
+    });
+  }
+
+  footerActions.push(
+    {
+      type: 'button',
+      style: 'secondary',
+      height: 'sm',
+      action: {
+        type: 'postback',
+        label: '✍️ แก้ไขรายการ',
+        data: `action=request_pr_edit&itemId=${prItem.id}`
+      }
+    },
+    {
+      type: 'button',
+      style: 'secondary',
+      height: 'sm',
+      action: {
+        type: 'postback',
+        label: '🗑️ ลบรายการ',
+        data: `action=pr_delete&itemId=${prItem.id}`
+      }
+    },
+    {
+      type: 'button',
+      style: 'secondary',
+      height: 'sm',
+      color: '#6366f1',
+      action: {
+        type: 'uri',
+        label: '✍️ เติมเลข PR/PO/QT บนเว็บ',
+        uri: editUrl
+      }
+    }
+  );
 
   return {
     type: 'bubble',
@@ -1159,19 +1239,137 @@ export function createPrFlexBubble(prItem: any, appUrl: string) {
       type: 'box',
       layout: 'vertical',
       spacing: 'sm',
-      contents: [
-        {
-          type: 'button',
-          style: 'primary',
-          height: 'sm',
-          color: '#6366f1',
-          action: {
-            type: 'uri',
-            label: '✍️ เติมเลข PR/PO/QT บนเว็บ',
-            uri: editUrl
+      contents: footerActions
+    }
+  };
+}
+
+export function createPrListMenuFlex() {
+  return {
+    type: 'flex',
+    altText: '📋 เมนูเลือกดูรายการ PR',
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#8b5cf6',
+        contents: [
+          {
+            type: 'text',
+            text: '📑 เมนูเลือกดูรายการ PR',
+            weight: 'bold',
+            color: '#ffffff',
+            size: 'sm'
           }
-        }
-      ]
+        ]
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          {
+            type: 'text',
+            text: 'กรุณาเลือกรายการ PR ที่คุณต้องการตรวจสอบ:',
+            size: 'xs',
+            color: '#64748b',
+            wrap: true
+          },
+          {
+            type: 'button',
+            style: 'primary',
+            color: '#8b5cf6',
+            height: 'sm',
+            action: {
+              type: 'postback',
+              label: '⏳ PR ที่กำลังติดตาม',
+              data: 'action=view_prs&status=pending'
+            }
+          },
+          {
+            type: 'button',
+            style: 'secondary',
+            height: 'sm',
+            action: {
+              type: 'postback',
+              label: '✅ PR ที่เสร็จสมบูรณ์แล้ว',
+              data: 'action=view_prs&status=completed'
+            }
+          },
+          {
+            type: 'button',
+            style: 'secondary',
+            height: 'sm',
+            action: {
+              type: 'postback',
+              label: '📋 ดูรายการ PR ทั้งหมด',
+              data: 'action=view_prs&status=all'
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
+export function createCalibrationListMenuFlex() {
+  return {
+    type: 'flex',
+    altText: '📋 เมนูเลือกดูรายการ Calibration',
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#0d9488',
+        contents: [
+          {
+            type: 'text',
+            text: '🔬 เมนูเลือกดูรายการ Calibrate',
+            weight: 'bold',
+            color: '#ffffff',
+            size: 'sm'
+          }
+        ]
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'md',
+        contents: [
+          {
+            type: 'text',
+            text: 'กรุณาเลือกประเภทรายการเครื่องมือที่คุณต้องการตรวจสอบ:',
+            size: 'xs',
+            color: '#64748b',
+            wrap: true
+          },
+          {
+            type: 'button',
+            style: 'primary',
+            color: '#0d9488',
+            height: 'sm',
+            action: {
+              type: 'postback',
+              label: '⚠️ เครื่องมือใกล้ถึงกำหนด Cal',
+              data: 'action=view_calibrations&status=due'
+            }
+          },
+          {
+            type: 'button',
+            style: 'secondary',
+            height: 'sm',
+            action: {
+              type: 'postback',
+              label: '🔬 ดูรายการเครื่องมือทั้งหมด',
+              data: 'action=view_calibrations&status=all'
+            }
+          }
+        ]
+      }
     }
   };
 }

@@ -13,7 +13,9 @@ import {
   createOcrStockConfirmationFlex,
   createOcrReminderConfirmationFlex,
   createPrFlexBubble,
-  createCalibrationFlexBubble
+  createCalibrationFlexBubble,
+  createPrListMenuFlex,
+  createCalibrationListMenuFlex
 } from '@/lib/line/flex-templates';
 import {
   verifySignature,
@@ -567,6 +569,258 @@ export async function POST(request: Request) {
               }
             };
             await sendLineReply(replyToken, flexMessage);
+          } else if (action === 'view_prs') {
+            const statusParam = params.get('status');
+            const { data: userProfile, error: profileErr } = await supabaseAdmin
+              .from('profiles')
+              .select('id')
+              .eq('line_user_id', lineUserId)
+              .single();
+
+            if (profileErr || !userProfile) {
+              await sendLineReply(replyToken, '❌ ไม่พบบัญชีผู้ใช้งานที่เชื่อมต่อกับไลน์นี้');
+              continue;
+            }
+
+            let query = supabaseAdmin
+              .from('pr_requests')
+              .select('*')
+              .eq('user_id', userProfile.id);
+
+            if (statusParam === 'completed') {
+              query = query.eq('status', 'Completed');
+            } else if (statusParam === 'pending') {
+              query = query.neq('status', 'Completed');
+            }
+
+            const { data: matchedPrs, error: searchPrErr } = await query
+              .order('created_at', { ascending: false })
+              .limit(10);
+
+            if (searchPrErr || !matchedPrs || matchedPrs.length === 0) {
+              const statusText = statusParam === 'completed' ? 'ที่เสร็จสมบูรณ์' : statusParam === 'pending' ? 'ที่กำลังติดตาม' : '';
+              await sendLineReply(replyToken, `📑 ไม่พบรายการ PR ${statusText} ของคุณในระบบครับ`);
+              continue;
+            }
+
+            const requestUrl = new URL(request.url);
+            const appUrl = requestUrl.origin;
+            const bubbles = matchedPrs.map(pr => createPrFlexBubble(pr, appUrl));
+            await sendLineReply(replyToken, {
+              type: 'flex',
+              altText: '📑 รายการติดตามการออก PR ของคุณ',
+              contents: {
+                type: 'carousel',
+                contents: bubbles.slice(0, 10)
+              }
+            });
+          } else if (action === 'view_calibrations') {
+            const { data: userProfile, error: profileErr } = await supabaseAdmin
+              .from('profiles')
+              .select('id')
+              .eq('line_user_id', lineUserId)
+              .single();
+
+            if (profileErr || !userProfile) {
+              await sendLineReply(replyToken, '❌ ไม่พบบัญชีผู้ใช้งานที่เชื่อมต่อกับไลน์นี้');
+              continue;
+            }
+
+            const { data: matchedCals, error: searchCalErr } = await supabaseAdmin
+              .from('lab_calibrations')
+              .select('*')
+              .eq('user_id', userProfile.id)
+              .order('next_cal_date', { ascending: true })
+              .limit(10);
+
+            if (searchCalErr || !matchedCals || matchedCals.length === 0) {
+              await sendLineReply(replyToken, '🔬 ไม่พบรายการ Calibrate เครื่องมือของคุณในระบบครับ');
+              continue;
+            }
+
+            const requestUrl = new URL(request.url);
+            const appUrl = requestUrl.origin;
+            const bubbles = matchedCals.map(cal => createCalibrationFlexBubble(cal, appUrl));
+            await sendLineReply(replyToken, {
+              type: 'flex',
+              altText: '🔬 รายการ Calibrate เครื่องมือวัด Lab ของคุณ',
+              contents: {
+                type: 'carousel',
+                contents: bubbles.slice(0, 10)
+              }
+            });
+          } else if (action === 'pr_complete') {
+            if (!itemId) continue;
+            const { data: item, error: fetchError } = await supabaseAdmin
+              .from('pr_requests')
+              .select('title')
+              .eq('id', itemId)
+              .single();
+
+            if (fetchError || !item) {
+              await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
+              continue;
+            }
+
+            const { error: updateError } = await supabaseAdmin
+              .from('pr_requests')
+              .update({
+                status: 'Completed',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', itemId);
+
+            if (updateError) {
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการอัปเดตสถานะ PR');
+            } else {
+              await sendLineReply(replyToken, `🎉 บันทึกสำเร็จแล้ว!\nอัปเดตรายการ PR "${item.title}" เป็น "เสร็จสมบูรณ์" เรียบร้อยแล้วครับ`);
+            }
+          } else if (action === 'pr_delete') {
+            if (!itemId) continue;
+            const { data: item, error: fetchError } = await supabaseAdmin
+              .from('pr_requests')
+              .select('title')
+              .eq('id', itemId)
+              .single();
+
+            if (fetchError || !item) {
+              await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
+              continue;
+            }
+
+            const { error: deleteError } = await supabaseAdmin
+              .from('pr_requests')
+              .delete()
+              .eq('id', itemId);
+
+            if (deleteError) {
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการลบรายการ PR');
+            } else {
+              await sendLineReply(replyToken, `🗑️ ลบรายการ PR "${item.title}" เรียบร้อยแล้วครับ!`);
+            }
+          } else if (action === 'request_pr_edit') {
+            if (!itemId) continue;
+            const { data: item, error: fetchError } = await supabaseAdmin
+              .from('pr_requests')
+              .select('title')
+              .eq('id', itemId)
+              .single();
+
+            if (fetchError || !item) {
+              await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
+              continue;
+            }
+
+            memoryStateCache.set(lineUserId, { action: 'editing_pr', itemId: itemId, itemTitle: item.title });
+            const promptMsg = `✍️ เตรียมแก้ไขรายการ PR: "${item.title}"\n\nกรุณาพิมพ์หัวข้อ หรือชื่อรายการ PR ใหม่เข้ามาได้เลยครับ (บอทจะอัปเดตชื่อรายการนี้โดยตรง)`;
+
+            await sendLineReply(replyToken, {
+              type: 'text',
+              text: promptMsg,
+              quickReply: {
+                items: [
+                  {
+                    type: 'action',
+                    action: {
+                      type: 'postback',
+                      label: '❌ ยกเลิกการแก้ไข',
+                      data: 'action=cancel_edit'
+                    }
+                  }
+                ]
+              }
+            });
+          } else if (action === 'cal_complete') {
+            if (!itemId) continue;
+            const { data: item, error: fetchError } = await supabaseAdmin
+              .from('lab_calibrations')
+              .select('name')
+              .eq('id', itemId)
+              .single();
+
+            if (fetchError || !item) {
+              await sendLineReply(replyToken, '❌ ไม่พบรายการ Calibration นี้ หรืออาจถูกลบไปแล้ว');
+              continue;
+            }
+
+            const today = new Date();
+            const pad = (n: number) => String(n).padStart(2, '0');
+            const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+            const nextYear = new Date();
+            nextYear.setFullYear(today.getFullYear() + 1);
+            const nextYearStr = `${nextYear.getFullYear()}-${pad(nextYear.getMonth() + 1)}-${pad(nextYear.getDate())}`;
+
+            const { error: updateError } = await supabaseAdmin
+              .from('lab_calibrations')
+              .update({
+                last_cal_date: todayStr,
+                next_cal_date: nextYearStr,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', itemId);
+
+            if (updateError) {
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการบันทึกการ Calibrate');
+            } else {
+              const formattedNext = nextYear.toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric' });
+              await sendLineReply(replyToken, `🎉 บันทึกการ Calibrate เรียบร้อย!\nเครื่องมือ: "${item.name}"\nวัน Cal ล่าสุด: วันนี้ (${todayStr})\nรอบถัดไปส่ง Calibrate: ${formattedNext}`);
+            }
+          } else if (action === 'cal_delete') {
+            if (!itemId) continue;
+            const { data: item, error: fetchError } = await supabaseAdmin
+              .from('lab_calibrations')
+              .select('name')
+              .eq('id', itemId)
+              .single();
+
+            if (fetchError || !item) {
+              await sendLineReply(replyToken, '❌ ไม่พบรายการ Calibration นี้ หรืออาจถูกลบไปแล้ว');
+              continue;
+            }
+
+            const { error: deleteError } = await supabaseAdmin
+              .from('lab_calibrations')
+              .delete()
+              .eq('id', itemId);
+
+            if (deleteError) {
+              await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการลบรายการ Calibration');
+            } else {
+              await sendLineReply(replyToken, `🗑️ ลบรายการเครื่องมือ "${item.name}" เรียบร้อยแล้วครับ!`);
+            }
+          } else if (action === 'request_cal_edit') {
+            if (!itemId) continue;
+            const { data: item, error: fetchError } = await supabaseAdmin
+              .from('lab_calibrations')
+              .select('name, next_cal_date')
+              .eq('id', itemId)
+              .single();
+
+            if (fetchError || !item) {
+              await sendLineReply(replyToken, '❌ ไม่พบรายการ Calibration นี้ หรืออาจถูกลบไปแล้ว');
+              continue;
+            }
+
+            memoryStateCache.set(lineUserId, { action: 'editing_cal', itemId: itemId, itemTitle: item.name });
+            const promptMsg = `✍️ เตรียมแก้ไขเครื่องมือ Calibrate: "${item.name}"\n\nคุณสามารถพิมพ์ชื่อเครื่องมือใหม่เข้ามาได้เลย หรือพิมพ์วันนัดหมายใหม่ เช่น "25/12/2026"`;
+
+            await sendLineReply(replyToken, {
+              type: 'text',
+              text: promptMsg,
+              quickReply: {
+                items: [
+                  {
+                    type: 'action',
+                    action: {
+                      type: 'postback',
+                      label: '❌ ยกเลิกการแก้ไข',
+                      data: 'action=cancel_edit'
+                    }
+                  }
+                ]
+              }
+            });
           } else if (action === 'stock_execute') {
             const id = params.get('id')!;
             const op = params.get('op')!;
@@ -988,7 +1242,83 @@ export async function POST(request: Request) {
       }
 
       // Check current active mode
-      const activeMode = lineGroupId ? 'stock' : await getUserModeState(profile, lineUserId, supabaseAdmin);
+      const activeMode: 'reminder' | 'stock' | 'pr' | 'calibration' | null = lineGroupId ? 'stock' : await getUserModeState(profile, lineUserId, supabaseAdmin);
+
+      // Handle "รายการ" or "ดูรายการ" command based on active mode
+      if (messageText.trim() === 'รายการ' || messageText.trim() === 'ดูรายการ') {
+        if (activeMode === 'pr') {
+          const prListFlex = createPrListMenuFlex();
+          await sendLineReply(replyToken, prListFlex);
+          continue;
+        }
+
+        if (activeMode === 'calibration') {
+          const calListFlex = createCalibrationListMenuFlex();
+          await sendLineReply(replyToken, calListFlex);
+          continue;
+        }
+
+        const listMenuFlex = {
+          type: 'flex',
+          altText: '📋 เมนูเลือกดูรายการ',
+          contents: {
+            type: 'bubble',
+            size: 'mega',
+            header: {
+              type: 'box',
+              layout: 'vertical',
+              backgroundColor: '#8b5cf6',
+              contents: [
+                {
+                  type: 'text',
+                  text: '📋 เมนูเลือกดูรายการ',
+                  weight: 'bold',
+                  color: '#ffffff',
+                  size: 'sm'
+                }
+              ]
+            },
+            body: {
+              type: 'box',
+              layout: 'vertical',
+              spacing: 'md',
+              contents: [
+                {
+                  type: 'text',
+                  text: 'กรุณาเลือกรายการที่คุณต้องการตรวจสอบ:',
+                  size: 'xs',
+                  color: '#64748b',
+                  wrap: true
+                },
+                {
+                  type: 'button',
+                  style: 'primary',
+                  color: '#8b5cf6',
+                  height: 'sm',
+                  action: {
+                    type: 'postback',
+                    label: '⏳ รายการที่ยังไม่สำเร็จ',
+                    data: 'action=view_items&status=active'
+                  }
+                },
+                {
+                  type: 'button',
+                  style: 'secondary',
+                  height: 'sm',
+                  action: {
+                    type: 'postback',
+                    label: '✅ รายการที่สำเร็จแล้ว',
+                    data: 'action=view_items&status=completed'
+                  }
+                }
+              ]
+            }
+          }
+        };
+
+        await sendLineReply(replyToken, listMenuFlex);
+        continue;
+      }
 
       // Handle PR creation if in PR mode or explicit PR command
       if (activeMode === 'pr' || /^pr[:\s]/i.test(messageText.trim()) || /^เปิด\s*pr[:\s]?/i.test(messageText.trim())) {
@@ -1123,68 +1453,7 @@ export async function POST(request: Request) {
         continue;
       }
 
-      if (messageText.trim() === 'รายการ' || messageText.trim() === 'ดูรายการ') {
-        const listMenuFlex = {
-          type: 'flex',
-          altText: '📋 เมนูเลือกดูรายการ',
-          contents: {
-            type: 'bubble',
-            size: 'mega',
-            header: {
-              type: 'box',
-              layout: 'vertical',
-              backgroundColor: '#8b5cf6',
-              contents: [
-                {
-                  type: 'text',
-                  text: '📋 เมนูเลือกดูรายการ',
-                  weight: 'bold',
-                  color: '#ffffff',
-                  size: 'sm'
-                }
-              ]
-            },
-            body: {
-              type: 'box',
-              layout: 'vertical',
-              spacing: 'md',
-              contents: [
-                {
-                  type: 'text',
-                  text: 'กรุณาเลือกรายการที่คุณต้องการตรวจสอบ:',
-                  size: 'xs',
-                  color: '#64748b',
-                  wrap: true
-                },
-                {
-                  type: 'button',
-                  style: 'primary',
-                  color: '#8b5cf6',
-                  height: 'sm',
-                  action: {
-                    type: 'postback',
-                    label: '⏳ รายการที่ยังไม่สำเร็จ',
-                    data: 'action=view_items&status=active'
-                  }
-                },
-                {
-                  type: 'button',
-                  style: 'secondary',
-                  height: 'sm',
-                  action: {
-                    type: 'postback',
-                    label: '✅ รายการที่สำเร็จแล้ว',
-                    data: 'action=view_items&status=completed'
-                  }
-                }
-              ]
-            }
-          }
-        };
 
-        await sendLineReply(replyToken, listMenuFlex);
-        continue;
-      }
 
       let parsedResult: any = null;
       const userState = memoryStateCache.get(lineUserId);
@@ -1711,6 +1980,86 @@ export async function POST(request: Request) {
             {
               type: 'flex',
               altText: `📄 รายการที่แก้ไขแล้ว`,
+              contents: bubble
+            }
+          ]);
+        }
+        continue;
+      }
+
+      if (userState && userState.action === 'editing_pr') {
+        const newTitle = messageText.trim();
+        const { data: updatedPr, error: updateError } = await supabaseAdmin
+          .from('pr_requests')
+          .update({
+            title: newTitle,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userState.itemId)
+          .select('*')
+          .single();
+
+        memoryStateCache.delete(lineUserId);
+
+        if (updateError || !updatedPr) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขรายการ PR');
+        } else {
+          const requestUrl = new URL(request.url);
+          const appUrl = requestUrl.origin;
+          const bubble = createPrFlexBubble(updatedPr, appUrl);
+          await sendLineReply(replyToken, [
+            `✅ แก้ไขชื่อรายการ PR เป็น "${updatedPr.title}" เรียบร้อยแล้วครับ!`,
+            {
+              type: 'flex',
+              altText: `📄 รายการ PR ที่แก้ไขแล้ว`,
+              contents: bubble
+            }
+          ]);
+        }
+        continue;
+      }
+
+      if (userState && userState.action === 'editing_cal') {
+        const updates: any = { updated_at: new Date().toISOString() };
+        
+        const dateMatch = messageText.match(/(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/);
+        if (dateMatch) {
+          const pad = (n: number) => String(n).padStart(2, '0');
+          let day = pad(parseInt(dateMatch[1]));
+          let month = pad(parseInt(dateMatch[2]));
+          let yearNum = parseInt(dateMatch[3]);
+          if (yearNum < 100) yearNum += 2000;
+          if (yearNum > 2500) yearNum -= 543;
+          updates.next_cal_date = `${yearNum}-${month}-${day}`;
+
+          const cleanName = messageText.replace(/(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/, '').trim();
+          if (cleanName) {
+            updates.name = cleanName;
+          }
+        } else {
+          updates.name = messageText.trim();
+        }
+
+        const { data: updatedCal, error: updateError } = await supabaseAdmin
+          .from('lab_calibrations')
+          .update(updates)
+          .eq('id', userState.itemId)
+          .select('*')
+          .single();
+
+        memoryStateCache.delete(lineUserId);
+
+        if (updateError || !updatedCal) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขรายการ Calibrate');
+        } else {
+          const requestUrl = new URL(request.url);
+          const appUrl = requestUrl.origin;
+          const bubble = createCalibrationFlexBubble(updatedCal, appUrl);
+          await sendLineReply(replyToken, [
+            `✅ แก้ไขเครื่องมือ Calibrate "${updatedCal.name}" เรียบร้อยแล้วครับ!`,
+            {
+              type: 'flex',
+              altText: `📄 รายการ Calibrate ที่แก้ไขแล้ว`,
               contents: bubble
             }
           ]);
