@@ -12,6 +12,8 @@ export interface Profile {
   line_group_id: string | null;
 }
 
+export type UserProfile = Profile;
+
 export interface Item {
   id: string;
   user_id: string;

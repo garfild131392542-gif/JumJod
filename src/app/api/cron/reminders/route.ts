@@ -50,7 +50,7 @@ export async function GET(request: Request) {
     let sentCount = 0;
 
     // ==========================================
-    // 1. Handle normal user reminders (reminder_date)
+    // 1. Group normal user reminders by user_id to save LINE Push quota
     // ==========================================
     const { data: items, error } = await supabaseAdmin
       .from('items')
@@ -65,51 +65,69 @@ export async function GET(request: Request) {
 
     if (items && items.length > 0) {
       console.log(`[CRON REMINDERS] Found ${items.length} normal reminders to process.`);
+      
+      // Group items by user_id
+      const userItemsMap = new Map<string, any[]>();
       for (const item of items) {
+        if (!userItemsMap.has(item.user_id)) {
+          userItemsMap.set(item.user_id, []);
+        }
+        userItemsMap.get(item.user_id)!.push(item);
+      }
+
+      const { createItemFlexBubble } = await import('../../../../lib/line/flex-templates');
+
+      for (const [userId, userItems] of userItemsMap.entries()) {
         const { data: profile, error: profileError } = await supabaseAdmin
           .from('profiles')
           .select('line_user_id')
-          .eq('id', item.user_id)
+          .eq('id', userId)
           .single();
 
-        if (profileError || !profile) {
-          await supabaseAdmin
-            .from('items')
-            .update({ reminder_sent: true })
-            .eq('id', item.id);
+        if (profileError || !profile || !profile.line_user_id) {
+          // Mark as processed if user has no line id
+          const itemIds = userItems.map(i => i.id);
+          await supabaseAdmin.from('items').update({ reminder_sent: true }).in('id', itemIds);
           continue;
         }
 
         const targetLineId = profile.line_user_id;
-        if (!targetLineId) {
-          await supabaseAdmin
-            .from('items')
-            .update({ reminder_sent: true })
-            .eq('id', item.id);
-          continue;
-        }
 
-        const { createItemFlexBubble } = await import('../../../../lib/line/flex-templates');
-        const bubble = createItemFlexBubble(item, appUrl, true);
-        
-        const pushSuccess = await sendLinePush(targetLineId, {
-          type: 'flex',
-          altText: `🔔 แจ้งเตือนความจำ: ${item.title}`,
-          contents: bubble
-        });
-
-        if (pushSuccess) {
-          await supabaseAdmin
-            .from('items')
-            .update({ reminder_sent: true })
-            .eq('id', item.id);
-          sentCount++;
+        if (userItems.length === 1) {
+          // Single item -> Send 1 Flex Bubble
+          const item = userItems[0];
+          const bubble = createItemFlexBubble(item, appUrl, true);
+          const pushSuccess = await sendLinePush(targetLineId, {
+            type: 'flex',
+            altText: `🔔 แจ้งเตือนความจำ: ${item.title}`,
+            contents: bubble
+          });
+          if (pushSuccess) {
+            await supabaseAdmin.from('items').update({ reminder_sent: true }).eq('id', item.id);
+            sentCount++;
+          }
+        } else {
+          // Multiple items -> Send 1 Flex Carousel to save push quota!
+          const bubbles = userItems.slice(0, 10).map(item => createItemFlexBubble(item, appUrl, true));
+          const pushSuccess = await sendLinePush(targetLineId, {
+            type: 'flex',
+            altText: `🔔 แจ้งเตือนความจำ (${userItems.length} รายการ)`,
+            contents: {
+              type: 'carousel',
+              contents: bubbles
+            }
+          });
+          if (pushSuccess) {
+            const itemIds = userItems.map(i => i.id);
+            await supabaseAdmin.from('items').update({ reminder_sent: true }).in('id', itemIds);
+            sentCount += userItems.length;
+          }
         }
       }
     }
 
     // ==========================================
-    // 2. Handle budget due date alerts (lacking Completed status)
+    // 2. Group budget due date alerts by user_id
     // ==========================================
     const threeDaysLater = new Date();
     threeDaysLater.setDate(threeDaysLater.getDate() + 3);
@@ -126,43 +144,36 @@ export async function GET(request: Request) {
       console.error('Error fetching items for budget due reminders:', dueError);
     } else if (dueItems && dueItems.length > 0) {
       console.log(`[CRON REMINDERS] Found ${dueItems.length} budget due date alerts to process.`);
+      
+      const dueUserMap = new Map<string, any[]>();
       for (const item of dueItems) {
-        const { data: profile, error: profileError } = await supabaseAdmin
+        if (!dueUserMap.has(item.user_id)) {
+          dueUserMap.set(item.user_id, []);
+        }
+        dueUserMap.get(item.user_id)!.push(item);
+      }
+
+      for (const [userId, userDueItems] of dueUserMap.entries()) {
+        const { data: profile } = await supabaseAdmin
           .from('profiles')
           .select('line_user_id')
-          .eq('id', item.user_id)
+          .eq('id', userId)
           .single();
 
-        if (profileError || !profile || !profile.line_user_id) {
-          await supabaseAdmin
-            .from('items')
-            .update({ due_reminder_sent: true })
-            .eq('id', item.id);
+        if (!profile || !profile.line_user_id) {
+          const itemIds = userDueItems.map(i => i.id);
+          await supabaseAdmin.from('items').update({ due_reminder_sent: true }).in('id', itemIds);
           continue;
         }
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const dueDate = new Date(item.budget_due_date!);
-        dueDate.setHours(0, 0, 0, 0);
+        const lines = userDueItems.map(item => `• ${item.title} (กำหนด: ${item.budget_due_date})`);
+        const messageText = `🚨 **แจ้งเตือนรายการใกล้ถึงกำหนด (${userDueItems.length} รายการ)**\n\n${lines.join('\n')}\n\nกรุณาตรวจสอบและดำเนินการด้วยครับ`;
 
-        const diffTime = dueDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        let dayText = `ในอีก ${diffDays} วัน`;
-        if (diffDays === 0) dayText = 'วันนี้';
-        if (diffDays < 0) dayText = `ที่ผ่านมาแล้ว (เกินกำหนดชำระ ${Math.abs(diffDays)} วัน)`;
-
-        const pushSuccess = await sendLinePush(profile.line_user_id, [
-          `🚨 **แจ้งเตือนรายการใกล้ถึงกำหนด!**\n\n📄 รายการ: "${item.title}"\n📅 วันที่ครบกำหนด: ${item.budget_due_date} (${dayText})\n⚠️ สถานะปัจจุบัน: ${item.status}\n\nกรุณาตรวจสอบและดำเนินการด้วยครับ`
-        ]);
-
+        const pushSuccess = await sendLinePush(profile.line_user_id, messageText);
         if (pushSuccess) {
-          await supabaseAdmin
-            .from('items')
-            .update({ due_reminder_sent: true })
-            .eq('id', item.id);
-          sentCount++;
+          const itemIds = userDueItems.map(i => i.id);
+          await supabaseAdmin.from('items').update({ due_reminder_sent: true }).in('id', itemIds);
+          sentCount += userDueItems.length;
         }
       }
     }

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useTheme } from '@/components/providers/theme-provider';
-import { ClipboardList, Calendar, LogOut, User as UserIcon, Menu, Sun, Moon, CheckSquare, Package, FileText, Scale } from 'lucide-react';
+import { ClipboardList, Calendar, LogOut, User as UserIcon, Menu, Sun, Moon, CheckSquare, Package, FileText, Scale, Settings } from 'lucide-react';
 import Image from 'next/image';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -52,6 +52,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       name: 'รายการสำเร็จ',
       href: '/completed',
       icon: CheckSquare,
+    },
+    {
+      name: 'ตั้งค่า & เชื่อมต่อ LINE',
+      href: '/settings',
+      icon: Settings,
     },
   ];
 
