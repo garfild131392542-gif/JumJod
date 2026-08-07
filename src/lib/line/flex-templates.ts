@@ -1232,7 +1232,37 @@ export function createPrFlexBubble(prItem: any, appUrl: string) {
             { type: 'text', text: 'ทำรายการ:', size: 'xs', color: '#94a3b8', flex: 3 },
             { type: 'text', text: `${dateStr} (${timeStr} น.)`, size: 'xs', color: '#64748b', flex: 7 }
           ]
-        }
+        },
+        ...(prItem.subtotal || prItem.total_amount ? [
+          {
+            type: 'separator',
+            margin: 'sm'
+          },
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              { type: 'text', text: 'ราคาต้น:', size: 'xs', color: '#94a3b8', flex: 3 },
+              { type: 'text', text: `${Number(prItem.subtotal || 0).toLocaleString('th-TH')} บาท`, size: 'xs', color: '#334155', flex: 7 }
+            ]
+          },
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              { type: 'text', text: 'VAT 7%:', size: 'xs', color: '#94a3b8', flex: 3 },
+              { type: 'text', text: `${Number(prItem.vat_amount || 0).toLocaleString('th-TH')} บาท`, size: 'xs', color: '#334155', flex: 7 }
+            ]
+          },
+          {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              { type: 'text', text: 'ราคารวมสุทธิ:', size: 'xs', color: '#94a3b8', flex: 3 },
+              { type: 'text', text: `${Number(prItem.total_amount || 0).toLocaleString('th-TH')} บาท`, size: 'xs', weight: 'bold', color: '#8b5cf6', flex: 7 }
+            ]
+          }
+        ] : [])
       ]
     },
     footer: {
@@ -1579,4 +1609,232 @@ export function createOcrReminderConfirmationFlex(reminder: { title: string, des
     }
   };
 }
+
+export function createPrEditMenuFlex(prItem: any) {
+  const shortId = prItem.id.substring(prItem.id.length - 4);
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#8b5cf6',
+      paddingAll: '15px',
+      contents: [
+        {
+          type: 'text',
+          text: '✏️ เลือกสิ่งที่ต้องการแก้ไข PR',
+          weight: 'bold',
+          color: '#ffffff',
+          size: 'sm'
+        },
+        {
+          type: 'text',
+          text: `รายการ: "${prItem.title}" (#${shortId})`,
+          size: 'xs',
+          color: '#e9d5ff',
+          margin: 'xs',
+          wrap: true
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#8b5cf6',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '📄 ใส่/แก้ เลข PR',
+            data: `action=request_pr_field&field=pr_no&itemId=${prItem.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#a855f7',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '📑 ใส่/แก้ เลข PO',
+            data: `action=request_pr_field&field=po_no&itemId=${prItem.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#10b981',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '🏷️ ใส่/แก้ เลข QT',
+            data: `action=request_pr_field&field=qt_no&itemId=${prItem.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#0284c7',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '💰 ใส่/แก้ ราคาต้น & VAT',
+            data: `action=request_pr_field&field=subtotal&itemId=${prItem.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '🔄 เปลี่ยนสถานะการติดตาม',
+            data: `action=request_pr_status_menu&itemId=${prItem.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '✏️ แก้ไขชื่อหัวข้อ PR',
+            data: `action=request_pr_field&field=title&itemId=${prItem.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '📝 แก้ไขหมายเหตุ',
+            data: `action=request_pr_field&field=notes&itemId=${prItem.id}`
+          }
+        }
+      ]
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'button',
+          style: 'link',
+          color: '#ef4444',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '❌ ยกเลิก',
+            data: 'action=cancel_edit'
+          }
+        }
+      ]
+    }
+  };
+}
+
+export function createPrStatusMenuFlex(prItem: any) {
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#3b82f6',
+      paddingAll: '15px',
+      contents: [
+        {
+          type: 'text',
+          text: '🔄 เลือกสถานะใหม่สำหรับ PR',
+          weight: 'bold',
+          color: '#ffffff',
+          size: 'sm'
+        },
+        {
+          type: 'text',
+          text: `"${prItem.title}"`,
+          size: 'xs',
+          color: '#dbeafe',
+          margin: 'xs',
+          wrap: true
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'button',
+          style: prItem.status === 'Pending' ? 'primary' : 'secondary',
+          color: '#f59e0b',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '⏳ รอเลข PR (Pending)',
+            data: `action=set_pr_status&status=Pending&itemId=${prItem.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: prItem.status === 'PR Issued' ? 'primary' : 'secondary',
+          color: '#3b82f6',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '📄 ออก PR แล้ว (PR Issued)',
+            data: `action=set_pr_status&status=PR Issued&itemId=${prItem.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: prItem.status === 'PO Issued' ? 'primary' : 'secondary',
+          color: '#8b5cf6',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '📑 ออก PO แล้ว (PO Issued)',
+            data: `action=set_pr_status&status=PO Issued&itemId=${prItem.id}`
+          }
+        },
+        {
+          type: 'button',
+          style: prItem.status === 'Completed' ? 'primary' : 'secondary',
+          color: '#10b981',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '✅ เสร็จสมบูรณ์ (Completed)',
+            data: `action=set_pr_status&status=Completed&itemId=${prItem.id}`
+          }
+        }
+      ]
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
+          type: 'button',
+          style: 'link',
+          color: '#64748b',
+          height: 'sm',
+          action: {
+            type: 'postback',
+            label: '⬅️ ย้อนกลับ',
+            data: `action=request_pr_edit&itemId=${prItem.id}`
+          }
+        }
+      ]
+    }
+  };
+}
+
 

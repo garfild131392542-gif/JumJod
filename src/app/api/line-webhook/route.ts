@@ -34,7 +34,8 @@ import {
 
 import { handlePostbackEvent } from '@/lib/line/handlers/postback.handler';
 import { handleTextEvent } from '@/lib/line/handlers/text.handler';
-import { ProfileService, ItemService } from '@/services';
+import { ProfileService, ItemService, PrService } from '@/services';
+import { PrModeController } from '@/lib/line/mode-controllers/pr-mode';
 
 // Initialize Supabase admin client using the service role key to bypass RLS policies
 const supabaseAdmin = createClient(
@@ -243,16 +244,20 @@ export async function POST(request: Request) {
       const activeMode = lineGroupId ? 'stock' : await getUserModeState(profile, lineUserId, supabaseAdmin);
       const cleanMessageText = messageText.toLowerCase();
 
-      // Handle PR creation if in PR mode or explicit PR command
+      const requestUrl = new URL(request.url);
+      const appUrl = requestUrl.origin;
+
+      // Check if message is a PR edit/update command
+      const prHandled = await PrModeController.handleMessage(messageText, profile, replyToken, lineUserId, supabaseAdmin, appUrl);
+      if (prHandled) continue;
+
+      // Handle PR creation if in PR mode or explicit PR creation command
       if (activeMode === 'pr' || /^pr[:\s]/i.test(messageText.trim()) || /^เปิด\s*pr[:\s]?/i.test(messageText.trim())) {
         let titleText = messageText.trim();
         titleText = titleText.replace(/^(?:เปิด|ติดตาม)?\s*pr[:\s]*/i, '').trim();
         if (!titleText) {
           titleText = messageText.trim();
         }
-
-        const requestUrl = new URL(request.url);
-        const appUrl = requestUrl.origin;
 
         const { data: insertedPr, error: insertPrError } = await supabaseAdmin
           .from('pr_requests')
@@ -910,28 +915,98 @@ export async function POST(request: Request) {
         continue;
       }
 
-      if (userState && userState.action === 'editing_pr') {
-        const newTitle = messageText.trim();
-        const { data: updatedPr, error: updateError } = await supabaseAdmin
-          .from('pr_requests')
-          .update({
-            title: newTitle,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userState.itemId)
-          .select('*')
-          .single();
+      if (userState && userState.action === 'editing_pr_field') {
+        const field = userState.field;
+        const val = messageText.trim();
+        const targetPr = await PrService.getPrById(supabaseAdmin, userState.itemId);
 
         memoryStateCache.delete(lineUserId);
 
-        if (updateError || !updatedPr) {
+        if (!targetPr) {
+          await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
+          continue;
+        }
+
+        const updates: any = {};
+
+        if (field === 'subtotal') {
+          const subMatch = val.match(/([0-9\.,]+)(?:\s*(?:vat|ภาษี)\s*([0-9\.,]+))?/i);
+          if (subMatch) {
+            const subNum = parseFloat(subMatch[1].replace(/,/g, '')) || 0;
+            const vatNum = subMatch[2] ? parseFloat(subMatch[2].replace(/,/g, '')) : Math.round(subNum * 0.07 * 100) / 100;
+            updates.subtotal = subNum;
+            updates.vat_amount = vatNum;
+            updates.total_amount = Math.round((subNum + vatNum) * 100) / 100;
+          }
+        } else {
+          updates[field] = val;
+        }
+
+        const updatedPr = await PrService.updatePr(supabaseAdmin, targetPr.id, updates);
+        if (!updatedPr) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขข้อมูล PR');
+        } else {
+          const requestUrl = new URL(request.url);
+          const appUrl = requestUrl.origin;
+          const bubble = createPrFlexBubble(updatedPr, appUrl);
+          await sendLineReply(replyToken, [
+            `✅ อัปเดต${userState.fieldName || field} เป็น "${val}" เรียบร้อยแล้วครับ!`,
+            {
+              type: 'flex',
+              altText: `📄 รายการ PR ที่แก้ไขแล้ว`,
+              contents: bubble
+            }
+          ]);
+        }
+        continue;
+      }
+
+      if (userState && userState.action === 'editing_pr') {
+        const text = messageText.trim();
+        const targetPr = await PrService.getPrById(supabaseAdmin, userState.itemId);
+
+        memoryStateCache.delete(lineUserId);
+
+        if (!targetPr) {
+          await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
+          continue;
+        }
+
+        const updates: any = {};
+        const prNoMatch = text.match(/(?:pr_no|เลข\s*pr|pr)[:\s]*([a-z0-9\-_/]+)/i);
+        const poNoMatch = text.match(/(?:po_no|เลข\s*po|po)[:\s]*([a-z0-9\-_/]+)/i);
+        const qtNoMatch = text.match(/(?:qt_no|เลข\s*qt|qt)[:\s]*([a-z0-9\-_/]+)/i);
+        const notesMatch = text.match(/(?:หมายเหตุ|notes)[:\s]*([^\n]+)/i);
+
+        if (prNoMatch) updates.pr_no = prNoMatch[1].trim();
+        if (poNoMatch) updates.po_no = poNoMatch[1].trim();
+        if (qtNoMatch) updates.qt_no = qtNoMatch[1].trim();
+        if (notesMatch) updates.notes = notesMatch[1].trim();
+
+        if (Object.keys(updates).length === 0) {
+          if (/^pr[-_\s]?\d+/i.test(text)) {
+            updates.pr_no = text;
+            if (targetPr.status === 'Pending') updates.status = 'PR Issued';
+          } else if (/^po[-_\s]?\d+/i.test(text)) {
+            updates.po_no = text;
+            if (targetPr.status === 'Pending' || targetPr.status === 'PR Issued') updates.status = 'PO Issued';
+          } else if (/^qt[-_\s]?\d+/i.test(text)) {
+            updates.qt_no = text;
+          } else {
+            updates.title = text;
+          }
+        }
+
+        const updatedPr = await PrService.updatePr(supabaseAdmin, targetPr.id, updates);
+
+        if (!updatedPr) {
           await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขรายการ PR');
         } else {
           const requestUrl = new URL(request.url);
           const appUrl = requestUrl.origin;
           const bubble = createPrFlexBubble(updatedPr, appUrl);
           await sendLineReply(replyToken, [
-            `✅ แก้ไขชื่อรายการ PR เป็น "${updatedPr.title}" เรียบร้อยแล้วครับ!`,
+            `✅ แก้ไขข้อมูลรายการ PR "${updatedPr.title}" เรียบร้อยแล้วครับ!`,
             {
               type: 'flex',
               altText: `📄 รายการ PR ที่แก้ไขแล้ว`,

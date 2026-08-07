@@ -154,9 +154,40 @@ export interface PrRequest {
   po_no: string | null;
   qt_no: string | null;
   status: PrStatus;
+  subtotal?: number | null;
+  vat_amount?: number | null;
+  total_amount?: number | null;
   created_at: string;
   updated_at: string;
   notes?: string | null;
+}
+
+/**
+ * Automatically compute PR status based on PR / PO / QT numbers
+ * - All empty -> 'Pending' (รอเลข PR)
+ * - PR or QT present, but PO missing -> 'PR Issued' (ออก PR แล้ว / รอออก PO)
+ * - PO present -> 'PO Issued' (ออก PO แล้ว)
+ * - PR, PO, QT all present -> 'Completed' (เสร็จสมบูรณ์)
+ */
+export function computeAutoPrStatus(
+  prNo?: string | null,
+  poNo?: string | null,
+  qtNo?: string | null
+): PrStatus {
+  const hasPr = !!(prNo && prNo.trim());
+  const hasPo = !!(poNo && poNo.trim());
+  const hasQt = !!(qtNo && qtNo.trim());
+
+  if (hasPr && hasPo && hasQt) {
+    return 'Completed';
+  }
+  if (hasPo) {
+    return 'PO Issued';
+  }
+  if (hasPr || hasQt) {
+    return 'PR Issued';
+  }
+  return 'Pending';
 }
 
 export type CalStatus = 'Normal' | 'Due Soon' | 'Overdue';

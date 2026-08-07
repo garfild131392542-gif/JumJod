@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, AlertCircle, FileText, Calendar, Hash, Tag } from 'lucide-react';
-import { PrRequest, PrStatus } from '@/lib/types';
+import { PrRequest, PrStatus, computeAutoPrStatus } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -25,8 +25,36 @@ export default function PrModal({ isOpen, onClose, userId, prToEdit }: PrModalPr
   const [createdAt, setCreatedAt] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Pricing states
+  const [subtotal, setSubtotal] = useState<string>('');
+  const [vatType, setVatType] = useState<'7' | '0' | 'custom'>('7');
+  const [vatAmount, setVatAmount] = useState<string>('');
+  const [totalAmount, setTotalAmount] = useState<string>('');
+
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Auto-calculate VAT and Total whenever subtotal or vatType changes
+  useEffect(() => {
+    const sub = parseFloat(subtotal) || 0;
+    if (sub <= 0) {
+      if (vatType !== 'custom') setVatAmount('');
+      setTotalAmount('');
+      return;
+    }
+
+    if (vatType === '7') {
+      const vat = Math.round(sub * 0.07 * 100) / 100;
+      setVatAmount(String(vat));
+      setTotalAmount(String(Math.round((sub + vat) * 100) / 100));
+    } else if (vatType === '0') {
+      setVatAmount('0');
+      setTotalAmount(String(sub));
+    } else if (vatType === 'custom') {
+      const vat = parseFloat(vatAmount) || 0;
+      setTotalAmount(String(Math.round((sub + vat) * 100) / 100));
+    }
+  }, [subtotal, vatType, vatAmount]);
 
   useEffect(() => {
     if (isOpen) {
@@ -35,9 +63,14 @@ export default function PrModal({ isOpen, onClose, userId, prToEdit }: PrModalPr
         setPrNo(prToEdit.pr_no || '');
         setPoNo(prToEdit.po_no || '');
         setQtNo(prToEdit.qt_no || '');
-        setStatus(prToEdit.status || 'Pending');
+        setStatus(prToEdit.status || computeAutoPrStatus(prToEdit.pr_no, prToEdit.po_no, prToEdit.qt_no));
         setNotes(prToEdit.notes || '');
         
+        setSubtotal(prToEdit.subtotal ? String(prToEdit.subtotal) : '');
+        setVatAmount(prToEdit.vat_amount ? String(prToEdit.vat_amount) : '');
+        setTotalAmount(prToEdit.total_amount ? String(prToEdit.total_amount) : '');
+        setVatType('7');
+
         // Format ISO date string for datetime-local input
         if (prToEdit.created_at) {
           const d = new Date(prToEdit.created_at);
@@ -54,6 +87,10 @@ export default function PrModal({ isOpen, onClose, userId, prToEdit }: PrModalPr
         setQtNo('');
         setStatus('Pending');
         setNotes('');
+        setSubtotal('');
+        setVatAmount('');
+        setTotalAmount('');
+        setVatType('7');
         
         const now = new Date();
         const pad = (n: number) => String(n).padStart(2, '0');
@@ -63,6 +100,22 @@ export default function PrModal({ isOpen, onClose, userId, prToEdit }: PrModalPr
       setError(null);
     }
   }, [isOpen, prToEdit]);
+
+  // Handler for PR/PO/QT number changes with auto status calculation
+  const handlePrNoChange = (val: string) => {
+    setPrNo(val);
+    setStatus(computeAutoPrStatus(val, poNo, qtNo));
+  };
+
+  const handlePoNoChange = (val: string) => {
+    setPoNo(val);
+    setStatus(computeAutoPrStatus(prNo, val, qtNo));
+  };
+
+  const handleQtNoChange = (val: string) => {
+    setQtNo(val);
+    setStatus(computeAutoPrStatus(prNo, poNo, val));
+  };
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -75,12 +128,19 @@ export default function PrModal({ isOpen, onClose, userId, prToEdit }: PrModalPr
 
       const formattedCreatedAt = createdAt ? new Date(createdAt).toISOString() : new Date().toISOString();
 
+      const subNum = parseFloat(subtotal) || null;
+      const vatNum = parseFloat(vatAmount) || null;
+      const totNum = parseFloat(totalAmount) || null;
+
       const payload = {
         title: title.trim(),
         pr_no: prNo.trim() || null,
         po_no: poNo.trim() || null,
         qt_no: qtNo.trim() || null,
-        status,
+        status: computeAutoPrStatus(prNo, poNo, qtNo),
+        subtotal: subNum,
+        vat_amount: vatNum,
+        total_amount: totNum,
         notes: notes.trim() || null,
         created_at: formattedCreatedAt,
         updated_at: new Date().toISOString(),
@@ -186,7 +246,7 @@ export default function PrModal({ isOpen, onClose, userId, prToEdit }: PrModalPr
                   type="text"
                   placeholder="เช่น PR-69001"
                   value={prNo}
-                  onChange={(e) => setPrNo(e.target.value)}
+                  onChange={(e) => handlePrNoChange(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-violet-500 font-mono"
                 />
               </div>
@@ -201,7 +261,7 @@ export default function PrModal({ isOpen, onClose, userId, prToEdit }: PrModalPr
                   type="text"
                   placeholder="เช่น PO-2026-042"
                   value={poNo}
-                  onChange={(e) => setPoNo(e.target.value)}
+                  onChange={(e) => handlePoNoChange(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-violet-500 font-mono"
                 />
               </div>
@@ -216,9 +276,90 @@ export default function PrModal({ isOpen, onClose, userId, prToEdit }: PrModalPr
                   type="text"
                   placeholder="เช่น QT-8891"
                   value={qtNo}
-                  onChange={(e) => setQtNo(e.target.value)}
+                  onChange={(e) => handleQtNoChange(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-violet-500 font-mono"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Pricing & VAT Section */}
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-violet-500" />
+                <span>จำนวนเงิน / ราคาต้น & VAT</span>
+              </label>
+              <span className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">คำนวณ VAT อัตโนมัติ</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Subtotal */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  ราคาต้น (ก่อน VAT)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="เช่น 10000"
+                    value={subtotal}
+                    onChange={(e) => setSubtotal(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-xl text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-violet-500 font-mono font-bold"
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">บาท</span>
+                </div>
+              </div>
+
+              {/* VAT Type & Amount */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                    ภาษี VAT
+                  </label>
+                  <select
+                    value={vatType}
+                    onChange={(e) => setVatType(e.target.value as any)}
+                    className="text-[10px] font-bold text-violet-600 bg-transparent focus:outline-none cursor-pointer"
+                  >
+                    <option value="7">VAT 7%</option>
+                    <option value="0">ไม่มี VAT (0%)</option>
+                    <option value="custom">ระบุเอง</option>
+                  </select>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    placeholder="0.00"
+                    readOnly={vatType !== 'custom'}
+                    value={vatAmount}
+                    onChange={(e) => setVatAmount(e.target.value)}
+                    className={`w-full px-3 py-1.5 rounded-xl text-xs border border-slate-200 dark:border-slate-800 focus:outline-none font-mono ${
+                      vatType !== 'custom' ? 'bg-slate-100 dark:bg-slate-950 text-slate-500' : 'bg-white dark:bg-slate-900 focus:border-violet-500'
+                    }`}
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400">บาท</span>
+                </div>
+              </div>
+
+              {/* Total Amount */}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  ราคารวมสุทธิ (รวม VAT)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    readOnly
+                    placeholder="0.00"
+                    value={totalAmount}
+                    className="w-full px-3 py-1.5 rounded-xl text-xs bg-violet-500/10 dark:bg-violet-950/40 border border-violet-500/30 text-violet-700 dark:text-violet-300 font-mono font-bold"
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-violet-500 font-bold">บาท</span>
+                </div>
               </div>
             </div>
           </div>
@@ -226,16 +367,19 @@ export default function PrModal({ isOpen, onClose, userId, prToEdit }: PrModalPr
           {/* Status & Created At */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
-                สถานะการติดตาม
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                  สถานะการติดตาม
+                </label>
+                <span className="text-[9px] text-violet-500 font-medium">คำนวณให้อัตโนมัติ</span>
+              </div>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as PrStatus)}
                 className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:border-violet-500 font-medium"
               >
                 <option value="Pending">⏳ รอเลข PR (Pending)</option>
-                <option value="PR Issued">📄 ออก PR แล้ว (PR Issued)</option>
+                <option value="PR Issued">📄 ออก PR แล้ว / รอเลข PO (PR Issued)</option>
                 <option value="PO Issued">📑 ออก PO แล้ว (PO Issued)</option>
                 <option value="Completed">✅ เสร็จสมบูรณ์ (Completed)</option>
               </select>

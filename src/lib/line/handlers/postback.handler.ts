@@ -7,6 +7,8 @@ import {
   createStockActionMenuFlex,
   createStockEditMenuFlex,
   createPrFlexBubble,
+  createPrEditMenuFlex,
+  createPrStatusMenuFlex,
   createCalibrationFlexBubble
 } from '@/lib/line/flex-templates';
 import { ItemService, StockService, ProfileService, PrService, CalibrationService } from '@/services';
@@ -479,6 +481,101 @@ export async function handlePostbackEvent(
       await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการลบรายการ PR');
     } else {
       await sendLineReply(replyToken, `🗑️ ลบรายการ PR "${item.title}" เรียบร้อยแล้วครับ!`);
+    }
+  } else if (action === 'request_pr_edit') {
+    if (!itemId) return;
+    const item = await PrService.getPrById(supabaseAdmin, itemId);
+    if (!item) {
+      await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
+      return;
+    }
+
+    await sendLineReply(replyToken, {
+      type: 'flex',
+      altText: `✏️ แก้ไขรายการ PR "${item.title}"`,
+      contents: createPrEditMenuFlex(item)
+    });
+  } else if (action === 'request_pr_field') {
+    if (!itemId) return;
+    const field = params.get('field');
+    if (!field) return;
+    const item = await PrService.getPrById(supabaseAdmin, itemId);
+    if (!item) {
+      await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
+      return;
+    }
+
+    const fieldNames: Record<string, string> = {
+      pr_no: 'เลข PR (เช่น PR-69001)',
+      po_no: 'เลข PO (เช่น PO-2026-042)',
+      qt_no: 'เลข QT (เช่น QT-8891)',
+      title: 'ชื่อหัวข้อ PR ใหม่',
+      notes: 'หมายเหตุ/บันทึกเพิ่มเติม'
+    };
+
+    const label = fieldNames[field] || field;
+
+    memoryStateCache.set(lineUserId, {
+      action: 'editing_pr_field',
+      itemId: item.id,
+      field: field,
+      itemTitle: item.title,
+      fieldName: label
+    });
+
+    await sendLineReply(replyToken, {
+      type: 'text',
+      text: `✍️ **กำลังแก้ไข ${label}**\nสำหรับรายการ PR: "${item.title}"\n\nกรุณาพิมพ์ค่าใหม่ที่คุณต้องการตั้งเข้ามาในแชตนี้ได้เลยครับ`,
+      quickReply: {
+        items: [
+          {
+            type: 'action',
+            action: {
+              type: 'postback',
+              label: '❌ ยกเลิกการแก้ไข',
+              data: 'action=cancel_edit'
+            }
+          }
+        ]
+      }
+    });
+  } else if (action === 'request_pr_status_menu') {
+    if (!itemId) return;
+    const item = await PrService.getPrById(supabaseAdmin, itemId);
+    if (!item) {
+      await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
+      return;
+    }
+
+    await sendLineReply(replyToken, {
+      type: 'flex',
+      altText: `🔄 เลือกสถานะสำหรับ PR "${item.title}"`,
+      contents: createPrStatusMenuFlex(item)
+    });
+  } else if (action === 'set_pr_status') {
+    if (!itemId) return;
+    const newStatus = params.get('status');
+    if (!newStatus) return;
+
+    const item = await PrService.getPrById(supabaseAdmin, itemId);
+    if (!item) {
+      await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
+      return;
+    }
+
+    const updated = await PrService.updatePr(supabaseAdmin, itemId, { status: newStatus as any });
+    if (!updated) {
+      await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการอัปเดตสถานะ PR');
+    } else {
+      const bubble = createPrFlexBubble(updated, requestUrlOrigin);
+      await sendLineReply(replyToken, [
+        `🔄 อัปเดตสถานะ PR "${updated.title}" เป็น "${newStatus}" เรียบร้อยแล้วครับ!`,
+        {
+          type: 'flex',
+          altText: `📑 อัปเดตสถานะ PR "${updated.title}"`,
+          contents: bubble
+        }
+      ]);
     }
   } else if (action === 'cal_complete') {
     if (!itemId) return;

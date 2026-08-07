@@ -21,7 +21,12 @@ import {
   Tag,
   Hash,
   ArrowUpDown,
-  Filter
+  Filter,
+  MessageSquare,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  Terminal
 } from 'lucide-react';
 import PrModal from '@/components/dashboard/pr-modal';
 
@@ -37,6 +42,8 @@ export default function PrTrackerPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPr, setSelectedPr] = useState<PrRequest | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showLineGuide, setShowLineGuide] = useState(true);
+  const [activeLineCmdMenu, setActiveLineCmdMenu] = useState<string | null>(null);
 
   // Fetch PR requests using React Query
   const { data: prRequests = [], isLoading, error } = useQuery<PrRequest[]>({
@@ -227,6 +234,93 @@ export default function PrTrackerPage() {
         </div>
       </div>
 
+      {/* LINE Command Helper Banner */}
+      <div className="rounded-2xl bg-gradient-to-r from-violet-600/10 via-purple-600/10 to-indigo-600/10 border border-violet-500/20 overflow-hidden shadow-sm transition-all">
+        <div 
+          onClick={() => setShowLineGuide(!showLineGuide)}
+          className="p-4 flex items-center justify-between cursor-pointer select-none"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center shadow-md shadow-violet-500/20">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  📱 สั่งงาน & แก้ไขเลข PR/PO/QT ผ่าน LINE ได้ทันที!
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-500/20 text-violet-600 dark:text-violet-300 border border-violet-500/30 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  <span>ใช้คำสั่งในไลน์</span>
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                ไม่ต้องทำบนเว็บเท่านั้น! สามารถพิมพ์สั่งงานในแชต LINE เพื่อเติมเลข PR, PO, QT หรือเปลี่ยนสถานะรายการได้เลย
+              </p>
+            </div>
+          </div>
+          <button className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/50">
+            {showLineGuide ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {showLineGuide && (
+          <div className="px-4 pb-4 pt-1 border-t border-violet-500/10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+            <div className="p-3 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800/60 flex flex-col justify-between space-y-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-violet-600 dark:text-violet-400">
+                <Terminal className="w-3.5 h-3.5" />
+                <span>1. ใส่/แก้ไขเลข PR</span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 font-mono bg-slate-100 dark:bg-slate-950 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 select-all">
+                ใส่เลข PR [ชื่อ] [เลข PR]
+              </p>
+              <p className="text-[10px] text-slate-400">
+                ตัวอย่าง: <code className="text-violet-500 font-mono">ใส่เลข PR ซื้อคอม PR-69001</code>
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800/60 flex flex-col justify-between space-y-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-purple-600 dark:text-purple-400">
+                <Terminal className="w-3.5 h-3.5" />
+                <span>2. ใส่/แก้ไขเลข PO</span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 font-mono bg-slate-100 dark:bg-slate-950 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 select-all">
+                ใส่เลข PO [ชื่อ] [เลข PO]
+              </p>
+              <p className="text-[10px] text-slate-400">
+                ตัวอย่าง: <code className="text-purple-500 font-mono">ใส่เลข PO ซื้อคอม PO-2026-042</code>
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800/60 flex flex-col justify-between space-y-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
+                <Terminal className="w-3.5 h-3.5" />
+                <span>3. ใส่/แก้ไขเลข QT</span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 font-mono bg-slate-100 dark:bg-slate-950 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 select-all">
+                ใส่เลข QT [ชื่อ] [เลข QT]
+              </p>
+              <p className="text-[10px] text-slate-400">
+                ตัวอย่าง: <code className="text-emerald-500 font-mono">ใส่เลข QT ซื้อคอม QT-8891</code>
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-white/70 dark:bg-slate-900/70 border border-slate-200/60 dark:border-slate-800/60 flex flex-col justify-between space-y-1.5">
+              <div className="flex items-center gap-1.5 font-bold text-blue-600 dark:text-blue-400">
+                <Terminal className="w-3.5 h-3.5" />
+                <span>4. เมนูปุ่มกดเลือกในแชต</span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 font-mono bg-slate-100 dark:bg-slate-950 p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 select-all">
+                พิมพ์คำว่า "รายการ"
+              </p>
+              <p className="text-[10px] text-slate-400">
+                แล้วกดปุ่ม <span className="font-bold text-violet-500">"✍️ แก้ไขรายการ"</span> บนการ์ดใน LINE ได้ทันที
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Filter & Search Toolbar */}
       <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         {/* Search */}
@@ -322,6 +416,16 @@ export default function PrTrackerPage() {
                     {item.title}
                   </h3>
 
+                  {(item.subtotal || item.total_amount) && (
+                    <div className="flex items-center gap-2.5 text-xs bg-violet-500/5 dark:bg-violet-950/30 px-3 py-1.5 rounded-xl border border-violet-500/15 w-fit flex-wrap">
+                      <span className="text-slate-500">ราคาต้น: <strong className="text-slate-700 dark:text-slate-200 font-mono">฿{Number(item.subtotal || 0).toLocaleString()}</strong></span>
+                      <span className="text-slate-300 dark:text-slate-700">|</span>
+                      <span className="text-slate-500">VAT 7%: <strong className="text-slate-700 dark:text-slate-200 font-mono">฿{Number(item.vat_amount || 0).toLocaleString()}</strong></span>
+                      <span className="text-slate-300 dark:text-slate-700">|</span>
+                      <span className="text-violet-600 dark:text-violet-400 font-bold">สุทธิ: <strong className="font-mono text-sm">฿{Number(item.total_amount || 0).toLocaleString()}</strong></span>
+                    </div>
+                  )}
+
                   {item.notes && (
                     <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-800/60 leading-relaxed whitespace-pre-wrap">
                       {item.notes}
@@ -409,6 +513,17 @@ export default function PrTrackerPage() {
 
                 {/* Right Action Buttons */}
                 <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                  <button
+                    onClick={() => handleCopy(`ใส่เลข PR ${item.title} `, `line_cmd_${item.id}`)}
+                    className="p-2 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-600 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+                    title="คัดลอกคำสั่งแก้ไขผ่าน LINE"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span className="hidden lg:inline">
+                      {copiedId === `line_cmd_${item.id}` ? 'คัดลอกคำสั่ง LINE แล้ว!' : 'สั่งแก้ใน LINE'}
+                    </span>
+                  </button>
+
                   <button
                     onClick={() => {
                       setSelectedPr(item);
