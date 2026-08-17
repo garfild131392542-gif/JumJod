@@ -25,7 +25,10 @@ import {
 } from '@/lib/line/client';
 import {
   getUserModeState,
-  setUserModeState
+  setUserModeState,
+  getConversationState,
+  setConversationState,
+  clearConversationState
 } from '@/lib/db/user-state';
 import {
   memoryStateCache,
@@ -253,6 +256,416 @@ export async function POST(request: Request) {
 
       const profile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
       if (!profile) continue;
+
+      const userState = await getConversationState(lineUserId, profile, supabaseAdmin);
+
+      // Handle stock editing input (name, desc, min, priority, category)
+      if (userState && userState.action === 'stock_editing') {
+        const field = userState.field || 'name';
+        const inputText = messageText.trim();
+
+        if (!inputText) {
+          await sendLineReply(replyToken, '❌ ข้อมูลห้ามว่างเปล่า กรุณาพิมพ์ใหม่อีกครั้งครับ');
+          continue;
+        }
+
+        let updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
+        let successMessage = '';
+
+        if (field === 'name') {
+          let newName = inputText.replace(/^(?:แก้ไขชื่อเป็น|แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อรายการเป็น|แก้ไขชื่อ|แก้ชื่อ|เปลี่ยนชื่อ|แก้ไข|แก้|เปลี่ยน|edit|update|ชื่อ|เป็น|คือ)\s*/i, '').trim();
+          if (!newName) newName = inputText;
+          updatePayload.name = newName;
+          successMessage = `✅ แก้ไขชื่อวัสดุจาก "${userState.stockName}" เป็น "${newName}" เรียบร้อยแล้วครับ! 📦`;
+        } else if (field === 'desc') {
+          let cleanDesc = inputText.replace(/^(?:แก้ไขรายละเอียดเป็น|แก้รายละเอียดเป็น|เปลี่ยนรายละเอียดเป็น|แก้ไขรายละเอียด|แก้รายละเอียด|เปลี่ยนรายละเอียด|แก้ไข|แก้|เปลี่ยน|รายละเอียด|คือ|เป็น)\s*/i, '').trim();
+          if (!cleanDesc) cleanDesc = inputText;
+          updatePayload.description = cleanDesc;
+          successMessage = `✅ แก้ไขรายละเอียดของวัสดุ "${userState.stockName}" เรียบร้อยแล้วครับ!`;
+        } else if (field === 'min') {
+          const numMatch = inputText.match(/\d+/);
+          if (!numMatch) {
+            await sendLineReply(replyToken, '❌ กรุณาพิมพ์เป็นตัวเลข เช่น "5" หรือ "10" ครับ');
+            continue;
+          }
+          const newMin = parseInt(numMatch[0]);
+          updatePayload.min_threshold = newMin;
+          successMessage = `✅ ตั้งเกณฑ์ขั้นต่ำของวัสดุ "${userState.stockName}" เป็น ${newMin} เรียบร้อยแล้วครับ! 🔔`;
+        } else if (field === 'priority') {
+          const priorityMap: Record<string, string> = {
+            'high': 'High', 'สูง': 'High', 'ด่วนมาก': 'High',
+            'medium': 'Medium', 'กลาง': 'Medium', 'ปานกลาง': 'Medium',
+            'low': 'Low', 'ต่ำ': 'Low', 'ทั่วไป': 'Low'
+          };
+          const priorityKey = inputText.toLowerCase();
+          const newPriority = priorityMap[priorityKey] || (
+            inputText === 'High' || inputText === 'Medium' || inputText === 'Low' ? inputText : null
+          );
+          if (!newPriority) {
+            await sendLineReply(replyToken, '❌ กรุณาเลือก "High", "Medium", หรือ "Low" ครับ');
+            continue;
+          }
+          updatePayload.priority = newPriority;
+          const priorityLabel = newPriority === 'High' ? '🔴 ด่วนมาก' : newPriority === 'Medium' ? '🟡 ปานกลาง' : '🟢 ทั่วไป';
+          successMessage = `✅ ตั้งความสำคัญของวัสดุ "${userState.stockName}" เป็น ${priorityLabel} เรียบร้อยแล้วครับ!`;
+        } else if (field === 'category') {
+          let newCategory = inputText.replace(/^(แก้ไข|แก้|เปลี่ยน|edit|update|หมวดหมู่|หมวด|เป็น)\s*/i, '').trim();
+          if (newCategory.toLowerCase().includes('lab') || newCategory.toLowerCase().includes('แล็บ') || newCategory.toLowerCase().includes('ห้องปฏิบัติการ') || newCategory.toLowerCase().includes('laboratory')) {
+            updatePayload.category = 'Laboratory';
+          } else {
+            updatePayload.category = 'อุปกรณ์สำนักงาน';
+          }
+          successMessage = `✅ แก้ไขหมวดหมู่ของวัสดุ "${userState.stockName}" เป็น "${updatePayload.category}" เรียบร้อยแล้วครับ!`;
+        }
+
+        const { data: updatedStock, error: updateError } = await supabaseAdmin
+          .from('stocks')
+          .update(updatePayload)
+          .eq('id', userState.stockId)
+          .select('*')
+          .single();
+
+        await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
+
+        if (updateError || !updatedStock) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขข้อมูลวัสดุ');
+        } else {
+          const bubble = createStockActionMenuFlex(updatedStock);
+          await sendLineReply(replyToken, [
+            successMessage,
+            {
+              type: 'flex',
+              altText: `📦 ข้อมูลวัสดุ "${updatedStock.name}" ที่แก้ไขแล้ว`,
+              contents: bubble
+            }
+          ]);
+        }
+        continue;
+      }
+
+      // Handle stock pending quantity input
+      if (userState && userState.action === 'stock_pending_qty') {
+        const qtyMatch = messageText.match(/\b(\d+)\b/);
+        if (qtyMatch) {
+          const qty = parseInt(qtyMatch[1]);
+          const { data: stockItem } = await supabaseAdmin
+            .from('stocks')
+            .select('*')
+            .eq('id', userState.stockId)
+            .single();
+
+          if (!stockItem) {
+            await sendLineReply(replyToken, '❌ ไม่พบวัสดุชิ้นนี้ในสต็อกแล้ว');
+            await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
+            continue;
+          }
+
+          let newQty = stockItem.quantity;
+          if (userState.operation === 'SUBTRACT') {
+            newQty = Math.max(0, stockItem.quantity - qty);
+          } else if (userState.operation === 'ADD') {
+            newQty = stockItem.quantity + qty;
+          } else if (userState.operation === 'SET' || userState.operation === 'CHECK') {
+            newQty = qty;
+          }
+
+          const { data: updatedStock, error: updateError } = await supabaseAdmin
+            .from('stocks')
+            .update({ quantity: newQty, updated_at: new Date().toISOString() })
+            .eq('id', userState.stockId)
+            .select('*')
+            .single();
+
+          await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
+
+          if (updateError || !updatedStock) {
+            await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการปรับยอดสต็อก');
+          } else {
+            const opText = userState.operation === 'SUBTRACT' ? 'เบิกออก' : userState.operation === 'ADD' ? 'เติมสต็อก' : 'ปรับยอด';
+            const isAlertTriggered = newQty <= stockItem.min_threshold && stockItem.quantity > stockItem.min_threshold;
+            const alertMsg = isAlertTriggered ? `\n\n⚠️ **คำเตือน:** ระดับวัสดุลดลงต่ำกว่าเกณฑ์ขั้นต่ำแล้ว! (เกณฑ์: ${stockItem.min_threshold} ${stockItem.unit})` : '';
+            await sendLineReply(replyToken, [
+              `✅ ทำการ${opText}วัสดุ "${stockItem.name}" เรียบร้อยแล้วครับ!\n\nยอดเดิม: ${stockItem.quantity} ${stockItem.unit}\nทำรายการ: ${qty} ${stockItem.unit}\nยอดคงเหลือใหม่: ${newQty} ${stockItem.unit} 📦${alertMsg}`,
+              {
+                type: 'flex',
+                altText: `📦 จัดการวัสดุ "${updatedStock.name}"`,
+                contents: createStockActionMenuFlex(updatedStock)
+              }
+            ]);
+          }
+        } else {
+          await sendLineReply(replyToken, '❌ กรุณาระบุจำนวนเป็นตัวเลขอีกครั้งครับ เช่น "5" หรือ "10"');
+        }
+        continue;
+      }
+
+      // Handle stock pending create quantity input
+      if (userState && userState.action === 'stock_pending_create_qty') {
+        const qtyMatch = messageText.match(/\b(\d+)\b/);
+        if (qtyMatch) {
+          const qty = parseInt(qtyMatch[1]);
+          const category = userState.stockName.includes('lab') || userState.stockName.includes('แล็บ') || userState.stockName.includes('สารเคมี') ? 'Laboratory' : 'อุปกรณ์สำนักงาน';
+          
+          const { data: newItem, error: createError } = await supabaseAdmin
+            .from('stocks')
+            .insert([{
+              user_id: profile.id,
+              name: userState.stockName,
+              quantity: qty,
+              unit: 'ชิ้น',
+              category: category
+            }])
+            .select('*')
+            .single();
+
+          await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
+
+          if (createError || !newItem) {
+            await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการสร้างวัสดุใหม่');
+          } else {
+            await sendLineReply(replyToken, [
+              `✅ เพิ่มวัสดุใหม่ "${newItem.name}" จำนวน ${newItem.quantity} ${newItem.unit} เข้าคลังสำเร็จแล้วครับ! 📦`,
+              {
+                type: 'flex',
+                altText: `📦 จัดการวัสดุ "${newItem.name}"`,
+                contents: createStockActionMenuFlex(newItem)
+              }
+            ]);
+          }
+        } else {
+          await sendLineReply(replyToken, '❌ กรุณาระบุจำนวนเริ่มต้นเป็นตัวเลขอีกครั้งครับ เช่น "10"');
+        }
+        continue;
+      }
+
+      // Handle PR field edit
+      if (userState && userState.action === 'editing_pr_field') {
+        const field = userState.field;
+        const val = messageText.trim();
+        const targetPr = await PrService.getPrById(supabaseAdmin, userState.itemId);
+
+        await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
+
+        if (!targetPr) {
+          await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
+          continue;
+        }
+
+        const updates: any = {};
+
+        if (field === 'subtotal') {
+          const subMatch = val.match(/([0-9\.,]+)(?:\s*(?:vat|ภาษี)\s*([0-9\.,]+))?/i);
+          if (subMatch) {
+            const subNum = parseFloat(subMatch[1].replace(/,/g, '')) || 0;
+            const vatNum = subMatch[2] ? parseFloat(subMatch[2].replace(/,/g, '')) : Math.round(subNum * 0.07 * 100) / 100;
+            updates.subtotal = subNum;
+            updates.vat_amount = vatNum;
+            updates.total_amount = Math.round((subNum + vatNum) * 100) / 100;
+          }
+        } else {
+          updates[field] = val;
+        }
+
+        const updatedPr = await PrService.updatePr(supabaseAdmin, targetPr.id, updates);
+        if (!updatedPr) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขข้อมูล PR');
+        } else {
+          const requestUrl = new URL(request.url);
+          const appUrl = requestUrl.origin;
+          const bubble = createPrFlexBubble(updatedPr, appUrl);
+          await sendLineReply(replyToken, [
+            `✅ อัปเดต${userState.fieldName || field} เป็น "${val}" เรียบร้อยแล้วครับ!`,
+            {
+              type: 'flex',
+              altText: `📄 รายการ PR ที่แก้ไขแล้ว`,
+              contents: bubble
+            }
+          ]);
+        }
+        continue;
+      }
+
+      // Handle Cal field edit
+      if (userState && userState.action === 'editing_cal_field') {
+        const val = messageText.trim();
+        const targetCal = await CalibrationService.getCalById(supabaseAdmin, userState.itemId);
+
+        await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
+
+        if (!targetCal) {
+          await sendLineReply(replyToken, '❌ ไม่พบรายการ Calibration นี้ หรืออาจถูกลบไปแล้ว');
+          continue;
+        }
+
+        const { error: updateError } = await supabaseAdmin
+          .from('lab_calibrations')
+          .update({ name: val, updated_at: new Date().toISOString() })
+          .eq('id', targetCal.id);
+
+        if (updateError) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขชื่อเครื่องมือ');
+        } else {
+          const requestUrl = new URL(request.url);
+          const appUrl = requestUrl.origin;
+          const bubble = createCalibrationFlexBubble({ ...targetCal, name: val }, appUrl);
+          await sendLineReply(replyToken, [
+            `✅ อัปเดตชื่อเครื่องมือวัดจาก "${targetCal.name}" เป็น "${val}" เรียบร้อยแล้วครับ!`,
+            {
+              type: 'flex',
+              altText: `🔬 รายการเครื่องมือที่แก้ไขแล้ว`,
+              contents: bubble
+            }
+          ]);
+        }
+        continue;
+      }
+
+      // Handle Item memo edit
+      if (userState && userState.action === 'editing') {
+        const { data: currentItem } = await supabaseAdmin
+          .from('items')
+          .select('*')
+          .eq('id', userState.itemId)
+          .single();
+
+        const apiKey = getGeminiApiKey();
+        const updates: any = { updated_at: new Date().toISOString() };
+        let parsedByAI = false;
+
+        if (apiKey && currentItem) {
+          try {
+            const aiUpdates = await parseItemEditWithAI(messageText, currentItem, apiKey);
+            if (aiUpdates.title !== undefined && aiUpdates.title) {
+              updates.title = aiUpdates.title;
+            }
+            if (aiUpdates.description !== undefined) {
+              updates.description = aiUpdates.description;
+            }
+            if (aiUpdates.reminder_date !== undefined) {
+              updates.reminder_date = aiUpdates.reminder_date;
+              if (aiUpdates.reminder_date) {
+                updates.reminder_sent = false;
+              }
+            }
+            parsedByAI = true;
+          } catch (err) {
+            console.error('[LINE BOT] Error parsing edit with AI, falling back to local:', err);
+          }
+        }
+
+        if (!parsedByAI) {
+          let updateTitle = messageText.trim();
+          const containsNameChangeKeyword = /^(?:แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อรายการเป็น|แก้ชื่อ|เปลี่ยนชื่อ|แก้|เปลี่ยน)\s*/i.test(updateTitle);
+
+          const isCancelReminder = /^(ยกเลิกแจ้งเตือน|ไม่แจ้งเตือนแล้ว|ลบวันแจ้งเตือน|ไม่เตือนแล้ว|ลบแจ้งเตือน|ไม่เตือน)/i.test(updateTitle);
+          if (isCancelReminder) {
+            updates.reminder_date = null;
+            const cleanText = updateTitle.replace(/^(ยกเลิกแจ้งเตือน|ไม่แจ้งเตือนแล้ว|ลบวันแจ้งเตือน|ไม่เตือนแล้ว|ลบแจ้งเตือน|ไม่เตือน)\s*/i, '').trim();
+            updateTitle = cleanText;
+          } else {
+            let baseDate = new Date();
+            let matchedDate = false;
+
+            const dateMatch = updateTitle.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
+            if (dateMatch) {
+              const day = parseInt(dateMatch[1]);
+              const month = parseInt(dateMatch[2]) - 1;
+              let year = parseInt(dateMatch[3]);
+              if (year < 100) year += 2000;
+              else if (year > 2500) year -= 543;
+              
+              baseDate = new Date(year, month, day);
+              matchedDate = true;
+            } else if (updateTitle.includes('พรุ่งนี้')) {
+              baseDate.setDate(baseDate.getDate() + 1);
+              matchedDate = true;
+            } else if (updateTitle.includes('วันนี้')) {
+              matchedDate = true;
+            }
+
+            let hours = 9;
+            let minutes = 0;
+            let matchedTime = false;
+
+            const timeMatch = updateTitle.match(/(?:เวลา|at|ตอน)\s*(\d{1,2})[:.](\d{2})/i) || updateTitle.match(/\b(\d{1,2})[:.](\d{2})\b/);
+            if (timeMatch) {
+              hours = parseInt(timeMatch[1]);
+              minutes = parseInt(timeMatch[2]);
+              matchedTime = true;
+            } else {
+              const mongMatch = updateTitle.match(/(\d{1,2})\s*โมง/i);
+              if (mongMatch) {
+                let h = parseInt(mongMatch[1]);
+                if (updateTitle.includes('บ่าย') && h < 12) h += 12;
+                else if (updateTitle.includes('เย็น') && h < 12) h += 12;
+                else if (updateTitle.includes('ค่ำ') && h < 12) h += 12;
+                hours = h;
+                matchedTime = true;
+              }
+            }
+
+            if (matchedDate || matchedTime) {
+              const pad = (n: number) => String(n).padStart(2, '0');
+              const localISO = `${baseDate.getFullYear()}-${pad(baseDate.getMonth() + 1)}-${pad(baseDate.getDate())}T${pad(hours)}:${pad(minutes)}:00+07:00`;
+              const remDate = new Date(localISO);
+              if (!isNaN(remDate.getTime())) {
+                updates.reminder_date = remDate.toISOString();
+                updates.reminder_sent = false;
+              }
+
+              let titleClean = updateTitle;
+              titleClean = titleClean.replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g, '').trim();
+              titleClean = titleClean.replace(/(?:เวลา|at|ตอน)\s*\d{1,2}[:.]\d{2}/gi, '').trim();
+              titleClean = titleClean.replace(/\b\d{1,2}[:.]\d{2}\b/g, '').trim();
+              titleClean = titleClean.replace(/\d{1,2}\s*โมง/g, '').trim();
+              titleClean = titleClean.replace(/(?:วันนี้|พรุ่งนี้|แจ้งเตือน|เตือน|น\.)/g, '').trim();
+              titleClean = titleClean.replace(/^[:\-ー\s\.]+/, '').trim();
+
+              if (!containsNameChangeKeyword) {
+                updateTitle = ''; 
+              } else {
+                updateTitle = titleClean;
+              }
+            }
+
+            if (containsNameChangeKeyword && updateTitle) {
+              updateTitle = updateTitle.replace(/^(?:แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อรายการเป็น|แก้ชื่อ|เปลี่ยนชื่อ|แก้|เปลี่ยน)\s*/i, '').trim();
+              updateTitle = updateTitle.replace(/^[:\-ー\s\.]+/, '').trim();
+            }
+          }
+
+          if (updateTitle) {
+            updates.title = updateTitle;
+          }
+        }
+
+        const { data: updatedItem, error: updateError } = await supabaseAdmin
+          .from('items')
+          .update(updates)
+          .eq('id', userState.itemId)
+          .select('*')
+          .single();
+
+        await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
+
+        if (updateError || !updatedItem) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขข้อมูลรายการ');
+        } else {
+          const requestUrl = new URL(request.url);
+          const appUrl = requestUrl.origin;
+          const bubble = createItemFlexBubble(updatedItem, appUrl);
+          await sendLineReply(replyToken, [
+            `✅ แก้ไขข้อมูลรายการ "${userState.itemTitle}" เรียบร้อยแล้วครับ!`,
+            {
+              type: 'flex',
+              altText: `📄 รายการที่แก้ไขแล้ว`,
+              contents: bubble
+            }
+          ]);
+        }
+        continue;
+      }
+
       const activeMode = lineGroupId ? 'stock' : await getUserModeState(profile, lineUserId, supabaseAdmin);
       const cleanMessageText = messageText.toLowerCase();
 
@@ -396,7 +809,6 @@ export async function POST(request: Request) {
 
 
       let parsedResult: any = null;
-      const userState = memoryStateCache.get(lineUserId);
 
       // Handle stock pending confirmation state
       if (userState && userState.action === 'stock_pending_confirm') {
@@ -405,19 +817,19 @@ export async function POST(request: Request) {
         
         if (isYes) {
           const pendingStockData = userState.pendingStockData;
-          memoryStateCache.delete(lineUserId);
+          await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
           
           parsedResult = {
             intent: 'STOCK',
             stock_data: pendingStockData
           };
         } else if (isNo) {
-          memoryStateCache.delete(lineUserId);
+          await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
           await sendLineReply(replyToken, '✅ ยกเลิกการยืนยันการดำเนินการแล้วครับ');
           continue;
         } else {
           // If they typed something else, clear confirmation state and let it fall through to normal parsing
-          memoryStateCache.delete(lineUserId);
+          await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
         }
       }
 
@@ -612,502 +1024,6 @@ export async function POST(request: Request) {
             stockUnit: targetStock.unit
           });
           const opText = userState.operation === 'SUBTRACT' ? 'เบิก' : userState.operation === 'ADD' ? 'เติม' : 'ปรับยอด';
-          await sendLineReply(replyToken, `📦 ต้องการ${opText}วัสดุ "${targetStock.name}" จำนวนเท่าไหร่ดีครับ?\n\n(กรุณาพิมพ์จำนวนเป็นตัวเลข เช่น "5" หรือ "10")`);
-        }
-        continue;
-      }
-
-      // Handle stock pending edit input
-      if (userState && userState.action === 'stock_editing') {
-        const field = userState.field || 'name';
-        const inputText = messageText.trim();
-
-        if (!inputText) {
-          await sendLineReply(replyToken, '❌ ข้อมูลห้ามว่างเปล่า กรุณาพิมพ์ใหม่อีกครั้งครับ');
-          continue;
-        }
-
-        let updatePayload: Record<string, any> = { updated_at: new Date().toISOString() };
-        let successMessage = '';
-
-        if (field === 'name') {
-          let newName = inputText.replace(/^(?:แก้ไขชื่อเป็น|แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อรายการเป็น|แก้ไขชื่อ|แก้ชื่อ|เปลี่ยนชื่อ|แก้ไข|แก้|เปลี่ยน|edit|update|ชื่อ|เป็น)\s*/i, '').trim();
-          newName = newName.replace(/^(?:เป็น|คือ)\s*/i, '').trim();
-          if (!newName) {
-            await sendLineReply(replyToken, '❌ ชื่อวัสดุห้ามว่างเปล่า กรุณาพิมพ์ใหม่อีกครั้งครับ');
-            continue;
-          }
-          updatePayload.name = newName;
-          successMessage = `✅ แก้ไขชื่อวัสดุจาก "${userState.stockName}" เป็น "${newName}" เรียบร้อยแล้วครับ! 📦`;
-        } else if (field === 'desc') {
-          updatePayload.description = inputText;
-          successMessage = `✅ แก้ไขรายละเอียดของวัสดุ "${userState.stockName}" เรียบร้อยแล้วครับ!`;
-        } else if (field === 'min') {
-          const numMatch = inputText.match(/\d+/);
-          if (!numMatch) {
-            await sendLineReply(replyToken, '❌ กรุณาพิมพ์เป็นตัวเลข เช่น "5" หรือ "10" ครับ');
-            continue;
-          }
-          const newMin = parseInt(numMatch[0]);
-          updatePayload.min_threshold = newMin;
-          successMessage = `✅ ตั้งเกณฑ์ขั้นต่ำของวัสดุ "${userState.stockName}" เป็น ${newMin} เรียบร้อยแล้วครับ! 🔔`;
-        } else if (field === 'priority') {
-          const priorityMap: Record<string, string> = {
-            'high': 'High', 'สูง': 'High', 'ด่วนมาก': 'High',
-            'medium': 'Medium', 'กลาง': 'Medium', 'ปานกลาง': 'Medium',
-            'low': 'Low', 'ต่ำ': 'Low', 'ทั่วไป': 'Low'
-          };
-          const priorityKey = inputText.toLowerCase();
-          const newPriority = priorityMap[priorityKey] || (
-            inputText === 'High' || inputText === 'Medium' || inputText === 'Low' ? inputText : null
-          );
-          if (!newPriority) {
-            await sendLineReply(replyToken, '❌ กรุณาพิมพ์ "High", "Medium", หรือ "Low" เท่านั้นครับ');
-            continue;
-          }
-          updatePayload.priority = newPriority;
-          const priorityLabel = newPriority === 'High' ? '🔴 ด่วนมาก' : newPriority === 'Medium' ? '🟡 ปานกลาง' : '🟢 ทั่วไป';
-          successMessage = `✅ ตั้งความสำคัญของวัสดุ "${userState.stockName}" เป็น ${priorityLabel} เรียบร้อยแล้วครับ!`;
-        } else if (field === 'category') {
-          let newCategory = inputText.replace(/^(แก้ไข|แก้|เปลี่ยน|edit|update|หมวดหมู่|หมวด|เป็น)\s*/i, '').trim();
-          if (newCategory.toLowerCase().includes('lab') || newCategory.toLowerCase().includes('แล็บ') || newCategory.toLowerCase().includes('ห้องปฏิบัติการ') || newCategory.toLowerCase().includes('laboratory')) {
-            updatePayload.category = 'Laboratory';
-          } else {
-            updatePayload.category = 'อุปกรณ์สำนักงาน';
-          }
-          successMessage = `✅ แก้ไขหมวดหมู่ของวัสดุ "${userState.stockName}" เป็น "${updatePayload.category}" เรียบร้อยแล้วครับ!`;
-        }
-
-        const { error: updateError } = await supabaseAdmin
-          .from('stocks')
-          .update(updatePayload)
-          .eq('id', userState.stockId);
-
-        memoryStateCache.delete(lineUserId);
-
-        if (updateError) {
-          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขข้อมูลวัสดุ');
-        } else {
-          await sendLineReply(replyToken, successMessage);
-        }
-        continue;
-      }
-
-      
-      // Handle stock pending quantity input
-      if (userState && userState.action === 'stock_pending_qty') {
-        const qtyMatch = messageText.match(/\b(\d+)\b/);
-        if (qtyMatch) {
-          const qty = parseInt(qtyMatch[1]);
-          const { data: stockItem } = await supabaseAdmin
-            .from('stocks')
-            .select('*')
-            .eq('id', userState.stockId)
-            .single();
-
-          if (!stockItem) {
-            await sendLineReply(replyToken, '❌ ไม่พบวัสดุชิ้นนี้ในสต็อกแล้ว');
-            memoryStateCache.delete(lineUserId);
-            continue;
-          }
-
-          let newQty = stockItem.quantity;
-           if (userState.operation === 'SUBTRACT') {
-             newQty = Math.max(0, stockItem.quantity - qty);
-           } else if (userState.operation === 'ADD') {
-             newQty = stockItem.quantity + qty;
-           } else if (userState.operation === 'SET' || userState.operation === 'CHECK') {
-             newQty = qty;
-           }
-
-          const { error: updateError } = await supabaseAdmin
-            .from('stocks')
-            .update({ quantity: newQty, updated_at: new Date().toISOString() })
-            .eq('id', userState.stockId);
-
-          memoryStateCache.delete(lineUserId);
-
-          if (updateError) {
-            await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการปรับยอดสต็อก');
-          } else {
-            const opText = userState.operation === 'SUBTRACT' ? 'เบิกออก' : userState.operation === 'ADD' ? 'เติมสต็อก' : 'ปรับยอด';
-            const isAlertTriggered = newQty <= stockItem.min_threshold && stockItem.quantity > stockItem.min_threshold;
-            const alertMsg = isAlertTriggered ? `\n\n⚠️ **คำเตือน:** ระดับวัสดุลดลงต่ำกว่าเกณฑ์ขั้นต่ำแล้ว! (เกณฑ์: ${stockItem.min_threshold} ${stockItem.unit})` : '';
-            await sendLineReply(replyToken, `✅ ทำการ${opText}วัสดุ "${stockItem.name}" เรียบร้อยแล้วครับ!\n\nยอดเดิม: ${stockItem.quantity} ${stockItem.unit}\nทำรายการ: ${qty} ${stockItem.unit}\nยอดคงเหลือใหม่: ${newQty} ${stockItem.unit} 📦${alertMsg}`);
-          }
-        } else {
-          await sendLineReply(replyToken, '❌ กรุณาระบุจำนวนเป็นตัวเลขอีกครั้งครับ เช่น "5" หรือ "10"');
-        }
-        continue;
-      }
-
-      // Handle stock pending create quantity input
-      if (userState && userState.action === 'stock_pending_create_qty') {
-        const qtyMatch = messageText.match(/\b(\d+)\b/);
-        if (qtyMatch) {
-          const qty = parseInt(qtyMatch[1]);
-          const category = userState.stockName.includes('lab') || userState.stockName.includes('แล็บ') || userState.stockName.includes('สารเคมี') ? 'Laboratory' : 'อุปกรณ์สำนักงาน';
-          
-          const { data: newItem, error: createError } = await supabaseAdmin
-            .from('stocks')
-            .insert([{
-              user_id: profile.id,
-              name: userState.stockName,
-              quantity: qty,
-              unit: 'ชิ้น',
-              category: category
-            }])
-            .select('*')
-            .single();
-
-          memoryStateCache.delete(lineUserId);
-
-          if (createError || !newItem) {
-            await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการสร้างวัสดุใหม่');
-          } else {
-            await sendLineReply(replyToken, `✅ เพิ่มวัสดุใหม่ "${newItem.name}" จำนวน ${newItem.quantity} ${newItem.unit} เข้าคลังสำเร็จแล้วครับ! 📦`);
-          }
-        } else {
-          await sendLineReply(replyToken, '❌ กรุณาระบุจำนวนเริ่มต้นเป็นตัวเลขอีกครั้งครับ เช่น "10"');
-        }
-        continue;
-      }
-
-      if (userState && userState.action === 'editing') {
-        const { data: currentItem } = await supabaseAdmin
-          .from('items')
-          .select('*')
-          .eq('id', userState.itemId)
-          .single();
-
-        const apiKey = getGeminiApiKey();
-        const updates: any = { updated_at: new Date().toISOString() };
-        let parsedByAI = false;
-
-        if (apiKey && currentItem) {
-          try {
-            const aiUpdates = await parseItemEditWithAI(messageText, currentItem, apiKey);
-            console.log('[LINE BOT] AI edit parsing result:', aiUpdates);
-            
-            if (aiUpdates.title !== undefined) {
-              if (aiUpdates.title) {
-                updates.title = aiUpdates.title;
-              }
-            }
-            if (aiUpdates.description !== undefined) {
-              updates.description = aiUpdates.description;
-            }
-            if (aiUpdates.reminder_date !== undefined) {
-              updates.reminder_date = aiUpdates.reminder_date;
-              if (aiUpdates.reminder_date) {
-                updates.reminder_sent = false;
-              }
-            }
-            
-            parsedByAI = true;
-          } catch (err) {
-            console.error('[LINE BOT] Error parsing edit with AI, falling back to local:', err);
-          }
-        }
-
-        if (!parsedByAI) {
-          // Fallback local parsing logic
-          let updateTitle = messageText.trim();
-          const containsNameChangeKeyword = /^(?:แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อรายการเป็น|แก้ชื่อ|เปลี่ยนชื่อ|แก้|เปลี่ยน)\s*/i.test(updateTitle);
-
-          const isCancelReminder = /^(ยกเลิกแจ้งเตือน|ไม่แจ้งเตือนแล้ว|ลบวันแจ้งเตือน|ไม่เตือนแล้ว|ลบแจ้งเตือน|ไม่เตือน)/i.test(updateTitle);
-          if (isCancelReminder) {
-            updates.reminder_date = null;
-            const cleanText = updateTitle.replace(/^(ยกเลิกแจ้งเตือน|ไม่แจ้งเตือนแล้ว|ลบวันแจ้งเตือน|ไม่เตือนแล้ว|ลบแจ้งเตือน|ไม่เตือน)\s*/i, '').trim();
-            updateTitle = cleanText;
-          } else {
-            let baseDate = new Date();
-            let matchedDate = false;
-
-            const dateMatch = updateTitle.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
-            if (dateMatch) {
-              const day = parseInt(dateMatch[1]);
-              const month = parseInt(dateMatch[2]) - 1;
-              let year = parseInt(dateMatch[3]);
-              if (year < 100) year += 2000;
-              else if (year > 2500) year -= 543;
-              
-              baseDate = new Date(year, month, day);
-              matchedDate = true;
-            } else if (updateTitle.includes('พรุ่งนี้')) {
-              baseDate.setDate(baseDate.getDate() + 1);
-              matchedDate = true;
-            } else if (updateTitle.includes('วันนี้')) {
-              matchedDate = true;
-            }
-
-            let hours = 9;
-            let minutes = 0;
-            let matchedTime = false;
-
-            const timeMatch = updateTitle.match(/(?:เวลา|at|ตอน)\s*(\d{1,2})[:.](\d{2})/i) || updateTitle.match(/\b(\d{1,2})[:.](\d{2})\b/);
-            if (timeMatch) {
-              hours = parseInt(timeMatch[1]);
-              minutes = parseInt(timeMatch[2]);
-              matchedTime = true;
-            } else {
-              const mongMatch = updateTitle.match(/(\d{1,2})\s*โมง/i);
-              if (mongMatch) {
-                let h = parseInt(mongMatch[1]);
-                if (updateTitle.includes('บ่าย') && h < 12) {
-                  h += 12;
-                } else if (updateTitle.includes('เย็น') && h < 12) {
-                  h += 12;
-                } else if (updateTitle.includes('ค่ำ') && h < 12) {
-                  h += 12;
-                }
-                hours = h;
-                matchedTime = true;
-              }
-            }
-
-            if (matchedDate || matchedTime) {
-              const pad = (n: number) => String(n).padStart(2, '0');
-              const localISO = `${baseDate.getFullYear()}-${pad(baseDate.getMonth() + 1)}-${pad(baseDate.getDate())}T${pad(hours)}:${pad(minutes)}:00+07:00`;
-              const remDate = new Date(localISO);
-              if (!isNaN(remDate.getTime())) {
-                updates.reminder_date = remDate.toISOString();
-                updates.reminder_sent = false;
-              }
-
-              let titleClean = updateTitle;
-              titleClean = titleClean.replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g, '').trim();
-              titleClean = titleClean.replace(/(?:เวลา|at|ตอน)\s*\d{1,2}[:.]\d{2}/gi, '').trim();
-              titleClean = titleClean.replace(/\b\d{1,2}[:.]\d{2}\b/g, '').trim();
-              titleClean = titleClean.replace(/\d{1,2}\s*โมง/g, '').trim();
-              titleClean = titleClean.replace(/(?:วันนี้|พรุ่งนี้|แจ้งเตือน|เตือน|น\.)/g, '').trim();
-              titleClean = titleClean.replace(/^[:\-ー\s\.]+/, '').trim();
-
-              if (!containsNameChangeKeyword) {
-                updateTitle = ''; 
-              } else {
-                updateTitle = titleClean;
-              }
-            }
-
-            if (containsNameChangeKeyword && updateTitle) {
-              updateTitle = updateTitle.replace(/^(?:แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อรายการเป็น|แก้ชื่อ|เปลี่ยนชื่อ|แก้|เปลี่ยน)\s*/i, '').trim();
-              updateTitle = updateTitle.replace(/^[:\-ー\s\.]+/, '').trim();
-            }
-          }
-
-          if (updateTitle) {
-            updates.title = updateTitle;
-          }
-        }
-
-        const { data: updatedItem, error: updateError } = await supabaseAdmin
-          .from('items')
-          .update(updates)
-          .eq('id', userState.itemId)
-          .select('*')
-          .single();
-
-        memoryStateCache.delete(lineUserId);
-
-        if (updateError || !updatedItem) {
-          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขข้อมูลรายการ');
-        } else {
-          const requestUrl = new URL(request.url);
-          const appUrl = requestUrl.origin;
-          const bubble = createItemFlexBubble(updatedItem, appUrl);
-          await sendLineReply(replyToken, [
-            `✅ แก้ไขข้อมูลรายการ "${userState.itemTitle}" เรียบร้อยแล้วครับ!`,
-            {
-              type: 'flex',
-              altText: `📄 รายการที่แก้ไขแล้ว`,
-              contents: bubble
-            }
-          ]);
-        }
-        continue;
-      }
-
-      if (userState && userState.action === 'editing_pr_field') {
-        const field = userState.field;
-        const val = messageText.trim();
-        const targetPr = await PrService.getPrById(supabaseAdmin, userState.itemId);
-
-        memoryStateCache.delete(lineUserId);
-
-        if (!targetPr) {
-          await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
-          continue;
-        }
-
-        const updates: any = {};
-
-        if (field === 'subtotal') {
-          const subMatch = val.match(/([0-9\.,]+)(?:\s*(?:vat|ภาษี)\s*([0-9\.,]+))?/i);
-          if (subMatch) {
-            const subNum = parseFloat(subMatch[1].replace(/,/g, '')) || 0;
-            const vatNum = subMatch[2] ? parseFloat(subMatch[2].replace(/,/g, '')) : Math.round(subNum * 0.07 * 100) / 100;
-            updates.subtotal = subNum;
-            updates.vat_amount = vatNum;
-            updates.total_amount = Math.round((subNum + vatNum) * 100) / 100;
-          }
-        } else {
-          updates[field] = val;
-        }
-
-        const updatedPr = await PrService.updatePr(supabaseAdmin, targetPr.id, updates);
-        if (!updatedPr) {
-          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขข้อมูล PR');
-        } else {
-          const requestUrl = new URL(request.url);
-          const appUrl = requestUrl.origin;
-          const bubble = createPrFlexBubble(updatedPr, appUrl);
-          await sendLineReply(replyToken, [
-            `✅ อัปเดต${userState.fieldName || field} เป็น "${val}" เรียบร้อยแล้วครับ!`,
-            {
-              type: 'flex',
-              altText: `📄 รายการ PR ที่แก้ไขแล้ว`,
-              contents: bubble
-            }
-          ]);
-        }
-        continue;
-      }
-
-      if (userState && userState.action === 'editing_cal_field') {
-        const val = messageText.trim();
-        const targetCal = await CalibrationService.getCalById(supabaseAdmin, userState.itemId);
-
-        memoryStateCache.delete(lineUserId);
-
-        if (!targetCal) {
-          await sendLineReply(replyToken, '❌ ไม่พบรายการ Calibration นี้ หรืออาจถูกลบไปแล้ว');
-          continue;
-        }
-
-        const { error: updateError } = await supabaseAdmin
-          .from('lab_calibrations')
-          .update({ name: val, updated_at: new Date().toISOString() })
-          .eq('id', targetCal.id);
-
-        if (updateError) {
-          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขชื่อเครื่องมือ');
-        } else {
-          const requestUrl = new URL(request.url);
-          const appUrl = requestUrl.origin;
-          const bubble = createCalibrationFlexBubble({ ...targetCal, name: val }, appUrl);
-          await sendLineReply(replyToken, [
-            `✅ อัปเดตชื่อเครื่องมือวัดจาก "${targetCal.name}" เป็น "${val}" เรียบร้อยแล้วครับ!`,
-            {
-              type: 'flex',
-              altText: `🔬 รายการเครื่องมือที่แก้ไขแล้ว`,
-              contents: bubble
-            }
-          ]);
-        }
-        continue;
-      }
-
-      if (userState && userState.action === 'editing_pr') {
-        const text = messageText.trim();
-        const targetPr = await PrService.getPrById(supabaseAdmin, userState.itemId);
-
-        memoryStateCache.delete(lineUserId);
-
-        if (!targetPr) {
-          await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
-          continue;
-        }
-
-        const updates: any = {};
-        const prNoMatch = text.match(/(?:pr_no|เลข\s*pr|pr)[:\s]*([a-z0-9\-_/]+)/i);
-        const poNoMatch = text.match(/(?:po_no|เลข\s*po|po)[:\s]*([a-z0-9\-_/]+)/i);
-        const qtNoMatch = text.match(/(?:qt_no|เลข\s*qt|qt)[:\s]*([a-z0-9\-_/]+)/i);
-        const notesMatch = text.match(/(?:หมายเหตุ|notes)[:\s]*([^\n]+)/i);
-
-        if (prNoMatch) updates.pr_no = prNoMatch[1].trim();
-        if (poNoMatch) updates.po_no = poNoMatch[1].trim();
-        if (qtNoMatch) updates.qt_no = qtNoMatch[1].trim();
-        if (notesMatch) updates.notes = notesMatch[1].trim();
-
-        if (Object.keys(updates).length === 0) {
-          if (/^pr[-_\s]?\d+/i.test(text)) {
-            updates.pr_no = text;
-            if (targetPr.status === 'Pending') updates.status = 'PR Issued';
-          } else if (/^po[-_\s]?\d+/i.test(text)) {
-            updates.po_no = text;
-            if (targetPr.status === 'Pending' || targetPr.status === 'PR Issued') updates.status = 'PO Issued';
-          } else if (/^qt[-_\s]?\d+/i.test(text)) {
-            updates.qt_no = text;
-          } else {
-            updates.title = text;
-          }
-        }
-
-        const updatedPr = await PrService.updatePr(supabaseAdmin, targetPr.id, updates);
-
-        if (!updatedPr) {
-          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขรายการ PR');
-        } else {
-          const requestUrl = new URL(request.url);
-          const appUrl = requestUrl.origin;
-          const bubble = createPrFlexBubble(updatedPr, appUrl);
-          await sendLineReply(replyToken, [
-            `✅ แก้ไขข้อมูลรายการ PR "${updatedPr.title}" เรียบร้อยแล้วครับ!`,
-            {
-              type: 'flex',
-              altText: `📄 รายการ PR ที่แก้ไขแล้ว`,
-              contents: bubble
-            }
-          ]);
-        }
-        continue;
-      }
-
-      if (userState && userState.action === 'editing_cal') {
-        const updates: any = { updated_at: new Date().toISOString() };
-        
-        const dateMatch = messageText.match(/(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/);
-        if (dateMatch) {
-          const pad = (n: number) => String(n).padStart(2, '0');
-          let day = pad(parseInt(dateMatch[1]));
-          let month = pad(parseInt(dateMatch[2]));
-          let yearNum = parseInt(dateMatch[3]);
-          if (yearNum < 100) yearNum += 2000;
-          if (yearNum > 2500) yearNum -= 543;
-          updates.next_cal_date = `${yearNum}-${month}-${day}`;
-
-          const cleanName = messageText.replace(/(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/, '').trim();
-          if (cleanName) {
-            updates.name = cleanName;
-          }
-        } else {
-          updates.name = messageText.trim();
-        }
-
-        const { data: updatedCal, error: updateError } = await supabaseAdmin
-          .from('lab_calibrations')
-          .update(updates)
-          .eq('id', userState.itemId)
-          .select('*')
-          .single();
-
-        memoryStateCache.delete(lineUserId);
-
-        if (updateError || !updatedCal) {
-          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขรายการ Calibrate');
-        } else {
-          const requestUrl = new URL(request.url);
-          const appUrl = requestUrl.origin;
-          const bubble = createCalibrationFlexBubble(updatedCal, appUrl);
-          await sendLineReply(replyToken, [
-            `✅ แก้ไขเครื่องมือ Calibrate "${updatedCal.name}" เรียบร้อยแล้วครับ!`,
-            {
-              type: 'flex',
-              altText: `📄 รายการ Calibrate ที่แก้ไขแล้ว`,
-              contents: bubble
-            }
-          ]);
         }
         continue;
       }

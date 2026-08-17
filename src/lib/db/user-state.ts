@@ -28,11 +28,13 @@ export async function getUserModeState(
       cached.lastActivity = now.toISOString();
       memoryStateCache.set(`${lineUserId}_mode`, cached);
       
-      // Update DB in background
+      // Update DB in background while preserving conversationState
+      const existingData = (profile.pending_item_data && typeof profile.pending_item_data === 'object') ? profile.pending_item_data : {};
       supabaseAdmin
         .from('profiles')
         .update({
           pending_item_data: {
+            ...existingData,
             activeMode: cached.activeMode,
             lastActivity: cached.lastActivity
           }
@@ -44,9 +46,11 @@ export async function getUserModeState(
     } else {
       // Inactive for more than 15 minutes, reset to null
       memoryStateCache.delete(`${lineUserId}_mode`);
+      const existingData = (profile.pending_item_data && typeof profile.pending_item_data === 'object') ? profile.pending_item_data : {};
+      const { activeMode, lastActivity, ...rest } = existingData;
       await supabaseAdmin
         .from('profiles')
-        .update({ pending_item_data: null })
+        .update({ pending_item_data: Object.keys(rest).length > 0 ? rest : null })
         .eq('id', profile.id);
       return null;
     }
@@ -62,18 +66,116 @@ export async function setUserModeState(
   supabaseAdmin: any
 ) {
   const now = new Date();
+  const existingData = (profile.pending_item_data && typeof profile.pending_item_data === 'object') ? profile.pending_item_data : {};
+
   if (mode) {
-    const state = { activeMode: mode, lastActivity: now.toISOString() };
-    memoryStateCache.set(`${lineUserId}_mode`, state);
+    const state = {
+      ...existingData,
+      activeMode: mode,
+      lastActivity: now.toISOString()
+    };
+    memoryStateCache.set(`${lineUserId}_mode`, { activeMode: mode, lastActivity: now.toISOString() });
     await supabaseAdmin
       .from('profiles')
       .update({ pending_item_data: state })
       .eq('id', profile.id);
   } else {
     memoryStateCache.delete(`${lineUserId}_mode`);
+    const { activeMode, lastActivity, ...rest } = existingData;
     await supabaseAdmin
       .from('profiles')
-      .update({ pending_item_data: null })
+      .update({ pending_item_data: Object.keys(rest).length > 0 ? rest : null })
       .eq('id', profile.id);
   }
 }
+
+export async function getConversationState(
+  lineUserId: string,
+  profile: any,
+  supabaseAdmin?: any
+): Promise<any> {
+  // Check memory cache first
+  const memoryState = memoryStateCache.get(lineUserId);
+  if (memoryState) return memoryState;
+
+  // Check DB state from profile
+  if (profile && profile.pending_item_data && typeof profile.pending_item_data === 'object') {
+    const dbData = profile.pending_item_data as any;
+    if (dbData.conversationState) {
+      memoryStateCache.set(lineUserId, dbData.conversationState);
+      return dbData.conversationState;
+    }
+  }
+
+  // If supabaseAdmin is passed, fetch fresh DB record
+  if (supabaseAdmin && profile?.id) {
+    const { data } = await supabaseAdmin
+      .from('profiles')
+      .select('pending_item_data')
+      .eq('id', profile.id)
+      .single();
+    if (data?.pending_item_data?.conversationState) {
+      memoryStateCache.set(lineUserId, data.pending_item_data.conversationState);
+      return data.pending_item_data.conversationState;
+    }
+  }
+
+  return null;
+}
+
+export async function setConversationState(
+  lineUserId: string,
+  state: any,
+  supabaseAdmin: any,
+  profileId?: string
+) {
+  memoryStateCache.set(lineUserId, state);
+
+  if (profileId) {
+    const { data } = await supabaseAdmin
+      .from('profiles')
+      .select('pending_item_data')
+      .eq('id', profileId)
+      .single();
+    
+    const existing = (data?.pending_item_data && typeof data.pending_item_data === 'object')
+      ? data.pending_item_data
+      : {};
+
+    await supabaseAdmin
+      .from('profiles')
+      .update({
+        pending_item_data: {
+          ...existing,
+          conversationState: state,
+          lastActivity: new Date().toISOString()
+        }
+      })
+      .eq('id', profileId);
+  }
+}
+
+export async function clearConversationState(
+  lineUserId: string,
+  supabaseAdmin: any,
+  profileId?: string
+) {
+  memoryStateCache.delete(lineUserId);
+
+  if (profileId) {
+    const { data } = await supabaseAdmin
+      .from('profiles')
+      .select('pending_item_data')
+      .eq('id', profileId)
+      .single();
+    
+    if (data?.pending_item_data && typeof data.pending_item_data === 'object') {
+      const { conversationState, ...rest } = data.pending_item_data;
+      await supabaseAdmin
+        .from('profiles')
+        .update({ pending_item_data: Object.keys(rest).length > 0 ? rest : null })
+        .eq('id', profileId);
+    }
+  }
+}
+

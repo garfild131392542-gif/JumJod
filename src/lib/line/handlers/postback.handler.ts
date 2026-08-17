@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { sendLineReply } from '@/lib/line/client';
 import { memoryStateCache } from '@/lib/state-cache';
-import { getUserModeState } from '@/lib/db/user-state';
+import { getUserModeState, getConversationState, setConversationState, clearConversationState } from '@/lib/db/user-state';
 import {
   createItemFlexBubble,
   createStockActionMenuFlex,
@@ -21,6 +21,7 @@ export async function handlePostbackEvent(
   const replyToken = event.replyToken;
   const lineUserId = event.source.userId;
   const lineGroupId = event.source.type === 'group' || event.source.type === 'room' ? event.source.groupId || event.source.roomId : null;
+  const profile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
 
   const params = new URLSearchParams(event.postback.data);
   const action = params.get('action');
@@ -90,7 +91,7 @@ export async function handlePostbackEvent(
       return;
     }
 
-    memoryStateCache.set(lineUserId, { action: 'editing', itemId: itemId, itemTitle: item.title });
+    await setConversationState(lineUserId, { action: 'editing', itemId: itemId, itemTitle: item.title }, supabaseAdmin, profile?.id);
 
     const promptMsg = `✍️ เตรียมแก้ไขรายการ: "${item.title}"\n\nกรุณาพิมพ์รายละเอียดใหม่ที่คุณต้องการแก้ไขเข้ามาได้เลยครับ เช่น:\n- "แก้ชื่อเป็น [ชื่อใหม่]"\n- "แก้เวลาแจ้งเตือนเป็น วันที่ 15/07/26 เวลา 12:00 น."\n- "แก้เวลาเป็น พรุ่งนี้ 9 โมงเช้า"\n- "ยกเลิกแจ้งเตือน" (เพื่อปิดการแจ้งเตือน)\n(บอทจะอัปเดตข้อมูลรายการนี้โดยตรง)`;
 
@@ -184,7 +185,7 @@ export async function handlePostbackEvent(
       .select('*')
       .single();
 
-    memoryStateCache.delete(lineUserId);
+    await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
 
     if (error || !updatedItem) {
       await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการตั้งเวลาแจ้งเตือน');
@@ -194,13 +195,13 @@ export async function handlePostbackEvent(
       await sendLineReply(replyToken, `🔔 ตั้งเวลาแจ้งเตือนสำเร็จ!\n\nรายการ: "${updatedItem.title}"\nเวลาแจ้งเตือนใหม่: ${formattedDate} (เวลา ${formattedTime} น.)`);
     }
   } else if (action === 'cancel_edit') {
-    memoryStateCache.delete(lineUserId);
+    await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
     await sendLineReply(replyToken, '✅ ยกเลิกการแก้ไขรายการเรียบร้อยแล้วครับ');
   } else if (action === 'confirm_ocr_reminder') {
-    const userState = memoryStateCache.get(lineUserId);
+    const userState = await getConversationState(lineUserId, profile, supabaseAdmin);
     if (userState && userState.action === 'pending_ocr_reminder') {
       const ocrData = userState.data;
-      const userProfile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
+      const userProfile = profile || await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
 
       if (!userProfile) {
         await sendLineReply(replyToken, '❌ ไม่พบบัญชีผู้ใช้งานที่เชื่อมต่อ');
@@ -217,6 +218,8 @@ export async function handlePostbackEvent(
             status: 'Pending',
             reminder_date: ocrData.reminder_date,
             image_url: ocrData.imageUrl || null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
             is_pr: false,
             line_group_id: lineGroupId
           }
@@ -224,7 +227,7 @@ export async function handlePostbackEvent(
         .select('*')
         .single();
 
-      memoryStateCache.delete(lineUserId);
+      await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
 
       if (insertError || !insertedItem) {
         await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
@@ -234,7 +237,7 @@ export async function handlePostbackEvent(
           '✅ บันทึกช่วยจำจากภาพถ่ายเรียบร้อยแล้วครับ!',
           {
             type: 'flex',
-            altText: `✅ บันทึกรายการ "${insertedItem.title}" สำเร็จ`,
+            altText: `📌 บันทึกช่วยจำ "${insertedItem.title}"`,
             contents: bubble
           }
         ]);
@@ -243,7 +246,7 @@ export async function handlePostbackEvent(
       await sendLineReply(replyToken, '❌ ไม่พบข้อมูลการสแกนหรือข้อมูลหมดอายุแล้วครับ');
     }
   } else if (action === 'cancel_ocr_reminder') {
-    memoryStateCache.delete(lineUserId);
+    await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
     await sendLineReply(replyToken, '✅ ยกเลิกการบันทึกรายการแล้วครับ');
   } else if (action === 'stock_select_action') {
     const stockId = params.get('id');
@@ -299,12 +302,12 @@ export async function handlePostbackEvent(
 
     const label = fieldLabels[field] || 'ข้อมูลใหม่';
 
-    memoryStateCache.set(lineUserId, {
+    await setConversationState(lineUserId, {
       action: 'stock_editing',
       stockId: stock.id,
       stockName: stock.name,
       field: field
-    });
+    }, supabaseAdmin, profile?.id);
 
     if (field === 'priority') {
       await sendLineReply(replyToken, {
@@ -409,6 +412,7 @@ export async function handlePostbackEvent(
       await sendLineReply(replyToken, `🗑️ ลบวัสดุ "${stock?.name || ''}" ออกจากคลังเรียบร้อยแล้วครับ!`);
     }
   } else if (action === 'stock_cancel') {
+    await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
     await sendLineReply(replyToken, '✅ ยกเลิกการดำเนินการแล้วครับ');
   } else if (action === 'stock_execute') {
     const id = params.get('id')!;
@@ -444,13 +448,13 @@ export async function handlePostbackEvent(
         await sendLineReply(replyToken, `✅ ทำการ${opText}วัสดุ "${stockItem.name}" เรียบร้อยแล้วครับ!\n\nยอดเดิม: ${stockItem.quantity} ${stockItem.unit}\nทำรายการ: ${qty} ${stockItem.unit}\nยอดคงเหลือใหม่: ${res.updatedStock.quantity} ${res.updatedStock.unit} 📦${alertMsg}`);
       }
     } else {
-      memoryStateCache.set(lineUserId, {
+      await setConversationState(lineUserId, {
         action: 'stock_pending_qty',
         stockId: id,
         operation: op,
         stockName: stockItem.name,
         stockUnit: stockItem.unit
-      });
+      }, supabaseAdmin, profile?.id);
       const opText = op === 'SUBTRACT' ? 'เบิก' : op === 'ADD' ? 'เติม' : 'ปรับยอด';
       await sendLineReply(replyToken, `📦 ต้องการ${opText}วัสดุ "${stockItem.name}" จำนวนเท่าไหร่ดีครับ?\n\n(กรุณาพิมพ์จำนวนเป็นตัวเลข เช่น "5" หรือ "10")`);
     }
@@ -466,7 +470,7 @@ export async function handlePostbackEvent(
     }
 
     if (qty !== null && !isNaN(qty) && qty > 0) {
-      const userProfile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
+      const userProfile = profile || await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
       if (!userProfile) {
         await sendLineReply(replyToken, '❌ บัญชีของคุณยังไม่ได้เชื่อมต่อกับระบบ กรุณาพิมพ์รหัสเชื่อมต่อก่อนครับ');
         return;
@@ -490,15 +494,15 @@ export async function handlePostbackEvent(
         await sendLineReply(replyToken, `🎉 สร้างวัสดุใหม่ **"${name}"** ในคลังเรียบร้อยแล้วครับ!\n\nหมวดหมู่: ${category}\nจำนวนเริ่มต้น: ${qty} ชิ้น 📦`);
       }
     } else {
-      memoryStateCache.set(lineUserId, {
+      await setConversationState(lineUserId, {
         action: 'stock_pending_create_qty',
         stockName: name
-      });
+      }, supabaseAdmin, profile?.id);
       await sendLineReply(replyToken, `📦 ต้องการสร้างวัสดุใหม่ **"${name}"**\nกรุณาระบุจำนวนตั้งต้นเป็นตัวเลข (เช่น "10" หรือ "50"):`);
     }
   } else if (action === 'view_items') {
     const statusParam = params.get('status');
-    const userProfile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
+    const userProfile = profile || await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
     if (!userProfile) {
       await sendLineReply(replyToken, '❌ ไม่พบบัญชีผู้ใช้งานที่เชื่อมต่อกับไลน์นี้');
       return;
@@ -511,57 +515,85 @@ export async function handlePostbackEvent(
       return;
     }
 
-    const bubbles = itemsList.map(item => createItemFlexBubble(item, requestUrlOrigin));
+    const bubbles = itemsList.map((item: any) => createItemFlexBubble(item, requestUrlOrigin));
     await sendLineReply(replyToken, {
       type: 'flex',
-      altText: `📋 รายการบันทึก`,
+      altText: `📋 รายการบันทึกช่วยจำ (${statusParam === 'completed' ? 'สำเร็จแล้ว' : 'ที่ยังไม่สำเร็จ'})`,
       contents: {
         type: 'carousel',
-        contents: bubbles.slice(0, 10)
+        contents: bubbles
       }
     });
   } else if (action === 'view_prs') {
-    const userProfile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
+    const statusParam = params.get('status');
+    const userProfile = profile || await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
     if (!userProfile) {
       await sendLineReply(replyToken, '❌ ไม่พบบัญชีผู้ใช้งานที่เชื่อมต่อกับไลน์นี้');
       return;
     }
 
-    const matchedPrs = await PrService.getPrsByUserId(supabaseAdmin, userProfile.id, 10);
-    if (!matchedPrs || matchedPrs.length === 0) {
-      await sendLineReply(replyToken, '📑 ไม่พบรายการ PR ในระบบครับ');
+    let prQuery = supabaseAdmin
+      .from('pr_requests')
+      .select('*')
+      .eq('user_id', userProfile.id)
+      .order('created_at', { ascending: false });
+
+    if (statusParam === 'pending') {
+      prQuery = prQuery.neq('status', 'Completed');
+    } else if (statusParam === 'completed') {
+      prQuery = prQuery.eq('status', 'Completed');
+    }
+
+    const { data: prList, error } = await prQuery.limit(10);
+    if (error || !prList || prList.length === 0) {
+      const statusName = statusParam === 'pending' ? 'ที่กำลังติดตาม' : statusParam === 'completed' ? 'ที่เสร็จสมบูรณ์แล้ว' : 'ทั้งหมด';
+      await sendLineReply(replyToken, `📄 ไม่พบรายการ PR ${statusName} ในขณะนี้`);
       return;
     }
 
-    const bubbles = matchedPrs.map(pr => createPrFlexBubble(pr, requestUrlOrigin));
+    const bubbles = prList.map(pr => createPrFlexBubble(pr, requestUrlOrigin));
     await sendLineReply(replyToken, {
       type: 'flex',
-      altText: '📑 รายการติดตามการออก PR ของคุณ',
+      altText: `📄 รายการติดตาม PR ของคุณ (${prList.length} รายการ)`,
       contents: {
         type: 'carousel',
-        contents: bubbles.slice(0, 10)
+        contents: bubbles
       }
     });
   } else if (action === 'view_calibrations') {
-    const userProfile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
+    const statusParam = params.get('status');
+    const userProfile = profile || await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
     if (!userProfile) {
       await sendLineReply(replyToken, '❌ ไม่พบบัญชีผู้ใช้งานที่เชื่อมต่อกับไลน์นี้');
       return;
     }
 
-    const matchedCals = await CalibrationService.getCalibrationsByUserId(supabaseAdmin, userProfile.id, 10);
-    if (!matchedCals || matchedCals.length === 0) {
-      await sendLineReply(replyToken, '🔬 ไม่พบรายการ Calibrate เครื่องมือของคุณในระบบครับ');
+    let calQuery = supabaseAdmin
+      .from('lab_calibrations')
+      .select('*')
+      .eq('user_id', userProfile.id)
+      .order('next_cal_date', { ascending: true });
+
+    if (statusParam === 'due') {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 30);
+      calQuery = calQuery.lte('next_cal_date', futureDate.toISOString());
+    }
+
+    const { data: calList, error } = await calQuery.limit(10);
+    if (error || !calList || calList.length === 0) {
+      const statusName = statusParam === 'due' ? 'ที่ใกล้ถึงกำหนดใน 30 วัน' : 'ทั้งหมด';
+      await sendLineReply(replyToken, `🔬 ไม่พบรายการเครื่องมือวัด Lab ${statusName} ในขณะนี้`);
       return;
     }
 
-    const bubbles = matchedCals.map(cal => createCalibrationFlexBubble(cal, requestUrlOrigin));
+    const bubbles = calList.map(cal => createCalibrationFlexBubble(cal, requestUrlOrigin));
     await sendLineReply(replyToken, {
       type: 'flex',
       altText: '🔬 รายการ Calibrate เครื่องมือวัด Lab ของคุณ',
       contents: {
         type: 'carousel',
-        contents: bubbles.slice(0, 10)
+        contents: bubbles
       }
     });
   } else if (action === 'pr_complete') {
@@ -632,13 +664,13 @@ export async function handlePostbackEvent(
 
     const label = fieldNames[field] || field;
 
-    memoryStateCache.set(lineUserId, {
+    await setConversationState(lineUserId, {
       action: 'editing_pr_field',
       itemId: item.id,
       field: field,
       itemTitle: item.title,
       fieldName: label
-    });
+    }, supabaseAdmin, profile?.id);
 
     await sendLineReply(replyToken, {
       type: 'text',
@@ -747,11 +779,11 @@ export async function handlePostbackEvent(
       return;
     }
 
-    memoryStateCache.set(lineUserId, {
+    await setConversationState(lineUserId, {
       action: 'editing_cal_field',
       itemId: item.id,
       itemName: item.name
-    });
+    }, supabaseAdmin, profile?.id);
 
     await sendLineReply(replyToken, {
       type: 'text',
