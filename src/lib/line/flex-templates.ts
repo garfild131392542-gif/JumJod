@@ -908,8 +908,8 @@ export function createModeSelectionFlex() {
               flex: 1,
               action: {
                 type: 'message',
-                label: '📌 บันทึกช่วยจำ',
-                text: 'บันทึกช่วยจำ'
+                label: '📌 ช่วยจำ',
+                text: 'ช่วยจำ'
               }
             },
             {

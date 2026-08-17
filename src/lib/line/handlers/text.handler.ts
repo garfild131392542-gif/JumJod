@@ -54,10 +54,10 @@ export async function handleTextEvent(
   }
 
   // 3. Mode switching commands
-  if (cleanMessageText === 'โหมดบันทึก' || cleanMessageText === 'โหมดช่วยจำ' || cleanMessageText === 'บันทึกช่วยจำ') {
+  if (cleanMessageText === 'โหมดบันทึก' || cleanMessageText === 'โหมดช่วยจำ' || cleanMessageText === 'บันทึกช่วยจำ' || cleanMessageText === 'ช่วยจำ' || cleanMessageText === 'บันทึก') {
     memoryStateCache.delete(lineUserId);
     await setUserModeState(profile, lineUserId, 'reminder', supabaseAdmin);
-    await sendLineReply(replyToken, '📝 เข้าสู่โหมด **"บันทึกช่วยจำ"** เรียบร้อยครับ!\n\n⚡ **คำสั่งคีย์ลัด:**\n• พิมพ์ข้อความเพื่อบันทึก (เช่น "ประชุม 10 โมง")\n• `รายการ` : ดูรายการบันทึกทั้งหมด\n• `ออกโหมด` : รีเซ็ตกลับโหมดเริ่มต้น');
+    await sendLineReply(replyToken, '📝 เข้าสู่โหมด **"ช่วยจำ"** เรียบร้อยครับ!\n\n⚡ **คำสั่งคีย์ลัด:**\n• พิมพ์ข้อความเพื่อบันทึก (เช่น "ประชุม 10 โมง")\n• `รายการ` : ดูรายการบันทึกทั้งหมด\n• `ออกโหมด` : รีเซ็ตกลับโหมดเริ่มต้น');
     return true;
   }
 
