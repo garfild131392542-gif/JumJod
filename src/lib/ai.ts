@@ -67,6 +67,39 @@ export function getGeminiApiKey(): string | undefined {
   return keys[randomIndex];
 }
 
+const GEMINI_CANDIDATE_MODELS = [
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-2.0-flash'
+];
+
+/**
+ * Fetches Gemini API with dynamic model fallback chain.
+ */
+export async function fetchGeminiWithFallback(body: any, apiKey: string): Promise<any> {
+  let lastError: Error | null = null;
+  for (const modelName of GEMINI_CANDIDATE_MODELS) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+      const errText = await response.text().catch(() => '');
+      lastError = new Error(`Gemini API error status ${response.status} for model ${modelName}: ${errText}`);
+    } catch (err: any) {
+      lastError = err;
+    }
+  }
+  throw lastError || new Error('All Gemini models failed');
+}
+
 /**
  * Classifies user intent using a specialized, focused Gemini prompt.
  */
@@ -75,9 +108,6 @@ async function classifyIntentWithAI(
   existingItems: any[],
   apiKey: string
 ): Promise<'CREATE' | 'SEARCH' | 'UPDATE' | 'DELETE' | 'COMPLETE' | 'UNKNOWN' | 'STOCK'> {
-  const modelName = 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
   const body = {
     contents: [{
       parts: [{
@@ -107,17 +137,7 @@ Format the output strictly as a JSON object:
     }
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Classifier API error: status ${response.status}`);
-  }
-
-  const data = await response.json();
+  const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const parsed = JSON.parse(rawText.trim());
   return parsed.intent;
@@ -130,9 +150,6 @@ async function parseCreateMessageWithAI(
   messageText: string,
   apiKey: string
 ): Promise<ParsedProcurementData> {
-  const modelName = 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
   const nowUtc = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   const localDate = new Date(nowUtc.getTime() + 7 * 60 * 60 * 1000);
@@ -161,17 +178,7 @@ Extract the following fields and format strictly as JSON:
     }
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Create parser API error: status ${response.status}`);
-  }
-
-  const data = await response.json();
+  const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const parsed = JSON.parse(rawText.trim()) as ParsedProcurementData;
 
@@ -196,9 +203,6 @@ async function parseUpdateMessageWithAI(
   existingItems: any[],
   apiKey: string
 ): Promise<{ item_id: string | null; update_data: any }> {
-  const modelName = 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
   const body = {
     contents: [{
       parts: [{
@@ -227,17 +231,7 @@ Format output strictly as JSON:
     }
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Update parser API error: status ${response.status}`);
-  }
-
-  const data = await response.json();
+  const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const parsed = JSON.parse(rawText.trim());
 
@@ -268,9 +262,6 @@ export async function parseStockMessageWithAI(
   confidence?: number;
   confirm_message?: string;
 }> {
-  const modelName = 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
   const body = {
     contents: [{
       parts: [{
@@ -318,17 +309,7 @@ IMPORTANT RULES:
     }
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Stock parser API error: status ${response.status}`);
-  }
-
-  const data = await response.json();
+  const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const parsed = JSON.parse(rawText.trim());
 
@@ -355,8 +336,6 @@ async function findClosestItemWithAI(
   apiKey: string
 ): Promise<string | null> {
   if (items.length === 0 || !query) return null;
-  const modelName = 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
   const body = {
     contents: [{
@@ -378,13 +357,7 @@ Return the UUID of the closest matching item as a JSON object. Do NOT guess if t
   };
 
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!response.ok) return null;
-    const data = await response.json();
+    const data = await fetchGeminiWithFallback(body, apiKey);
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const parsed = JSON.parse(rawText.trim());
     return parsed.item_id || null;
@@ -415,9 +388,6 @@ export async function generateHelpfulFallbackResponseWithAI(
   activeMode: 'stock' | 'reminder' | null,
   apiKey: string
 ): Promise<string> {
-  const modelName = 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
   // Build list of existing items for typo matching and suggestions
   const itemsContext = existingItems.slice(0, 15).map(item => `- ${item.title} (Status: ${item.status || 'Pending'})`).join('\n');
 
@@ -447,17 +417,7 @@ Instructions:
   };
 
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-
-    if (!response.ok) {
-      throw new Error(`Fallback API response status ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = await fetchGeminiWithFallback(body, apiKey);
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     return rawText.trim() || '🤖 ขออภัยครับ ผมไม่เข้าใจคำสั่งนี้ กรุณาลองพิมพ์ข้อความใหม่อีกครั้ง หรือสลับโหมดการทำงานครับ';
   } catch (err) {
@@ -846,9 +806,6 @@ export async function parseItemEditWithAI(
   status?: 'Pending' | 'Issuing Item';
   reminder_date?: string | null;
 }> {
-  const modelName = 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
   const nowUtc = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   const localDate = new Date(nowUtc.getTime() + 7 * 60 * 60 * 1000);
@@ -898,17 +855,7 @@ Format the output strictly as JSON with the following structure (include only fi
     }
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Item edit parser API error: status ${response.status}`);
-  }
-
-  const data = await response.json();
+  const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   const parsed = JSON.parse(rawText.trim());
 
@@ -929,9 +876,6 @@ export async function analyzeImageWithAI(
   activeMode: 'stock' | 'reminder' | 'pr' | 'calibration' | null,
   apiKey: string
 ): Promise<any> {
-  const modelName = 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
   const nowUtc = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
   const localDate = new Date(nowUtc.getTime() + 7 * 60 * 60 * 1000);
@@ -994,17 +938,7 @@ Format the response strictly as JSON with the following structure:
     }
   };
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!response.ok) {
-    throw new Error(`Gemini Multimodal API error: status ${response.status}`);
-  }
-
-  const data = await response.json();
+  const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   return JSON.parse(rawText.trim());
 }

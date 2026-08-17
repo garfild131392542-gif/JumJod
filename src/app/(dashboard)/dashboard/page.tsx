@@ -100,7 +100,9 @@ export default function DashboardPage() {
   // Link code generation mutation
   const generateLinkCodeMutation = useMutation({
     mutationFn: async () => {
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const array = new Uint8Array(4);
+      crypto.getRandomValues(array);
+      const code = Array.from(array, byte => (byte % 36).toString(36)).join('').toUpperCase().padStart(6, 'X');
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
       const { error } = await supabase
         .from('profiles')

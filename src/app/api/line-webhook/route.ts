@@ -75,18 +75,30 @@ function detectStockOperation(text: string): 'ADD' | 'SUBTRACT' | 'SET' | 'CHECK
 
 export async function POST(request: Request) {
   try {
+    // 0. Protect against Payload Size DoS (Max 5MB)
+    const contentLength = parseInt(request.headers.get('content-length') || '0', 10);
+    if (contentLength > 5 * 1024 * 1024) {
+      return new Response('Payload Too Large', { status: 413 });
+    }
+
     const rawBody = await request.text();
+    if (rawBody.length > 5 * 1024 * 1024) {
+      return new Response('Payload Too Large', { status: 413 });
+    }
+
     const signature = request.headers.get('x-line-signature');
     const channelSecret = process.env.LINE_CHANNEL_SECRET;
 
-    // Verify signature if secret is provided in environment variables
+    // Verify signature
     if (channelSecret && signature) {
       const isValid = verifySignature(rawBody, signature, channelSecret);
       if (!isValid) {
         return new Response('Invalid signature', { status: 401 });
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      return new Response('Missing LINE Channel Secret configuration', { status: 500 });
     } else {
-      console.warn('Skipping LINE webhook signature verification because LINE_CHANNEL_SECRET is not configured.');
+      console.warn('Skipping LINE webhook signature verification because LINE_CHANNEL_SECRET is not configured in development.');
     }
 
     const payload = JSON.parse(rawBody);
@@ -619,7 +631,8 @@ export async function POST(request: Request) {
         let successMessage = '';
 
         if (field === 'name') {
-          let newName = inputText.replace(/^(แก้ไข|แก้|เปลี่ยน|edit|update|ชื่อ|เป็น)\s*/i, '').trim();
+          let newName = inputText.replace(/^(?:แก้ไขชื่อเป็น|แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อรายการเป็น|แก้ไขชื่อ|แก้ชื่อ|เปลี่ยนชื่อ|แก้ไข|แก้|เปลี่ยน|edit|update|ชื่อ|เป็น)\s*/i, '').trim();
+          newName = newName.replace(/^(?:เป็น|คือ)\s*/i, '').trim();
           if (!newName) {
             await sendLineReply(replyToken, '❌ ชื่อวัสดุห้ามว่างเปล่า กรุณาพิมพ์ใหม่อีกครั้งครับ');
             continue;
@@ -799,23 +812,19 @@ export async function POST(request: Request) {
 
         if (!parsedByAI) {
           // Fallback local parsing logic
-          let updateTitle = messageText;
-            // Credit terms matching logic removed
+          let updateTitle = messageText.trim();
+          const containsNameChangeKeyword = /^(?:แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อรายการเป็น|แก้ชื่อ|เปลี่ยนชื่อ|แก้|เปลี่ยน)\s*/i.test(updateTitle);
 
-          const isCancelReminder = /^(ยกเลิกแจ้งเตือน|ไม่แจ้งเตือนแล้ว|ลบวันแจ้งเตือน|ไม่เตือนแล้ว|ลบแจ้งเตือน|ไม่เตือน)/i.test(messageText.trim());
+          const isCancelReminder = /^(ยกเลิกแจ้งเตือน|ไม่แจ้งเตือนแล้ว|ลบวันแจ้งเตือน|ไม่เตือนแล้ว|ลบแจ้งเตือน|ไม่เตือน)/i.test(updateTitle);
           if (isCancelReminder) {
             updates.reminder_date = null;
-            const cleanText = messageText.replace(/^(ยกเลิกแจ้งเตือน|ไม่แจ้งเตือนแล้ว|ลบวันแจ้งเตือน|ไม่เตือนแล้ว|ลบแจ้งเตือน|ไม่เตือน)\s*/i, '').trim();
-            if (!cleanText) {
-              updateTitle = ''; 
-            } else {
-              updateTitle = cleanText;
-            }
+            const cleanText = updateTitle.replace(/^(ยกเลิกแจ้งเตือน|ไม่แจ้งเตือนแล้ว|ลบวันแจ้งเตือน|ไม่เตือนแล้ว|ลบแจ้งเตือน|ไม่เตือน)\s*/i, '').trim();
+            updateTitle = cleanText;
           } else {
             let baseDate = new Date();
             let matchedDate = false;
 
-            const dateMatch = messageText.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
+            const dateMatch = updateTitle.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/);
             if (dateMatch) {
               const day = parseInt(dateMatch[1]);
               const month = parseInt(dateMatch[2]) - 1;
@@ -825,10 +834,10 @@ export async function POST(request: Request) {
               
               baseDate = new Date(year, month, day);
               matchedDate = true;
-            } else if (messageText.includes('พรุ่งนี้')) {
+            } else if (updateTitle.includes('พรุ่งนี้')) {
               baseDate.setDate(baseDate.getDate() + 1);
               matchedDate = true;
-            } else if (messageText.includes('วันนี้')) {
+            } else if (updateTitle.includes('วันนี้')) {
               matchedDate = true;
             }
 
@@ -836,20 +845,20 @@ export async function POST(request: Request) {
             let minutes = 0;
             let matchedTime = false;
 
-            const timeMatch = messageText.match(/(?:เวลา|at|ตอน)\s*(\d{1,2})[:.](\d{2})/i) || messageText.match(/\b(\d{1,2})[:.](\d{2})\b/);
+            const timeMatch = updateTitle.match(/(?:เวลา|at|ตอน)\s*(\d{1,2})[:.](\d{2})/i) || updateTitle.match(/\b(\d{1,2})[:.](\d{2})\b/);
             if (timeMatch) {
               hours = parseInt(timeMatch[1]);
               minutes = parseInt(timeMatch[2]);
               matchedTime = true;
             } else {
-              const mongMatch = messageText.match(/(\d{1,2})\s*โมง/i);
+              const mongMatch = updateTitle.match(/(\d{1,2})\s*โมง/i);
               if (mongMatch) {
                 let h = parseInt(mongMatch[1]);
-                if (messageText.includes('บ่าย') && h < 12) {
+                if (updateTitle.includes('บ่าย') && h < 12) {
                   h += 12;
-                } else if (messageText.includes('เย็น') && h < 12) {
+                } else if (updateTitle.includes('เย็น') && h < 12) {
                   h += 12;
-                } else if (messageText.includes('ค่ำ') && h < 12) {
+                } else if (updateTitle.includes('ค่ำ') && h < 12) {
                   h += 12;
                 }
                 hours = h;
@@ -874,12 +883,16 @@ export async function POST(request: Request) {
               titleClean = titleClean.replace(/(?:วันนี้|พรุ่งนี้|แจ้งเตือน|เตือน|น\.)/g, '').trim();
               titleClean = titleClean.replace(/^[:\-ー\s\.]+/, '').trim();
 
-              const containsNameChangeKeyword = /^(แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อ|เปลี่ยนชื่อ|แก้ชื่อรายการเป็น)/.test(messageText.trim());
-              if (!containsNameChangeKeyword && !titleClean) {
+              if (!containsNameChangeKeyword) {
                 updateTitle = ''; 
               } else {
-                updateTitle = titleClean || updateTitle;
+                updateTitle = titleClean;
               }
+            }
+
+            if (containsNameChangeKeyword && updateTitle) {
+              updateTitle = updateTitle.replace(/^(?:แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อรายการเป็น|แก้ชื่อ|เปลี่ยนชื่อ|แก้|เปลี่ยน)\s*/i, '').trim();
+              updateTitle = updateTitle.replace(/^[:\-ー\s\.]+/, '').trim();
             }
           }
 

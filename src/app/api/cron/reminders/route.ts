@@ -44,6 +44,13 @@ async function sendLinePush(to: string, content: any) {
 
 export async function GET(request: Request) {
   try {
+    // 0. Authenticate cron request using CRON_SECRET header if configured
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const now = new Date().toISOString();
     const requestUrl = new URL(request.url);
     const appUrl = requestUrl.origin;
@@ -51,12 +58,14 @@ export async function GET(request: Request) {
 
     // ==========================================
     // 1. Group normal user reminders by user_id to save LINE Push quota
+    // Limit to 100 items per batch to prevent RAM overflow (DoS)
     // ==========================================
     const { data: items, error } = await supabaseAdmin
       .from('items')
       .select('*')
       .lte('reminder_date', now)
-      .eq('reminder_sent', false);
+      .eq('reminder_sent', false)
+      .limit(100);
 
     if (error) {
       console.error('Error fetching items for reminders:', error);
@@ -138,7 +147,8 @@ export async function GET(request: Request) {
       .select('*')
       .neq('status', 'Issuing Item') // Not completed yet
       .lte('budget_due_date', threeDaysStr)
-      .eq('due_reminder_sent', false);
+      .eq('due_reminder_sent', false)
+      .limit(100);
 
     if (dueError) {
       console.error('Error fetching items for budget due reminders:', dueError);

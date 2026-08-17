@@ -101,36 +101,44 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
         imageUrl = await uploadItemImage(imageFile, userId);
       }
 
-      const itemData = {
-        user_id: userId,
-        title,
-        description: description || null,
-        status,
-        image_url: imageUrl,
-        reminder_date: reminderDate ? new Date(reminderDate).toISOString() : null,
-        updated_at: new Date().toISOString(),
-        // Clear all PR/PO/Credit Term legacy fields
-        is_pr: false,
-        has_item_number: false,
-        item_number: null,
-        item_request_status: 'None',
-        pr_number: null,
-        pr_status: 'Pending',
-        po_date: null,
-        credit_term: null,
-        budget_due_date: null,
-      };
-
       if (itemToEdit) {
-        // Update Item
+        // Update Item - update item details while preserving existing PR metadata
+        const updateData = {
+          title,
+          description: description || null,
+          status,
+          image_url: imageUrl,
+          reminder_date: reminderDate ? new Date(reminderDate).toISOString() : null,
+          updated_at: new Date().toISOString(),
+        };
+
         const { error: updateError } = await supabase
           .from('items')
-          .update(itemData)
+          .update(updateData)
           .eq('id', itemToEdit.id);
 
         if (updateError) throw updateError;
       } else {
         // Create Item
+        const itemData = {
+          user_id: userId,
+          title,
+          description: description || null,
+          status,
+          image_url: imageUrl,
+          reminder_date: reminderDate ? new Date(reminderDate).toISOString() : null,
+          updated_at: new Date().toISOString(),
+          is_pr: false,
+          has_item_number: false,
+          item_number: null,
+          item_request_status: 'None',
+          pr_number: null,
+          pr_status: 'Pending',
+          po_date: null,
+          credit_term: null,
+          budget_due_date: null,
+        };
+
         const { error: createError } = await supabase
           .from('items')
           .insert([itemData]);

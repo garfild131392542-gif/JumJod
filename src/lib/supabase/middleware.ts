@@ -36,11 +36,11 @@ export async function updateSession(request: NextRequest) {
 
   // Route protection and redirection
   const url = request.nextUrl.clone();
-  const isDashboard = url.pathname.startsWith('/dashboard');
-  const isCalendar = url.pathname.startsWith('/calendar');
+  const protectedRoutes = ['/dashboard', '/calendar', '/stock', '/pr-tracker', '/calibration', '/completed', '/settings'];
+  const isProtectedRoute = protectedRoutes.some(path => url.pathname.startsWith(path));
   const isLogin = url.pathname.startsWith('/login');
 
-  if (!user && (isDashboard || isCalendar)) {
+  if (!user && isProtectedRoute) {
     url.pathname = '/login';
     return NextResponse.redirect(url);
   }
