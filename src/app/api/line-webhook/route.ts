@@ -34,7 +34,7 @@ import {
 
 import { handlePostbackEvent } from '@/lib/line/handlers/postback.handler';
 import { handleTextEvent } from '@/lib/line/handlers/text.handler';
-import { ProfileService, ItemService, PrService } from '@/services';
+import { ProfileService, ItemService, PrService, CalibrationService } from '@/services';
 import { PrModeController } from '@/lib/line/mode-controllers/pr-mode';
 
 // Initialize Supabase admin client using the service role key to bypass RLS policies
@@ -967,6 +967,40 @@ export async function POST(request: Request) {
             {
               type: 'flex',
               altText: `📄 รายการ PR ที่แก้ไขแล้ว`,
+              contents: bubble
+            }
+          ]);
+        }
+        continue;
+      }
+
+      if (userState && userState.action === 'editing_cal_field') {
+        const val = messageText.trim();
+        const targetCal = await CalibrationService.getCalById(supabaseAdmin, userState.itemId);
+
+        memoryStateCache.delete(lineUserId);
+
+        if (!targetCal) {
+          await sendLineReply(replyToken, '❌ ไม่พบรายการ Calibration นี้ หรืออาจถูกลบไปแล้ว');
+          continue;
+        }
+
+        const { error: updateError } = await supabaseAdmin
+          .from('lab_calibrations')
+          .update({ name: val, updated_at: new Date().toISOString() })
+          .eq('id', targetCal.id);
+
+        if (updateError) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขชื่อเครื่องมือ');
+        } else {
+          const requestUrl = new URL(request.url);
+          const appUrl = requestUrl.origin;
+          const bubble = createCalibrationFlexBubble({ ...targetCal, name: val }, appUrl);
+          await sendLineReply(replyToken, [
+            `✅ อัปเดตชื่อเครื่องมือวัดจาก "${targetCal.name}" เป็น "${val}" เรียบร้อยแล้วครับ!`,
+            {
+              type: 'flex',
+              altText: `🔬 รายการเครื่องมือที่แก้ไขแล้ว`,
               contents: bubble
             }
           ]);

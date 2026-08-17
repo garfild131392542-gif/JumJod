@@ -275,6 +275,81 @@ export async function handlePostbackEvent(
       altText: `✏️ แก้ไขข้อมูล "${stock.name}"`,
       contents: createStockEditMenuFlex(stock)
     });
+  } else if (action === 'stock_request_edit') {
+    if (lineGroupId) {
+      await sendLineReply(replyToken, '❌ ไม่ได้รับสิทธิ์ในการแก้ไขข้อมูลรายละเอียดวัสดุผ่านกลุ่มไลน์ครับ');
+      return;
+    }
+    const stockId = params.get('id');
+    const field = params.get('field') || 'name';
+    if (!stockId) return;
+
+    const stock = await StockService.getStockById(supabaseAdmin, stockId);
+    if (!stock) {
+      await sendLineReply(replyToken, '❌ ไม่พบวัสดุชิ้นนี้ในสต็อกแล้ว');
+      return;
+    }
+
+    const fieldLabels: Record<string, string> = {
+      name: 'ชื่อวัสดุใหม่',
+      desc: 'รายละเอียดวัสดุใหม่',
+      min: 'เกณฑ์ขั้นต่ำใหม่ (พิมพ์เป็นตัวเลข เช่น 5 หรือ 10)',
+      priority: 'ระดับความสำคัญใหม่'
+    };
+
+    const label = fieldLabels[field] || 'ข้อมูลใหม่';
+
+    memoryStateCache.set(lineUserId, {
+      action: 'stock_editing',
+      stockId: stock.id,
+      stockName: stock.name,
+      field: field
+    });
+
+    if (field === 'priority') {
+      await sendLineReply(replyToken, {
+        type: 'text',
+        text: `⚡ **กำลังแก้ไขความสำคัญ**\nสำหรับวัสดุ: "${stock.name}"\n(ระดับปัจจุบัน: ${stock.priority || 'Medium'})\n\nกรุณาเลือกหรือพิมพ์ระดับความสำคัญ:`,
+        quickReply: {
+          items: [
+            { type: 'action', action: { type: 'message', label: '🔴 High (ด่วนมาก)', text: 'High' } },
+            { type: 'action', action: { type: 'message', label: '🟡 Medium (ปานกลาง)', text: 'Medium' } },
+            { type: 'action', action: { type: 'message', label: '🟢 Low (ทั่วไป)', text: 'Low' } },
+            { type: 'action', action: { type: 'postback', label: '❌ ยกเลิก', data: 'action=stock_cancel' } }
+          ]
+        }
+      });
+    } else {
+      await sendLineReply(replyToken, {
+        type: 'text',
+        text: `✍️ **กำลังแก้ไข ${label}**\nสำหรับวัสดุ: "${stock.name}"\n\nกรุณาพิมพ์ข้อความที่ต้องการแก้ไขเข้ามาในแชตนี้ได้เลยครับ`,
+        quickReply: {
+          items: [
+            {
+              type: 'action',
+              action: {
+                type: 'postback',
+                label: '❌ ยกเลิกการแก้ไข',
+                data: 'action=stock_cancel'
+              }
+            }
+          ]
+        }
+      });
+    }
+  } else if (action === 'stock_manage') {
+    const stockId = params.get('id');
+    if (!stockId) return;
+    const stock = await StockService.getStockById(supabaseAdmin, stockId);
+    if (!stock) {
+      await sendLineReply(replyToken, '❌ ไม่พบวัสดุชิ้นนี้ในสต็อกแล้ว');
+      return;
+    }
+    await sendLineReply(replyToken, {
+      type: 'flex',
+      altText: `📦 เลือกการดำเนินการสำหรับ "${stock.name}"`,
+      contents: createStockActionMenuFlex(stock)
+    });
   } else if (action === 'stock_delete_confirm') {
     if (lineGroupId) {
       await sendLineReply(replyToken, '❌ ไม่ได้รับสิทธิ์ในการลบวัสดุออกจากคลังผ่านกลุ่มไลน์ครับ');
@@ -622,5 +697,35 @@ export async function handlePostbackEvent(
     } else {
       await sendLineReply(replyToken, `🗑️ ลบรายการเครื่องมือ "${item.name}" เรียบร้อยแล้วครับ!`);
     }
+  } else if (action === 'request_cal_edit') {
+    if (!itemId) return;
+    const item = await CalibrationService.getCalById(supabaseAdmin, itemId);
+    if (!item) {
+      await sendLineReply(replyToken, '❌ ไม่พบรายการ Calibration นี้ หรืออาจถูกลบไปแล้ว');
+      return;
+    }
+
+    memoryStateCache.set(lineUserId, {
+      action: 'editing_cal_field',
+      itemId: item.id,
+      itemName: item.name
+    });
+
+    await sendLineReply(replyToken, {
+      type: 'text',
+      text: `✍️ **กำลังแก้ไขชื่อเครื่องมือวัด**\nสำหรับรายการ: "${item.name}"\n\nกรุณาพิมพ์ชื่อเครื่องมือใหม่เข้ามาในแชตนี้ได้เลยครับ`,
+      quickReply: {
+        items: [
+          {
+            type: 'action',
+            action: {
+              type: 'postback',
+              label: '❌ ยกเลิกการแก้ไข',
+              data: 'action=cancel_edit'
+            }
+          }
+        ]
+      }
+    });
   }
 }
