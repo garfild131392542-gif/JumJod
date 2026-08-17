@@ -454,6 +454,48 @@ export async function handlePostbackEvent(
       const opText = op === 'SUBTRACT' ? 'เบิก' : op === 'ADD' ? 'เติม' : 'ปรับยอด';
       await sendLineReply(replyToken, `📦 ต้องการ${opText}วัสดุ "${stockItem.name}" จำนวนเท่าไหร่ดีครับ?\n\n(กรุณาพิมพ์จำนวนเป็นตัวเลข เช่น "5" หรือ "10")`);
     }
+  } else if (action === 'stock_create_prompt') {
+    const rawName = params.get('name');
+    const name = rawName ? decodeURIComponent(rawName) : '';
+    const qtyStr = params.get('qty');
+    const qty = qtyStr ? parseInt(qtyStr) : null;
+
+    if (!name) {
+      await sendLineReply(replyToken, '❌ ไม่พบชื่อวัสดุที่ต้องการสร้าง');
+      return;
+    }
+
+    if (qty !== null && !isNaN(qty) && qty > 0) {
+      const userProfile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
+      if (!userProfile) {
+        await sendLineReply(replyToken, '❌ บัญชีของคุณยังไม่ได้เชื่อมต่อกับระบบ กรุณาพิมพ์รหัสเชื่อมต่อก่อนครับ');
+        return;
+      }
+      const category = name.includes('lab') || name.includes('แล็บ') || name.includes('สารเคมี') ? 'Laboratory' : 'อุปกรณ์สำนักงาน';
+      const { data: newStock, error: createError } = await supabaseAdmin
+        .from('stocks')
+        .insert([{
+          user_id: userProfile.id,
+          name: name,
+          quantity: qty,
+          unit: 'ชิ้น',
+          category: category
+        }])
+        .select('*')
+        .single();
+
+      if (createError || !newStock) {
+        await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการสร้างรายการสต็อกใหม่');
+      } else {
+        await sendLineReply(replyToken, `🎉 สร้างวัสดุใหม่ **"${name}"** ในคลังเรียบร้อยแล้วครับ!\n\nหมวดหมู่: ${category}\nจำนวนเริ่มต้น: ${qty} ชิ้น 📦`);
+      }
+    } else {
+      memoryStateCache.set(lineUserId, {
+        action: 'stock_pending_create_qty',
+        stockName: name
+      });
+      await sendLineReply(replyToken, `📦 ต้องการสร้างวัสดุใหม่ **"${name}"**\nกรุณาระบุจำนวนตั้งต้นเป็นตัวเลข (เช่น "10" หรือ "50"):`);
+    }
   } else if (action === 'view_items') {
     const statusParam = params.get('status');
     const userProfile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
@@ -727,5 +769,8 @@ export async function handlePostbackEvent(
         ]
       }
     });
+  } else {
+    console.warn(`[LINE Postback] Unhandled action received: "${action}" with data:`, event.postback?.data);
+    await sendLineReply(replyToken, '⚠️ ขออภัยครับ ระบบไม่พบการดำเนินการนี้ กรุณาลองใหม่อีกครั้งหรือพิมพ์ "โหมด" เพื่อเลือกเมนูใหม่ครับ');
   }
 }
