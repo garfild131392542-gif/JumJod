@@ -223,28 +223,23 @@ export function createStockFlexBubble(stock: any, op: string, qty: number | null
     header: {
       type: 'box',
       layout: 'vertical',
-      background: {
-        type: 'linearGradient',
-        angle: '135deg',
-        startColor: '#6366f1',
-        endColor: '#3b82f6'
-      },
-      paddingAll: '20px',
+      backgroundColor: '#f8fafc',
+      paddingAll: '18px',
       contents: [
         {
           type: 'text',
           text: `📦 หมวดหมู่: ${stock.category || 'ทั่วไป'}`,
           weight: 'bold',
-          size: 'xs',
-          color: '#dbeafe'
+          size: 'xxs',
+          color: '#0284c7'
         },
         {
           type: 'text',
           text: displayName,
           weight: 'bold',
-          size: 'lg',
-          color: '#ffffff',
-          margin: 'sm',
+          size: 'md',
+          color: '#0f172a',
+          margin: 'xs',
           wrap: true
         }
       ]
@@ -404,26 +399,21 @@ export function createStockActionMenuFlex(stock: any) {
     header: {
       type: 'box',
       layout: 'vertical',
-      background: {
-        type: 'linearGradient',
-        angle: '135deg',
-        startColor: '#7c3aed',
-        endColor: '#ec4899'
-      },
-      paddingAll: '20px',
+      backgroundColor: '#f8fafc',
+      paddingAll: '18px',
       contents: [
         {
           type: 'text',
-          text: '⚡ INVENTORY OPERATIONS',
+          text: '📦 คลังวัสดุ (INVENTORY)',
           weight: 'bold',
           size: 'xxs',
-          color: '#fdf2f8'
+          color: '#0284c7'
         },
         {
           type: 'text',
-          text: `📦 ${stock.name}`,
+          text: stock.name,
           weight: 'bold',
-          color: '#ffffff',
+          color: '#0f172a',
           size: 'md',
           margin: 'xs',
           wrap: true
@@ -432,7 +422,7 @@ export function createStockActionMenuFlex(stock: any) {
           type: 'text',
           text: `คงเหลือปัจจุบัน: ${stock.quantity} ${stock.unit}${isAlert ? ' ⚠️ (ต่ำกว่าเกณฑ์)' : ''}`,
           size: 'xs',
-          color: '#fbcfe8',
+          color: isAlert ? '#ef4444' : '#64748b',
           margin: 'xs'
         }
       ]
@@ -440,25 +430,25 @@ export function createStockActionMenuFlex(stock: any) {
     body: {
       type: 'box',
       layout: 'vertical',
-      spacing: 'md',
-      paddingAll: '20px',
+      spacing: 'sm',
+      paddingAll: '18px',
       contents: [
         {
           type: 'text',
-          text: 'กรุณาเลือกการดำเนินการที่ต้องการ:',
+          text: 'เลือกการดำเนินการ:',
           size: 'xs',
           color: '#64748b',
-          weight: 'bold'
+          weight: 'bold',
+          margin: 'none'
         },
         {
           type: 'box',
           layout: 'horizontal',
-          spacing: 'md',
+          spacing: 'sm',
           contents: [
             {
               type: 'button',
-              style: 'primary',
-              color: '#ef4444',
+              style: 'secondary',
               height: 'sm',
               flex: 1,
               action: {
@@ -469,8 +459,7 @@ export function createStockActionMenuFlex(stock: any) {
             },
             {
               type: 'button',
-              style: 'primary',
-              color: '#10b981',
+              style: 'secondary',
               height: 'sm',
               flex: 1,
               action: {
@@ -484,24 +473,22 @@ export function createStockActionMenuFlex(stock: any) {
         {
           type: 'box',
           layout: 'horizontal',
-          spacing: 'md',
+          spacing: 'sm',
           contents: [
             {
               type: 'button',
-              style: 'primary',
-              color: '#6366f1',
+              style: 'secondary',
               height: 'sm',
               flex: 1,
               action: {
                 type: 'postback',
-                label: '🔢 ปรับยอด',
+                label: '⚙️ ปรับยอด',
                 data: `action=stock_execute&id=${stock.id}&op=SET&qty=`
               }
             },
             {
               type: 'button',
-              style: 'primary',
-              color: '#0ea5e9',
+              style: 'secondary',
               height: 'sm',
               flex: 1,
               action: {
@@ -513,26 +500,34 @@ export function createStockActionMenuFlex(stock: any) {
           ]
         },
         {
-          type: 'button',
-          style: 'primary',
-          color: '#f59e0b',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '✏️ แก้ไขรายละเอียดวัสดุ',
-            data: `action=stock_edit_menu&id=${stock.id}`
-          }
-        },
-        {
-          type: 'button',
-          style: 'secondary',
-          color: '#dc2626',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '🗑️ ลบจากคลังคุมสินค้า',
-            data: `action=stock_delete_confirm&id=${stock.id}`
-          }
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '✏️ แก้ไขข้อมูล',
+                data: `action=stock_edit_menu&id=${stock.id}`
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              color: '#dc2626',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🗑️ ลบจากคลัง',
+                data: `action=stock_delete_confirm&id=${stock.id}`
+              }
+            }
+          ]
         }
       ]
     }
@@ -546,26 +541,21 @@ export function createStockEditMenuFlex(stock: any) {
     header: {
       type: 'box',
       layout: 'vertical',
-      background: {
-        type: 'linearGradient',
-        angle: '135deg',
-        startColor: '#334155',
-        endColor: '#475569'
-      },
-      paddingAll: '20px',
+      backgroundColor: '#f8fafc',
+      paddingAll: '18px',
       contents: [
         {
           type: 'text',
-          text: '✏️ EDIT STOCK DETAIL',
+          text: '✏️ แก้ไขข้อมูลสต็อก',
           weight: 'bold',
           size: 'xxs',
-          color: '#cbd5e1'
+          color: '#0284c7'
         },
         {
           type: 'text',
           text: stock.name,
           weight: 'bold',
-          color: '#ffffff',
+          color: '#0f172a',
           size: 'md',
           margin: 'xs',
           wrap: true
@@ -575,58 +565,90 @@ export function createStockEditMenuFlex(stock: any) {
     body: {
       type: 'box',
       layout: 'vertical',
-      spacing: 'md',
-      paddingAll: '20px',
+      spacing: 'sm',
+      paddingAll: '18px',
       contents: [
         {
           type: 'text',
-          text: 'เลือกรายการที่คุณต้องการจะแก้ไข:',
+          text: 'เลือกรายการที่ต้องการแก้ไข:',
           size: 'xs',
           color: '#64748b',
-          weight: 'bold'
+          weight: 'bold',
+          margin: 'none'
         },
         {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🏷️ แก้ชื่อวัสดุ',
+                data: `action=stock_request_edit&id=${stock.id}&field=name`
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '📝 แก้รายละเอียด',
+                data: `action=stock_request_edit&id=${stock.id}&field=desc`
+              }
+            }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🔔 เกณฑ์ขั้นต่ำ',
+                data: `action=stock_request_edit&id=${stock.id}&field=min`
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '⚡ ความสำคัญ',
+                data: `action=stock_request_edit&id=${stock.id}&field=priority`
+              }
+            }
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      contents: [
+        {
           type: 'button',
-          style: 'primary',
-          color: '#3b82f6',
+          style: 'link',
+          color: '#64748b',
           height: 'sm',
           action: {
             type: 'postback',
-            label: '🏷️ แก้ไขชื่อวัสดุ',
-            data: `action=stock_request_edit&id=${stock.id}&field=name`
-          }
-        },
-        {
-          type: 'button',
-          style: 'primary',
-          color: '#10b981',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '📝 แก้ไขรายละเอียดวัสดุ',
-            data: `action=stock_request_edit&id=${stock.id}&field=desc`
-          }
-        },
-        {
-          type: 'button',
-          style: 'primary',
-          color: '#f59e0b',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '🔔 แก้ไขเกณฑ์ขั้นต่ำ',
-            data: `action=stock_request_edit&id=${stock.id}&field=min`
-          }
-        },
-        {
-          type: 'button',
-          style: 'primary',
-          color: '#8b5cf6',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '⚡ แก้ไขระดับความสำคัญ',
-            data: `action=stock_request_edit&id=${stock.id}&field=priority`
+            label: '⬅️ ย้อนกลับ',
+            data: `action=stock_manage&id=${stock.id}`
           }
         }
       ]
@@ -850,13 +872,14 @@ export function createModeSelectionFlex() {
       type: 'box',
       layout: 'vertical',
       backgroundColor: '#f8fafc',
+      paddingAll: '18px',
       contents: [
         {
           type: 'text',
-          text: '🤖 ยินดีต้อนรับสู่ระบบ จำจด (JumJod)',
+          text: '🤖 ยินดีต้อนรับสู่ระบบ จำจด (JodJum)',
           weight: 'bold',
           size: 'md',
-          color: '#1e293b'
+          color: '#0f172a'
         },
         {
           type: 'text',
@@ -870,51 +893,66 @@ export function createModeSelectionFlex() {
     body: {
       type: 'box',
       layout: 'vertical',
-      spacing: 'md',
+      spacing: 'sm',
+      paddingAll: '18px',
       contents: [
         {
-          type: 'button',
-          style: 'primary',
-          color: '#8b5cf6',
-          height: 'sm',
-          action: {
-            type: 'message',
-            label: '📝 โหมดบันทึกช่วยจำ',
-            text: 'บันทึกช่วยจำ'
-          }
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'message',
+                label: '📌 บันทึกช่วยจำ',
+                text: 'บันทึกช่วยจำ'
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'message',
+                label: '📦 สต็อกวัสดุ',
+                text: 'สต็อก'
+              }
+            }
+          ]
         },
         {
-          type: 'button',
-          style: 'primary',
-          color: '#10b981',
-          height: 'sm',
-          action: {
-            type: 'message',
-            label: '📦 โหมดสต็อก',
-            text: 'สต็อก'
-          }
-        },
-        {
-          type: 'button',
-          style: 'primary',
-          color: '#6366f1',
-          height: 'sm',
-          action: {
-            type: 'message',
-            label: '📄 โหมดติดตาม PR',
-            text: 'ติดตาม PR'
-          }
-        },
-        {
-          type: 'button',
-          style: 'primary',
-          color: '#0d9488',
-          height: 'sm',
-          action: {
-            type: 'message',
-            label: '🔬 โหมด Calibrate',
-            text: 'Calibrate'
-          }
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'message',
+                label: '📄 ติดตาม PR',
+                text: 'ติดตาม PR'
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'message',
+                label: '🔬 Calibrate',
+                text: 'Calibrate'
+              }
+            }
+          ]
         }
       ]
     }
@@ -1031,9 +1069,8 @@ export function createCalibrationFlexBubble(item: any, appUrl: string) {
       contents: [
         {
           type: 'button',
-          style: 'primary',
+          style: 'secondary',
           height: 'sm',
-          color: '#10b981',
           action: {
             type: 'postback',
             label: '✅ Cal แล้ว (อัปเดตรอบถัดไป)',
@@ -1041,24 +1078,34 @@ export function createCalibrationFlexBubble(item: any, appUrl: string) {
           }
         },
         {
-          type: 'button',
-          style: 'secondary',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '✍️ แก้ไขรายการ',
-            data: `action=request_cal_edit&itemId=${item.id}`
-          }
-        },
-        {
-          type: 'button',
-          style: 'secondary',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '🗑️ ลบรายการ',
-            data: `action=cal_delete&itemId=${item.id}`
-          }
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '✍️ แก้ไข',
+                data: `action=request_cal_edit&itemId=${item.id}`
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              color: '#dc2626',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🗑️ ลบรายการ',
+                data: `action=cal_delete&itemId=${item.id}`
+              }
+            }
+          ]
         },
         {
           type: 'button',
@@ -1618,21 +1665,22 @@ export function createPrEditMenuFlex(prItem: any) {
     header: {
       type: 'box',
       layout: 'vertical',
-      backgroundColor: '#8b5cf6',
-      paddingAll: '15px',
+      backgroundColor: '#f8fafc',
+      paddingAll: '18px',
       contents: [
         {
           type: 'text',
-          text: '✏️ เลือกสิ่งที่ต้องการแก้ไข PR',
+          text: '✏️ แก้ไขข้อมูล PR',
           weight: 'bold',
-          color: '#ffffff',
-          size: 'sm'
+          size: 'xxs',
+          color: '#0284c7'
         },
         {
           type: 'text',
-          text: `รายการ: "${prItem.title}" (#${shortId})`,
-          size: 'xs',
-          color: '#e9d5ff',
+          text: `"${prItem.title}" (#${shortId})`,
+          size: 'sm',
+          weight: 'bold',
+          color: '#0f172a',
           margin: 'xs',
           wrap: true
         }
@@ -1642,97 +1690,140 @@ export function createPrEditMenuFlex(prItem: any) {
       type: 'box',
       layout: 'vertical',
       spacing: 'sm',
+      paddingAll: '18px',
       contents: [
         {
-          type: 'button',
-          style: 'primary',
-          color: '#8b5cf6',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '📄 ใส่/แก้ เลข PR',
-            data: `action=request_pr_field&field=pr_no&itemId=${prItem.id}`
-          }
+          type: 'text',
+          text: 'เอกสาร & ตัวเลข:',
+          size: 'xs',
+          color: '#64748b',
+          weight: 'bold',
+          margin: 'none'
         },
         {
-          type: 'button',
-          style: 'primary',
-          color: '#a855f7',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '📑 ใส่/แก้ เลข PO',
-            data: `action=request_pr_field&field=po_no&itemId=${prItem.id}`
-          }
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '📄 เลข PR',
+                data: `action=request_pr_field&field=pr_no&itemId=${prItem.id}`
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '📑 เลข PO',
+                data: `action=request_pr_field&field=po_no&itemId=${prItem.id}`
+              }
+            }
+          ]
         },
         {
-          type: 'button',
-          style: 'primary',
-          color: '#10b981',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '🏷️ ใส่/แก้ เลข QT',
-            data: `action=request_pr_field&field=qt_no&itemId=${prItem.id}`
-          }
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🏷️ เลข QT',
+                data: `action=request_pr_field&field=qt_no&itemId=${prItem.id}`
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '💰 ราคา & VAT',
+                data: `action=request_pr_field&field=subtotal&itemId=${prItem.id}`
+              }
+            }
+          ]
         },
         {
-          type: 'button',
-          style: 'primary',
-          color: '#0284c7',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '💰 ใส่/แก้ ราคาต้น & VAT',
-            data: `action=request_pr_field&field=subtotal&itemId=${prItem.id}`
-          }
+          type: 'text',
+          text: 'สถานะ & ข้อความ:',
+          size: 'xs',
+          color: '#64748b',
+          weight: 'bold',
+          margin: 'md'
         },
         {
-          type: 'button',
-          style: 'secondary',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '🔄 เปลี่ยนสถานะการติดตาม',
-            data: `action=request_pr_status_menu&itemId=${prItem.id}`
-          }
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '🔄 เปลี่ยนสถานะ',
+                data: `action=request_pr_status_menu&itemId=${prItem.id}`
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '✏️ แก้ไขหัวข้อ',
+                data: `action=request_pr_field&field=title&itemId=${prItem.id}`
+              }
+            }
+          ]
         },
         {
-          type: 'button',
-          style: 'secondary',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '✏️ แก้ไขชื่อหัวข้อ PR',
-            data: `action=request_pr_field&field=title&itemId=${prItem.id}`
-          }
-        },
-        {
-          type: 'button',
-          style: 'secondary',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '📝 แก้ไขหมายเหตุ',
-            data: `action=request_pr_field&field=notes&itemId=${prItem.id}`
-          }
-        }
-      ]
-    },
-    footer: {
-      type: 'box',
-      layout: 'vertical',
-      contents: [
-        {
-          type: 'button',
-          style: 'link',
-          color: '#ef4444',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '❌ ยกเลิก',
-            data: 'action=cancel_edit'
-          }
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '📝 แก้หมายเหตุ',
+                data: `action=request_pr_field&field=notes&itemId=${prItem.id}`
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              color: '#ef4444',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '✕ ยกเลิก',
+                data: 'action=cancel_edit'
+              }
+            }
+          ]
         }
       ]
     }
@@ -1746,21 +1837,21 @@ export function createPrStatusMenuFlex(prItem: any) {
     header: {
       type: 'box',
       layout: 'vertical',
-      backgroundColor: '#3b82f6',
-      paddingAll: '15px',
+      backgroundColor: '#f8fafc',
+      paddingAll: '18px',
       contents: [
         {
           type: 'text',
           text: '🔄 เลือกสถานะใหม่สำหรับ PR',
           weight: 'bold',
-          color: '#ffffff',
+          color: '#0f172a',
           size: 'sm'
         },
         {
           type: 'text',
           text: `"${prItem.title}"`,
           size: 'xs',
-          color: '#dbeafe',
+          color: '#64748b',
           margin: 'xs',
           wrap: true
         }
@@ -1770,50 +1861,65 @@ export function createPrStatusMenuFlex(prItem: any) {
       type: 'box',
       layout: 'vertical',
       spacing: 'sm',
+      paddingAll: '18px',
       contents: [
         {
-          type: 'button',
-          style: prItem.status === 'Pending' ? 'primary' : 'secondary',
-          color: '#f59e0b',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '⏳ รอเลข PR (Pending)',
-            data: `action=set_pr_status&status=Pending&itemId=${prItem.id}`
-          }
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '⏳ รอเลข PR',
+                data: `action=set_pr_status&status=Pending&itemId=${prItem.id}`
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '📄 ออก PR แล้ว',
+                data: `action=set_pr_status&status=PR Issued&itemId=${prItem.id}`
+              }
+            }
+          ]
         },
         {
-          type: 'button',
-          style: prItem.status === 'PR Issued' ? 'primary' : 'secondary',
-          color: '#3b82f6',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '📄 ออก PR แล้ว (PR Issued)',
-            data: `action=set_pr_status&status=PR Issued&itemId=${prItem.id}`
-          }
-        },
-        {
-          type: 'button',
-          style: prItem.status === 'PO Issued' ? 'primary' : 'secondary',
-          color: '#8b5cf6',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '📑 ออก PO แล้ว (PO Issued)',
-            data: `action=set_pr_status&status=PO Issued&itemId=${prItem.id}`
-          }
-        },
-        {
-          type: 'button',
-          style: prItem.status === 'Completed' ? 'primary' : 'secondary',
-          color: '#10b981',
-          height: 'sm',
-          action: {
-            type: 'postback',
-            label: '✅ เสร็จสมบูรณ์ (Completed)',
-            data: `action=set_pr_status&status=Completed&itemId=${prItem.id}`
-          }
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '📑 ออก PO แล้ว',
+                data: `action=set_pr_status&status=PO Issued&itemId=${prItem.id}`
+              }
+            },
+            {
+              type: 'button',
+              style: 'secondary',
+              height: 'sm',
+              flex: 1,
+              action: {
+                type: 'postback',
+                label: '✅ เสร็จสมบูรณ์',
+                data: `action=set_pr_status&status=Completed&itemId=${prItem.id}`
+              }
+            }
+          ]
         }
       ]
     },
