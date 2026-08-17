@@ -1231,27 +1231,27 @@ export async function POST(request: Request) {
 
             // Conversational Editing Flow: if edit parameter is missing, transition to editing state
             if (stockData.action === 'EDIT_NAME' && !stockData.new_name) {
-              memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'name' });
+              await setConversationState(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'name' }, supabaseAdmin, profile?.id);
               await sendLineReply(replyToken, `🏷️ กรุณาพิมพ์ชื่อใหม่สำหรับวัสดุ "${editTarget.name}":`);
               continue;
             }
             if (stockData.action === 'EDIT_DESC' && !stockData.description) {
-              memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'desc' });
+              await setConversationState(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'desc' }, supabaseAdmin, profile?.id);
               await sendLineReply(replyToken, `📝 กรุณาพิมพ์รายละเอียดใหม่สำหรับวัสดุ "${editTarget.name}":\n(ค่าปัจจุบัน: ${editTarget.description || 'ไม่มี'})`);
               continue;
             }
             if (stockData.action === 'EDIT_MIN' && (stockData.new_min_threshold === null || stockData.new_min_threshold === undefined)) {
-              memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'min' });
+              await setConversationState(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'min' }, supabaseAdmin, profile?.id);
               await sendLineReply(replyToken, `🔔 กรุณาพิมพ์เกณฑ์ขั้นต่ำใหม่สำหรับวัสดุ "${editTarget.name}":\n(ค่าปัจจุบัน: ${editTarget.min_threshold ?? 0})\nพิมพ์เป็นตัวเลข เช่น "5"`);
               continue;
             }
             if (stockData.action === 'EDIT_PRIORITY' && !stockData.new_priority) {
-              memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'priority' });
+              await setConversationState(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'priority' }, supabaseAdmin, profile?.id);
               await sendLineReply(replyToken, `⚡ กรุณาเลือกความสำคัญใหม่สำหรับวัสดุ "${editTarget.name}":\nพิมพ์ "High" (ด่วนมาก), "Medium" (ปานกลาง), หรือ "Low" (ทั่วไป)`);
               continue;
             }
             if (stockData.action === 'EDIT_CATEGORY' && !stockData.category) {
-              memoryStateCache.set(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'category' });
+              await setConversationState(lineUserId, { action: 'stock_editing', stockId: editTarget.id, stockName: editTarget.name, field: 'category' }, supabaseAdmin, profile?.id);
               await sendLineReply(replyToken, `📦 กรุณาระบุหมวดหมู่ใหม่สำหรับวัสดุ "${editTarget.name}":\n(ค่าปัจจุบัน: ${editTarget.category || 'ไม่มี'})\nพิมพ์ "อุปกรณ์สำนักงาน" หรือ "Laboratory"`);
               continue;
             }
