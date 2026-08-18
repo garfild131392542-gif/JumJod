@@ -456,7 +456,22 @@ export async function handlePostbackEvent(
         stockUnit: stockItem.unit
       }, supabaseAdmin, profile?.id);
       const opText = op === 'SUBTRACT' ? 'เบิก' : op === 'ADD' ? 'เติม' : 'ปรับยอด';
-      await sendLineReply(replyToken, `📦 ต้องการ${opText}วัสดุ "${stockItem.name}" จำนวนเท่าไหร่ดีครับ?\n\n(กรุณาพิมพ์จำนวนเป็นตัวเลข เช่น "5" หรือ "10")`);
+      await sendLineReply(replyToken, {
+        type: 'text',
+        text: `📦 ต้องการ${opText}วัสดุ "${stockItem.name}" จำนวนเท่าไหร่ดีครับ?\n\n(กรุณาพิมพ์จำนวนเป็นตัวเลข เช่น "5" หรือ "10")`,
+        quickReply: {
+          items: [
+            {
+              type: 'action',
+              action: {
+                type: 'postback',
+                label: '❌ ยกเลิก',
+                data: 'action=stock_cancel'
+              }
+            }
+          ]
+        }
+      });
     }
   } else if (action === 'stock_create_prompt') {
     const rawName = params.get('name');
@@ -498,7 +513,22 @@ export async function handlePostbackEvent(
         action: 'stock_pending_create_qty',
         stockName: name
       }, supabaseAdmin, profile?.id);
-      await sendLineReply(replyToken, `📦 ต้องการสร้างวัสดุใหม่ **"${name}"**\nกรุณาระบุจำนวนตั้งต้นเป็นตัวเลข (เช่น "10" หรือ "50"):`);
+      await sendLineReply(replyToken, {
+        type: 'text',
+        text: `📦 ต้องการสร้างวัสดุใหม่ **"${name}"**\nกรุณาระบุจำนวนตั้งต้นเป็นตัวเลข (เช่น "10" หรือ "50"):`,
+        quickReply: {
+          items: [
+            {
+              type: 'action',
+              action: {
+                type: 'postback',
+                label: '❌ ยกเลิก',
+                data: 'action=stock_cancel'
+              }
+            }
+          ]
+        }
+      });
     }
   } else if (action === 'view_items') {
     const statusParam = params.get('status');

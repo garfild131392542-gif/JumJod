@@ -259,13 +259,23 @@ export async function POST(request: Request) {
 
       const userState = await getConversationState(lineUserId, profile, supabaseAdmin);
 
+      // Global cancellation for any active conversation state
+      if (userState) {
+        const cancelKeywords = /^(ยกเลิก|cancel|ออก|ไม่|หยุด|ปิด|back|กลับ|ยกเลิกการทำรายการ)$/i;
+        if (cancelKeywords.test(messageText.trim())) {
+          await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
+          await sendLineReply(replyToken, '❌ ยกเลิกการทำรายการเรียบร้อยแล้วครับ');
+          continue;
+        }
+      }
+
       // Handle stock editing input (name, desc, min, priority, category)
       if (userState && userState.action === 'stock_editing') {
         const field = userState.field || 'name';
         const inputText = messageText.trim();
 
         if (!inputText) {
-          await sendLineReply(replyToken, '❌ ข้อมูลห้ามว่างเปล่า กรุณาพิมพ์ใหม่อีกครั้งครับ');
+          await sendLineReply(replyToken, '❌ ข้อมูลห้ามว่างเปล่า กรุณาพิมพ์ใหม่อีกครั้งครับ (หรือพิมพ์ "ยกเลิก" เพื่อยกเลิกรายการ)');
           continue;
         }
 
@@ -285,7 +295,7 @@ export async function POST(request: Request) {
         } else if (field === 'min') {
           const numMatch = inputText.match(/\d+/);
           if (!numMatch) {
-            await sendLineReply(replyToken, '❌ กรุณาพิมพ์เป็นตัวเลข เช่น "5" หรือ "10" ครับ');
+            await sendLineReply(replyToken, '❌ กรุณาพิมพ์เป็นตัวเลข เช่น "5" หรือ "10" ครับ (หรือพิมพ์ "ยกเลิก" เพื่อยกเลิกรายการ)');
             continue;
           }
           const newMin = parseInt(numMatch[0]);
@@ -302,7 +312,7 @@ export async function POST(request: Request) {
             inputText === 'High' || inputText === 'Medium' || inputText === 'Low' ? inputText : null
           );
           if (!newPriority) {
-            await sendLineReply(replyToken, '❌ กรุณาเลือก "High", "Medium", หรือ "Low" ครับ');
+            await sendLineReply(replyToken, '❌ กรุณาเลือก "High", "Medium", หรือ "Low" ครับ (หรือพิมพ์ "ยกเลิก" เพื่อยกเลิกรายการ)');
             continue;
           }
           updatePayload.priority = newPriority;
@@ -394,7 +404,7 @@ export async function POST(request: Request) {
             ]);
           }
         } else {
-          await sendLineReply(replyToken, '❌ กรุณาระบุจำนวนเป็นตัวเลขอีกครั้งครับ เช่น "5" หรือ "10"');
+          await sendLineReply(replyToken, '❌ กรุณาระบุจำนวนเป็นตัวเลขอีกครั้งครับ เช่น "5" หรือ "10"\n(หรือพิมพ์ "ยกเลิก" เพื่อยกเลิกรายการ)');
         }
         continue;
       }
@@ -433,7 +443,7 @@ export async function POST(request: Request) {
             ]);
           }
         } else {
-          await sendLineReply(replyToken, '❌ กรุณาระบุจำนวนเริ่มต้นเป็นตัวเลขอีกครั้งครับ เช่น "10"');
+          await sendLineReply(replyToken, '❌ กรุณาระบุจำนวนเริ่มต้นเป็นตัวเลขอีกครั้งครับ เช่น "10"\n(หรือพิมพ์ "ยกเลิก" เพื่อยกเลิกรายการ)');
         }
         continue;
       }

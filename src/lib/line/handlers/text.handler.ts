@@ -1,10 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { sendLineReply } from '@/lib/line/client';
-import { setUserModeState, getUserModeState } from '@/lib/db/user-state';
+import { setUserModeState, getUserModeState, clearConversationState } from '@/lib/db/user-state';
 import { memoryStateCache } from '@/lib/state-cache';
 import { ProfileService, StockService, ItemService, PrService, CalibrationService } from '@/services';
 import { StockModeController } from '../mode-controllers/stock-mode';
-import { createPrListMenuFlex, createCalibrationListMenuFlex } from '../flex-templates';
+import { createPrListMenuFlex, createCalibrationListMenuFlex, createModeSelectionFlex } from '../flex-templates';
 
 export async function handleTextEvent(
   event: any,
@@ -53,9 +53,23 @@ export async function handleTextEvent(
     return true;
   }
 
-  // 3. Mode switching commands
+  // 3. General mode menu command
+  if (cleanMessageText === 'โหมด' || cleanMessageText === 'เมนูโหมด' || cleanMessageText === 'เลือกโหมด') {
+    memoryStateCache.delete(lineUserId);
+    await clearConversationState(lineUserId, supabaseAdmin, profile.id);
+    const flexMenu = createModeSelectionFlex();
+    await sendLineReply(replyToken, {
+      type: 'flex',
+      altText: '🤖 กรุณาเลือกโหมดการทำงาน',
+      contents: flexMenu
+    });
+    return true;
+  }
+
+  // 4. Mode switching commands
   if (cleanMessageText === 'โหมดบันทึก' || cleanMessageText === 'โหมดช่วยจำ' || cleanMessageText === 'บันทึกช่วยจำ' || cleanMessageText === 'ช่วยจำ' || cleanMessageText === 'บันทึก') {
     memoryStateCache.delete(lineUserId);
+    await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     await setUserModeState(profile, lineUserId, 'reminder', supabaseAdmin);
     await sendLineReply(replyToken, '📝 เข้าสู่โหมด **"ช่วยจำ"** เรียบร้อยครับ!\n\n⚡ **คำสั่งคีย์ลัด:**\n• พิมพ์ข้อความเพื่อบันทึก (เช่น "ประชุม 10 โมง")\n• `รายการ` : ดูรายการบันทึกทั้งหมด\n• `ออกโหมด` : รีเซ็ตกลับโหมดเริ่มต้น');
     return true;
@@ -63,6 +77,7 @@ export async function handleTextEvent(
 
   if (cleanMessageText === 'โหมดสต็อก' || cleanMessageText === 'โหมดสต๊อก' || cleanMessageText === 'สต็อก' || cleanMessageText === 'สต๊อก') {
     memoryStateCache.delete(lineUserId);
+    await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     await setUserModeState(profile, lineUserId, 'stock', supabaseAdmin);
     await sendLineReply(replyToken, '📦 เข้าสู่โหมด **"สต็อกวัสดุ"** เรียบร้อยครับ!\n\n⚡ **คำสั่งคีย์ลัด:**\n• พิมพ์ทำรายการ (เช่น "เบิก แอลกอฮอล์ 5")\n• `รายการ` : ดูรายการสต็อกทั้งหมด\n• `ออกโหมด` : รีเซ็ตกลับโหมดเริ่มต้น');
     return true;
@@ -70,6 +85,7 @@ export async function handleTextEvent(
 
   if (cleanMessageText === 'โหมดpr' || cleanMessageText === 'โหมด pr' || cleanMessageText === 'ติดตามpr' || cleanMessageText === 'ติดตาม pr') {
     memoryStateCache.delete(lineUserId);
+    await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     await setUserModeState(profile, lineUserId, 'pr', supabaseAdmin);
     await sendLineReply(replyToken, '📄 เข้าสู่โหมด **"ติดตาม PR"** เรียบร้อยครับ!\n\n⚡ **คำสั่งคีย์ลัด:**\n• พิมพ์หัวข้อเพื่อเปิด PR (เช่น "ซื้อคอมพิวเตอร์")\n• `รายการ` : ดูรายการติดตาม PR ทั้งหมด\n• `ออกโหมด` : รีเซ็ตกลับโหมดเริ่มต้น');
     return true;
@@ -77,6 +93,7 @@ export async function handleTextEvent(
 
   if (cleanMessageText === 'โหมดcal' || cleanMessageText === 'โหมด cal' || cleanMessageText === 'โหมด calibrate' || cleanMessageText === 'calibrate' || cleanMessageText === 'แคล' || cleanMessageText === 'เครื่องมือ') {
     memoryStateCache.delete(lineUserId);
+    await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     await setUserModeState(profile, lineUserId, 'calibration', supabaseAdmin);
     await sendLineReply(replyToken, '🔬 เข้าสู่โหมด **"ติดตาม Calibrate"** เรียบร้อยครับ!\n\n⚡ **คำสั่งคีย์ลัด:**\n• พิมพ์ชื่อเครื่องมือ + วันที่ (เช่น "เครื่องชั่ง 15/08/2026")\n• `รายการ` : ดูรายการเครื่องมือทั้งหมด\n• `ออกโหมด` : รีเซ็ตกลับโหมดเริ่มต้น');
     return true;
@@ -84,6 +101,7 @@ export async function handleTextEvent(
 
   if (cleanMessageText === 'ออกโหมด' || cleanMessageText === 'ยกเลิกโหมด' || cleanMessageText === 'รีเซ็ตโหมด') {
     memoryStateCache.delete(lineUserId);
+    await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     await setUserModeState(profile, lineUserId, null, supabaseAdmin);
     await sendLineReply(replyToken, '🔄 ออกจากโหมดพิเศษ เรียบร้อยแล้วครับ! กลับสู่โหมดเริ่มต้นอัตโนมัติ');
     return true;
