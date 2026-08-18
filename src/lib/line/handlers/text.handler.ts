@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { sendLineReply } from '@/lib/line/client';
-import { setUserModeState, getUserModeState, clearConversationState } from '@/lib/db/user-state';
+import { setUserModeState, getUserModeState, clearConversationState, getConversationState } from '@/lib/db/user-state';
 import { memoryStateCache } from '@/lib/state-cache';
 import { ProfileService, StockService, ItemService, PrService, CalibrationService } from '@/services';
 import { StockModeController } from '../mode-controllers/stock-mode';
@@ -105,6 +105,13 @@ export async function handleTextEvent(
     await setUserModeState(profile, lineUserId, null, supabaseAdmin);
     await sendLineReply(replyToken, '🔄 ออกจากโหมดพิเศษ เรียบร้อยแล้วครับ! กลับสู่โหมดเริ่มต้นอัตโนมัติ');
     return true;
+  }
+
+  // 5. If user is in an active pending conversation state (e.g. editing stock/memo/pr, pending qty input),
+  // bypass mode AI controllers and let route.ts handle the state directly to prevent unnecessary AI latency.
+  const userState = await getConversationState(lineUserId, profile, supabaseAdmin);
+  if (userState) {
+    return false;
   }
 
   // Fetch active mode
