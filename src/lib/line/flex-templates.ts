@@ -1181,13 +1181,13 @@ export function createPrFlexBubble(prItem: any, appUrl: string) {
     },
     {
       type: 'button',
-      style: 'secondary',
+      style: 'primary',
       height: 'sm',
       color: '#6366f1',
       action: {
-        type: 'uri',
-        label: '✍️ เติมเลข PR/PO/QT บนเว็บ',
-        uri: editUrl
+        type: 'postback',
+        label: '✍️ เติมเลข PR / PO / QT',
+        data: `action=request_pr_fill_numbers&itemId=${prItem.id}`
       }
     }
   );
@@ -1650,6 +1650,195 @@ export function createOcrReminderConfirmationFlex(reminder: { title: string, des
             type: 'postback',
             label: '❌ ยกเลิก',
             data: 'action=cancel_ocr_reminder'
+          }
+        }
+      ]
+    }
+  };
+}
+export function createPrFillNumbersMenuFlex(prItem: any) {
+  const shortId = prItem.id.substring(prItem.id.length - 4);
+  return {
+    type: 'bubble',
+    size: 'mega',
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#f8fafc',
+      paddingAll: '18px',
+      contents: [
+        {
+          type: 'text',
+          text: '📑 เติมเลขเอกสาร & ราคา PR',
+          weight: 'bold',
+          size: 'xxs',
+          color: '#6366f1'
+        },
+        {
+          type: 'text',
+          text: `"${prItem.title}" (#${shortId})`,
+          size: 'sm',
+          weight: 'bold',
+          color: '#0f172a',
+          margin: 'xs',
+          wrap: true
+        }
+      ]
+    },
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      spacing: 'md',
+      paddingAll: '18px',
+      contents: [
+        {
+          type: 'text',
+          text: 'แตะปุ่มด้านล่างเพื่อพิมพ์เลขเอกสารหรือราคาในไลน์ได้ทันทีครับ:',
+          size: 'xs',
+          color: '#64748b',
+          wrap: true
+        },
+        {
+          type: 'box',
+          layout: 'vertical',
+          spacing: 'sm',
+          contents: [
+            // Row 1: PR
+            {
+              type: 'box',
+              layout: 'horizontal',
+              alignItems: 'center',
+              contents: [
+                {
+                  type: 'box',
+                  layout: 'vertical',
+                  flex: 5,
+                  contents: [
+                    { type: 'text', text: 'เลข PR', size: 'xxs', color: '#94a3b8', weight: 'bold' },
+                    { type: 'text', text: prItem.pr_no || '(ยังไม่ระบุ)', size: 'xs', weight: 'bold', color: prItem.pr_no ? '#6366f1' : '#cbd5e1', wrap: true }
+                  ]
+                },
+                {
+                  type: 'button',
+                  style: 'primary',
+                  height: 'sm',
+                  color: '#6366f1',
+                  flex: 5,
+                  action: {
+                    type: 'postback',
+                    label: prItem.pr_no ? '✏️ แก้ไข PR' : '➕ เติมเลข PR',
+                    data: `action=request_pr_field&field=pr_no&itemId=${prItem.id}`
+                  }
+                }
+              ]
+            },
+            { type: 'separator', margin: 'xs' },
+            // Row 2: PO
+            {
+              type: 'box',
+              layout: 'horizontal',
+              alignItems: 'center',
+              contents: [
+                {
+                  type: 'box',
+                  layout: 'vertical',
+                  flex: 5,
+                  contents: [
+                    { type: 'text', text: 'เลข PO', size: 'xxs', color: '#94a3b8', weight: 'bold' },
+                    { type: 'text', text: prItem.po_no || '(ยังไม่ระบุ)', size: 'xs', weight: 'bold', color: prItem.po_no ? '#8b5cf6' : '#cbd5e1', wrap: true }
+                  ]
+                },
+                {
+                  type: 'button',
+                  style: 'primary',
+                  height: 'sm',
+                  color: '#8b5cf6',
+                  flex: 5,
+                  action: {
+                    type: 'postback',
+                    label: prItem.po_no ? '✏️ แก้ไข PO' : '➕ เติมเลข PO',
+                    data: `action=request_pr_field&field=po_no&itemId=${prItem.id}`
+                  }
+                }
+              ]
+            },
+            { type: 'separator', margin: 'xs' },
+            // Row 3: QT
+            {
+              type: 'box',
+              layout: 'horizontal',
+              alignItems: 'center',
+              contents: [
+                {
+                  type: 'box',
+                  layout: 'vertical',
+                  flex: 5,
+                  contents: [
+                    { type: 'text', text: 'เลข QT', size: 'xxs', color: '#94a3b8', weight: 'bold' },
+                    { type: 'text', text: prItem.qt_no || '(ยังไม่ระบุ)', size: 'xs', weight: 'bold', color: prItem.qt_no ? '#10b981' : '#cbd5e1', wrap: true }
+                  ]
+                },
+                {
+                  type: 'button',
+                  style: 'primary',
+                  height: 'sm',
+                  color: '#10b981',
+                  flex: 5,
+                  action: {
+                    type: 'postback',
+                    label: prItem.qt_no ? '✏️ แก้ไข QT' : '➕ เติมเลข QT',
+                    data: `action=request_pr_field&field=qt_no&itemId=${prItem.id}`
+                  }
+                }
+              ]
+            },
+            { type: 'separator', margin: 'xs' },
+            // Row 4: Subtotal / Price
+            {
+              type: 'box',
+              layout: 'horizontal',
+              alignItems: 'center',
+              contents: [
+                {
+                  type: 'box',
+                  layout: 'vertical',
+                  flex: 5,
+                  contents: [
+                    { type: 'text', text: 'ราคารวม VAT', size: 'xxs', color: '#94a3b8', weight: 'bold' },
+                    { type: 'text', text: prItem.total_amount ? `${Number(prItem.total_amount).toLocaleString('th-TH')} บ.` : '(ยังไม่ระบุ)', size: 'xs', weight: 'bold', color: prItem.total_amount ? '#0f172a' : '#cbd5e1', wrap: true }
+                  ]
+                },
+                {
+                  type: 'button',
+                  style: 'secondary',
+                  height: 'sm',
+                  flex: 5,
+                  action: {
+                    type: 'postback',
+                    label: prItem.total_amount ? '✏️ แก้ราคา' : '💰 เติมราคา',
+                    data: `action=request_pr_field&field=subtotal&itemId=${prItem.id}`
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    footer: {
+      type: 'box',
+      layout: 'vertical',
+      paddingAll: '14px',
+      contents: [
+        {
+          type: 'button',
+          style: 'secondary',
+          height: 'sm',
+          color: '#ef4444',
+          action: {
+            type: 'postback',
+            label: '✕ ปิดเมนู',
+            data: 'action=cancel_edit'
           }
         }
       ]

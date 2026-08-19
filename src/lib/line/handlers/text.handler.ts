@@ -71,7 +71,7 @@ export async function handleTextEvent(
     memoryStateCache.delete(lineUserId);
     await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     await setUserModeState(profile, lineUserId, 'reminder', supabaseAdmin);
-    await sendLineReply(replyToken, '📝 เข้าสู่โหมด **"ช่วยจำ"** เรียบร้อยครับ!\n\n⚡ **คำสั่งคีย์ลัด:**\n• พิมพ์ข้อความเพื่อบันทึก (เช่น "ประชุม 10 โมง")\n• `รายการ` : ดูรายการบันทึกทั้งหมด\n• `ออกโหมด` : รีเซ็ตกลับโหมดเริ่มต้น');
+    await sendLineReply(replyToken, '📝 เข้าสู่โหมด **"ช่วยจำ"** เรียบร้อยครับ!\n\nอยากให้จำจดช่วยจำเรื่องอะไรดีครับ?\n(พิมพ์หัวข้อหรือเรื่องที่ต้องการบันทึกเข้ามาได้เลยครับ)');
     return true;
   }
 

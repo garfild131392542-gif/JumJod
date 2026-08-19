@@ -68,6 +68,52 @@ export class StockModeController {
               return true;
             }
           }
+        } else {
+          // Item not found in stock -> Offer to create it!
+          const createNewPostback = `action=stock_create_prompt&name=${encodeURIComponent(parsed.name)}&qty=${parsed.quantity || ''}`;
+          const notFoundFlex = {
+            type: 'bubble',
+            body: {
+              type: 'box',
+              layout: 'vertical',
+              spacing: 'md',
+              contents: [
+                {
+                  type: 'text',
+                  text: `🔎 ไม่พบวัสดุชื่อ "${parsed.name}" ในคลัง`,
+                  weight: 'bold',
+                  size: 'md',
+                  color: '#1e293b',
+                  wrap: true
+                },
+                {
+                  type: 'text',
+                  text: 'คุณต้องการบันทึกเพิ่มวัสดุชิ้นนี้เข้าไปในระบบสต็อกใหม่เลยไหมครับ?',
+                  size: 'xs',
+                  color: '#64748b',
+                  wrap: true
+                },
+                {
+                  type: 'button',
+                  style: 'primary',
+                  color: '#8b5cf6',
+                  height: 'sm',
+                  action: {
+                    type: 'postback',
+                    label: '➕ สร้างวัสดุใหม่ในคลัง',
+                    data: createNewPostback
+                  }
+                }
+              ]
+            }
+          };
+
+          await sendLineReply(replyToken, {
+            type: 'flex',
+            altText: `⚠️ ไม่พบวัสดุ "${parsed.name}" ในคลัง`,
+            contents: notFoundFlex
+          });
+          return true;
         }
       }
     } catch (err) {

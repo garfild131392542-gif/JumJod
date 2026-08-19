@@ -7,6 +7,7 @@ import {
   createStockActionMenuFlex,
   createStockEditMenuFlex,
   createPrFlexBubble,
+  createPrFillNumbersMenuFlex,
   createPrEditMenuFlex,
   createPrStatusMenuFlex,
   createCalibrationFlexBubble
@@ -661,6 +662,19 @@ export async function handlePostbackEvent(
     } else {
       await sendLineReply(replyToken, `🗑️ ลบรายการ PR "${item.title}" เรียบร้อยแล้วครับ!`);
     }
+  } else if (action === 'request_pr_fill_numbers') {
+    if (!itemId) return;
+    const item = await PrService.getPrById(supabaseAdmin, itemId);
+    if (!item) {
+      await sendLineReply(replyToken, '❌ ไม่พบรายการ PR นี้ หรืออาจถูกลบไปแล้ว');
+      return;
+    }
+
+    await sendLineReply(replyToken, {
+      type: 'flex',
+      altText: `✍️ เติมเลข PR/PO/QT สำหรับ "${item.title}"`,
+      contents: createPrFillNumbersMenuFlex(item)
+    });
   } else if (action === 'request_pr_edit') {
     if (!itemId) return;
     const item = await PrService.getPrById(supabaseAdmin, itemId);
@@ -688,6 +702,7 @@ export async function handlePostbackEvent(
       pr_no: 'เลข PR (เช่น PR-69001)',
       po_no: 'เลข PO (เช่น PO-2026-042)',
       qt_no: 'เลข QT (เช่น QT-8891)',
+      subtotal: 'ราคาต้น / VAT (เช่น 15000 หรือ 15000 vat 1050)',
       title: 'ชื่อหัวข้อ PR ใหม่',
       notes: 'หมายเหตุ/บันทึกเพิ่มเติม'
     };
@@ -704,7 +719,7 @@ export async function handlePostbackEvent(
 
     await sendLineReply(replyToken, {
       type: 'text',
-      text: `✍️ **กำลังแก้ไข ${label}**\nสำหรับรายการ PR: "${item.title}"\n\nกรุณาพิมพ์ค่าใหม่ที่คุณต้องการตั้งเข้ามาในแชตนี้ได้เลยครับ`,
+      text: `✍️ **กำลังเติม/แก้ไข ${label}**\nสำหรับรายการ PR: "${item.title}"\n\nกรุณาพิมพ์ค่าที่ต้องการเข้ามาในแชตนี้ได้เลยครับ:`,
       quickReply: {
         items: [
           {

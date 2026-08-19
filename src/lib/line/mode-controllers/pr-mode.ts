@@ -64,6 +64,55 @@ export class PrModeController {
       return true;
     }
 
+    // 1.2 Pattern: "ใส่เลข/เติมเลข PR/PO/QT [Number]" (omitting query, apply to latest PR)
+    // Examples: "เติมเลข PR PR-69001", "ใส่เลข PO PO-2026-042", "เลข PR PR-12345"
+    const singleNumMatch = text.match(/^(?:ใส่เลข|เติมเลข|แก้เลข|อัปเดตเลข|เลข)\s*(pr|po|qt)[:\s]+([a-z0-9\-_/]+)$/i);
+    if (singleNumMatch) {
+      const fieldType = singleNumMatch[1].toLowerCase();
+      const val = singleNumMatch[2].trim();
+
+      const { data: latestPrs } = await supabaseAdmin
+        .from('pr_requests')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (latestPrs && latestPrs.length > 0) {
+        const targetPr = latestPrs[0];
+        const fieldMap: Record<string, keyof PrRequest> = {
+          pr: 'pr_no',
+          po: 'po_no',
+          qt: 'qt_no'
+        };
+        const fieldKey = fieldMap[fieldType];
+        const updates: Partial<PrRequest> = { [fieldKey]: val };
+
+        if (fieldType === 'pr' && targetPr.status === 'Pending') {
+          updates.status = 'PR Issued';
+        } else if (fieldType === 'po' && (targetPr.status === 'Pending' || targetPr.status === 'PR Issued')) {
+          updates.status = 'PO Issued';
+        }
+
+        const updated = await PrService.updatePr(supabaseAdmin, targetPr.id, updates);
+        if (!updated) {
+          await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการอัปเดตข้อมูล PR');
+        } else {
+          const bubble = createPrFlexBubble(updated, appUrl);
+          const labelName = fieldType.toUpperCase();
+          await sendLineReply(replyToken, [
+            `✅ อัปเดตเลข ${labelName} ของ PR "${updated.title}" เป็น "${val}" เรียบร้อยแล้วครับ!`,
+            {
+              type: 'flex',
+              altText: `📑 อัปเดตเลข ${labelName} ของ PR "${updated.title}"`,
+              contents: bubble
+            }
+          ]);
+        }
+        return true;
+      }
+    }
+
     // 1.5 Pattern: "ใส่ราคา [PR Query] [Price] [VAT optional]"
     // Examples: "ใส่ราคา ซื้อคอม 15000", "เติมราคา หมึก 2500 vat 175"
     const priceMatch = text.match(/^(?:ใส่ราคา|เติมราคา|แก้ราคา|อัปเดตราคา|ราคา)\s*pr?\s+(.+?)\s+([0-9\.,]+)(?:\s*(?:vat|ภาษี)\s*([0-9\.,]+))?$/i);

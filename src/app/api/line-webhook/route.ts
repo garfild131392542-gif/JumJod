@@ -39,6 +39,7 @@ import { handlePostbackEvent } from '@/lib/line/handlers/postback.handler';
 import { handleTextEvent } from '@/lib/line/handlers/text.handler';
 import { ProfileService, ItemService, PrService, CalibrationService } from '@/services';
 import { PrModeController } from '@/lib/line/mode-controllers/pr-mode';
+import { ReminderModeController } from '@/lib/line/mode-controllers/reminder-mode';
 
 // Initialize Supabase admin client using the service role key to bypass RLS policies
 const supabaseAdmin = createClient(
@@ -340,15 +341,7 @@ export async function POST(request: Request) {
         if (updateError || !updatedStock) {
           await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการแก้ไขข้อมูลวัสดุ');
         } else {
-          const bubble = createStockActionMenuFlex(updatedStock);
-          await sendLineReply(replyToken, [
-            successMessage,
-            {
-              type: 'flex',
-              altText: `📦 ข้อมูลวัสดุ "${updatedStock.name}" ที่แก้ไขแล้ว`,
-              contents: bubble
-            }
-          ]);
+          await sendLineReply(replyToken, successMessage);
         }
         continue;
       }
@@ -394,14 +387,10 @@ export async function POST(request: Request) {
             const opText = userState.operation === 'SUBTRACT' ? 'เบิกออก' : userState.operation === 'ADD' ? 'เติมสต็อก' : 'ปรับยอด';
             const isAlertTriggered = newQty <= stockItem.min_threshold && stockItem.quantity > stockItem.min_threshold;
             const alertMsg = isAlertTriggered ? `\n\n⚠️ **คำเตือน:** ระดับวัสดุลดลงต่ำกว่าเกณฑ์ขั้นต่ำแล้ว! (เกณฑ์: ${stockItem.min_threshold} ${stockItem.unit})` : '';
-            await sendLineReply(replyToken, [
-              `✅ ทำการ${opText}วัสดุ "${stockItem.name}" เรียบร้อยแล้วครับ!\n\nยอดเดิม: ${stockItem.quantity} ${stockItem.unit}\nทำรายการ: ${qty} ${stockItem.unit}\nยอดคงเหลือใหม่: ${newQty} ${stockItem.unit} 📦${alertMsg}`,
-              {
-                type: 'flex',
-                altText: `📦 จัดการวัสดุ "${updatedStock.name}"`,
-                contents: createStockActionMenuFlex(updatedStock)
-              }
-            ]);
+            await sendLineReply(
+              replyToken,
+              `✅ ทำการ${opText}วัสดุ "${stockItem.name}" เรียบร้อยแล้วครับ!\n\nยอดเดิม: ${stockItem.quantity} ${stockItem.unit}\nทำรายการ: ${qty} ${stockItem.unit}\nยอดคงเหลือใหม่: ${newQty} ${stockItem.unit} 📦${alertMsg}`
+            );
           }
         } else {
           await sendLineReply(replyToken, '❌ กรุณาระบุจำนวนเป็นตัวเลขอีกครั้งครับ เช่น "5" หรือ "10"\n(หรือพิมพ์ "ยกเลิก" เพื่อยกเลิกรายการ)');
@@ -433,14 +422,10 @@ export async function POST(request: Request) {
           if (createError || !newItem) {
             await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการสร้างวัสดุใหม่');
           } else {
-            await sendLineReply(replyToken, [
-              `✅ เพิ่มวัสดุใหม่ "${newItem.name}" จำนวน ${newItem.quantity} ${newItem.unit} เข้าคลังสำเร็จแล้วครับ! 📦`,
-              {
-                type: 'flex',
-                altText: `📦 จัดการวัสดุ "${newItem.name}"`,
-                contents: createStockActionMenuFlex(newItem)
-              }
-            ]);
+            await sendLineReply(
+              replyToken,
+              `✅ เพิ่มวัสดุใหม่ "${newItem.name}" จำนวน ${newItem.quantity} ${newItem.unit} เข้าคลังสำเร็จแล้วครับ! 📦`
+            );
           }
         } else {
           await sendLineReply(replyToken, '❌ กรุณาระบุจำนวนเริ่มต้นเป็นตัวเลขอีกครั้งครับ เช่น "10"\n(หรือพิมพ์ "ยกเลิก" เพื่อยกเลิกรายการ)');
@@ -483,11 +468,18 @@ export async function POST(request: Request) {
           const requestUrl = new URL(request.url);
           const appUrl = requestUrl.origin;
           const bubble = createPrFlexBubble(updatedPr, appUrl);
+          
+          let successText = `✅ บันทึกข้อมูลสำหรับ "${updatedPr.title}" เรียบร้อยแล้วครับ!`;
+          if (field === 'pr_no') successText = `✅ บันทึกเลข PR "${val}" สำหรับ "${updatedPr.title}" เรียบร้อยแล้วครับ!`;
+          else if (field === 'po_no') successText = `✅ บันทึกเลข PO "${val}" สำหรับ "${updatedPr.title}" เรียบร้อยแล้วครับ!`;
+          else if (field === 'qt_no') successText = `✅ บันทึกเลข QT "${val}" สำหรับ "${updatedPr.title}" เรียบร้อยแล้วครับ!`;
+          else if (field === 'subtotal' && updates.total_amount) successText = `✅ บันทึกราคา ${Number(updates.total_amount).toLocaleString('th-TH')} บาท สำหรับ "${updatedPr.title}" เรียบร้อยแล้วครับ!`;
+
           await sendLineReply(replyToken, [
-            `✅ อัปเดต${userState.fieldName || field} เป็น "${val}" เรียบร้อยแล้วครับ!`,
+            successText,
             {
               type: 'flex',
-              altText: `📄 รายการ PR ที่แก้ไขแล้ว`,
+              altText: `📄 อัปเดตข้อมูล PR "${updatedPr.title}"`,
               contents: bubble
             }
           ]);
@@ -676,18 +668,47 @@ export async function POST(request: Request) {
         continue;
       }
 
+      // Handle Reminder Wizard states (reminder_pending_date, reminder_pending_time)
+      if (userState && (userState.action === 'reminder_pending_date' || userState.action === 'reminder_pending_time')) {
+        const requestUrl = new URL(request.url);
+        const handled = await ReminderModeController.handleMessage(
+          messageText,
+          profile,
+          replyToken,
+          lineUserId,
+          supabaseAdmin,
+          requestUrl.origin,
+          userState
+        );
+        if (handled) continue;
+      }
+
       const activeMode = lineGroupId ? 'stock' : await getUserModeState(profile, lineUserId, supabaseAdmin);
       const cleanMessageText = messageText.toLowerCase();
 
       const requestUrl = new URL(request.url);
       const appUrl = requestUrl.origin;
 
-      // Check if message is a PR edit/update command
-      const prHandled = await PrModeController.handleMessage(messageText, profile, replyToken, lineUserId, supabaseAdmin, appUrl);
-      if (prHandled) continue;
+      // Handle Reminder mode actions (Wizard / Direct input)
+      if (activeMode === 'reminder') {
+        const handled = await ReminderModeController.handleMessage(
+          messageText,
+          profile,
+          replyToken,
+          lineUserId,
+          supabaseAdmin,
+          appUrl,
+          userState
+        );
+        if (handled) continue;
+      }
 
-      // Handle PR creation if in PR mode or explicit PR creation command
-      if (activeMode === 'pr' || /^pr[:\s]/i.test(messageText.trim()) || /^เปิด\s*pr[:\s]?/i.test(messageText.trim())) {
+      // Handle PR mode actions (only when activeMode === 'pr' or if no mode is active and message explicitly starts with PR:)
+      if (activeMode === 'pr' || (!activeMode && /^pr[:\s]/i.test(messageText.trim()))) {
+        // Check if message is a PR edit/update command
+        const prHandled = await PrModeController.handleMessage(messageText, profile, replyToken, lineUserId, supabaseAdmin, appUrl);
+        if (prHandled) continue;
+
         let titleText = messageText.trim();
         titleText = titleText.replace(/^(?:เปิด|ติดตาม)?\s*pr[:\s]*/i, '').trim();
         if (!titleText) {
@@ -721,39 +742,38 @@ export async function POST(request: Request) {
         continue;
       }
 
-      // Check if message is a request to view Calibration list
-      const isCheckAllCals = /^(ดู|เช็ก|เช็ค|รายการ|แสดง)?\s*(cal|calibrate|การแคล|แคล|เครื่องมือ|เครื่องชั่ง)$/i.test(cleanMessageText) ||
-        ['ดูcal', 'เช็กcal', 'เช็คcal', 'รายการcal', 'ดู cal', 'เช็ก cal', 'เช็ค cal', 'ดูเครื่องมือ', 'เช็กเครื่องมือ'].includes(cleanMessageText);
+      // Handle Calibration mode actions (only when activeMode === 'calibration' or if no mode is active and message explicitly starts with Cal:)
+      if (activeMode === 'calibration' || (!activeMode && (/^cal[:\s]/i.test(messageText.trim()) || /^calibrate[:\s]/i.test(messageText.trim())))) {
+        // Check if message is a request to view Calibration list
+        const isCheckAllCals = /^(ดู|เช็ก|เช็ค|รายการ|แสดง)?\s*(cal|calibrate|การแคล|แคล|เครื่องมือ|เครื่องชั่ง)$/i.test(cleanMessageText) ||
+          ['ดูcal', 'เช็กcal', 'เช็คcal', 'รายการcal', 'ดู cal', 'เช็ก cal', 'เช็ค cal', 'ดูเครื่องมือ', 'เช็กเครื่องมือ'].includes(cleanMessageText);
 
-      if (isCheckAllCals) {
-        const requestUrl = new URL(request.url);
-        const appUrl = requestUrl.origin;
-        const { data: matchedCals, error: searchCalErr } = await supabaseAdmin
-          .from('lab_calibrations')
-          .select('*')
-          .eq('user_id', profile.id)
-          .order('next_cal_date', { ascending: true })
-          .limit(10);
+        if (isCheckAllCals) {
+          const { data: matchedCals, error: searchCalErr } = await supabaseAdmin
+            .from('lab_calibrations')
+            .select('*')
+            .eq('user_id', profile.id)
+            .order('next_cal_date', { ascending: true })
+            .limit(10);
 
-        if (searchCalErr || !matchedCals || matchedCals.length === 0) {
-          await sendLineReply(replyToken, '🔬 ไม่พบรายการ Calibrate เครื่องมือของคุณในระบบครับ สามารถพิมพ์เพิ่มเครื่องมือใหม่ได้เลยครับ');
+          if (searchCalErr || !matchedCals || matchedCals.length === 0) {
+            await sendLineReply(replyToken, '🔬 ไม่พบรายการ Calibrate เครื่องมือของคุณในระบบครับ สามารถพิมพ์เพิ่มเครื่องมือใหม่ได้เลยครับ');
+            continue;
+          }
+
+          const bubbles = matchedCals.map(cal => createCalibrationFlexBubble(cal, appUrl));
+          await sendLineReply(replyToken, {
+            type: 'flex',
+            altText: '🔬 รายการ Calibrate เครื่องมือวัด Lab ของคุณ',
+            contents: {
+              type: 'carousel',
+              contents: bubbles
+            }
+          });
           continue;
         }
 
-        const bubbles = matchedCals.map(cal => createCalibrationFlexBubble(cal, appUrl));
-        await sendLineReply(replyToken, {
-          type: 'flex',
-          altText: '🔬 รายการ Calibrate เครื่องมือวัด Lab ของคุณ',
-          contents: {
-            type: 'carousel',
-            contents: bubbles
-          }
-        });
-        continue;
-      }
-
-      // Handle Calibration creation if in Calibration mode or explicit Cal command
-      if (activeMode === 'calibration' || /^cal[:\s]/i.test(messageText.trim()) || /^calibrate[:\s]/i.test(messageText.trim())) {
+        // Handle Calibration creation
         let textToParse = messageText.trim().replace(/^(?:calibrate|cal)[:\s]*/i, '').trim();
         if (!textToParse) textToParse = messageText.trim();
 
@@ -774,9 +794,6 @@ export async function POST(request: Request) {
 
         let calName = textToParse.replace(/(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})/, '').replace(/(?:ครั้งถัดไป|ครั้งก่อน|วันที่|cal|calibrate)/gi, '').trim();
         if (!calName) calName = textToParse;
-
-        const requestUrl = new URL(request.url);
-        const appUrl = requestUrl.origin;
 
         const { data: insertedCal, error: insertCalError } = await supabaseAdmin
           .from('lab_calibrations')
