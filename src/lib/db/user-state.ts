@@ -94,20 +94,47 @@ export async function getConversationState(
   profile: any,
   supabaseAdmin?: any
 ): Promise<any> {
-  // Check memory cache first
-  const memoryState = memoryStateCache.get(lineUserId);
-  if (memoryState) return memoryState;
+  const now = new Date();
 
-  // Check DB state from profile
+  // Helper to validate TTL (15 minutes)
+  const isExpired = (activityTimestamp?: string | null) => {
+    if (!activityTimestamp) return false;
+    const lastActive = new Date(activityTimestamp);
+    if (isNaN(lastActive.getTime())) return false;
+    const diffMinutes = (now.getTime() - lastActive.getTime()) / (1000 * 60);
+    return diffMinutes >= 15;
+  };
+
+  // 1. Check memory cache first
+  const memoryState = memoryStateCache.get(lineUserId);
+  if (memoryState) {
+    if (isExpired(memoryState._lastActivity)) {
+      memoryStateCache.delete(lineUserId);
+      if (supabaseAdmin && profile?.id) {
+        await clearConversationState(lineUserId, supabaseAdmin, profile.id);
+      }
+      return null;
+    }
+    return memoryState;
+  }
+
+  // 2. Check DB state from profile
   if (profile && profile.pending_item_data && typeof profile.pending_item_data === 'object') {
     const dbData = profile.pending_item_data as any;
     if (dbData.conversationState) {
+      const lastActivity = dbData.conversationState._lastActivity || dbData.lastActivity;
+      if (isExpired(lastActivity)) {
+        if (supabaseAdmin && profile?.id) {
+          await clearConversationState(lineUserId, supabaseAdmin, profile.id);
+        }
+        return null;
+      }
       memoryStateCache.set(lineUserId, dbData.conversationState);
       return dbData.conversationState;
     }
   }
 
-  // If supabaseAdmin is passed, fetch fresh DB record
+  // 3. If supabaseAdmin is passed, fetch fresh DB record
   if (supabaseAdmin && profile?.id) {
     const { data } = await supabaseAdmin
       .from('profiles')
@@ -115,6 +142,11 @@ export async function getConversationState(
       .eq('id', profile.id)
       .single();
     if (data?.pending_item_data?.conversationState) {
+      const lastActivity = data.pending_item_data.conversationState._lastActivity || data.pending_item_data.lastActivity;
+      if (isExpired(lastActivity)) {
+        await clearConversationState(lineUserId, supabaseAdmin, profile.id);
+        return null;
+      }
       memoryStateCache.set(lineUserId, data.pending_item_data.conversationState);
       return data.pending_item_data.conversationState;
     }
@@ -129,7 +161,13 @@ export async function setConversationState(
   supabaseAdmin: any,
   profileId?: string
 ) {
-  memoryStateCache.set(lineUserId, state);
+  const now = new Date().toISOString();
+  const stateWithTimestamp = {
+    ...state,
+    _lastActivity: now
+  };
+
+  memoryStateCache.set(lineUserId, stateWithTimestamp);
 
   if (profileId) {
     const { data } = await supabaseAdmin
@@ -147,8 +185,8 @@ export async function setConversationState(
       .update({
         pending_item_data: {
           ...existing,
-          conversationState: state,
-          lastActivity: new Date().toISOString()
+          conversationState: stateWithTimestamp,
+          lastActivity: now
         }
       })
       .eq('id', profileId);

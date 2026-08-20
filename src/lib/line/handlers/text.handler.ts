@@ -125,6 +125,16 @@ export async function handleTextEvent(
 
   // Handle "รายการ" or "ดูรายการ" command based on active mode
   if (messageText.trim() === 'รายการ' || messageText.trim() === 'ดูรายการ') {
+    if (!activeMode) {
+      const flexMenu = createModeSelectionFlex();
+      await sendLineReply(replyToken, {
+        type: 'flex',
+        altText: '🤖 กรุณาเลือกโหมดการทำงานก่อนดูรายการครับ',
+        contents: flexMenu
+      });
+      return true;
+    }
+
     if (activeMode === 'pr') {
       const prListFlex = createPrListMenuFlex();
       await sendLineReply(replyToken, prListFlex);
@@ -137,66 +147,68 @@ export async function handleTextEvent(
       return true;
     }
 
-    const listMenuFlex = {
-      type: 'flex',
-      altText: '📋 เมนูเลือกดูรายการ',
-      contents: {
-        type: 'bubble',
-        size: 'mega',
-        header: {
-          type: 'box',
-          layout: 'vertical',
-          backgroundColor: '#8b5cf6',
-          contents: [
-            {
-              type: 'text',
-              text: '📋 เมนูเลือกดูรายการ',
-              weight: 'bold',
-              color: '#ffffff',
-              size: 'sm'
-            }
-          ]
-        },
-        body: {
-          type: 'box',
-          layout: 'vertical',
-          spacing: 'md',
-          contents: [
-            {
-              type: 'text',
-              text: 'กรุณาเลือกรายการที่คุณต้องการตรวจสอบ:',
-              size: 'xs',
-              color: '#64748b',
-              wrap: true
-            },
-            {
-              type: 'button',
-              style: 'primary',
-              color: '#8b5cf6',
-              height: 'sm',
-              action: {
-                type: 'postback',
-                label: '⏳ รายการที่ยังไม่สำเร็จ',
-                data: 'action=view_items&status=active'
+    if (activeMode === 'reminder') {
+      const listMenuFlex = {
+        type: 'flex',
+        altText: '📋 เมนูเลือกดูรายการ',
+        contents: {
+          type: 'bubble',
+          size: 'mega',
+          header: {
+            type: 'box',
+            layout: 'vertical',
+            backgroundColor: '#8b5cf6',
+            contents: [
+              {
+                type: 'text',
+                text: '📋 เมนูเลือกดูรายการ',
+                weight: 'bold',
+                color: '#ffffff',
+                size: 'sm'
               }
-            },
-            {
-              type: 'button',
-              style: 'secondary',
-              height: 'sm',
-              action: {
-                type: 'postback',
-                label: '✅ รายการที่สำเร็จแล้ว',
-                data: 'action=view_items&status=completed'
+            ]
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            spacing: 'md',
+            contents: [
+              {
+                type: 'text',
+                text: 'กรุณาเลือกรายการที่คุณต้องการตรวจสอบ:',
+                size: 'xs',
+                color: '#64748b',
+                wrap: true
+              },
+              {
+                type: 'button',
+                style: 'primary',
+                color: '#8b5cf6',
+                height: 'sm',
+                action: {
+                  type: 'postback',
+                  label: '⏳ รายการที่ยังไม่สำเร็จ',
+                  data: 'action=view_items&status=active'
+                }
+              },
+              {
+                type: 'button',
+                style: 'secondary',
+                height: 'sm',
+                action: {
+                  type: 'postback',
+                  label: '✅ รายการที่สำเร็จแล้ว',
+                  data: 'action=view_items&status=completed'
+                }
               }
-            }
-          ]
+            ]
+          }
         }
-      }
-    };
+      };
 
-    await sendLineReply(replyToken, listMenuFlex);
-    return true;
+      await sendLineReply(replyToken, listMenuFlex);
+      return true;
+    }
   }
 
   return false;
