@@ -217,10 +217,22 @@ export function parseThaiTime(input: string): { timeStr: string; displayStr: str
     };
   }
 
-  // 4. Single number with 'น.' or 'โมง': e.g. "7 น.", "8น.", "7.00น"
-  const singleNumMatch = text.match(/(?:ตอน|เวลา)?\s*(\d{1,2})(?:\s*น\.?|\s*โมง)?/);
-  if (singleNumMatch) {
-    const hour = parseInt(singleNumMatch[1], 10);
+  // 4. Explicit hour indicator with 'น.' or 'นาฬิกา': e.g. "7 น.", "8น.", "17:00น", "9 นาฬิกา"
+  const explicitHourMatch = text.match(/(?:ตอน|เวลา)?\s*(\d{1,2})\s*(?:น\.|นาฬิกา)/);
+  if (explicitHourMatch) {
+    const hour = parseInt(explicitHourMatch[1], 10);
+    if (hour >= 0 && hour <= 23) {
+      return {
+        timeStr: `${pad(hour)}:00:00`,
+        displayStr: `${pad(hour)}:00 น.`
+      };
+    }
+  }
+
+  // 5. Standalone number ONLY if the entire trimmed input is just a single number (e.g. "8", "17", "09")
+  const standaloneMatch = text.match(/^\s*(\d{1,2})\s*$/);
+  if (standaloneMatch) {
+    const hour = parseInt(standaloneMatch[1], 10);
     if (hour >= 0 && hour <= 23) {
       return {
         timeStr: `${pad(hour)}:00:00`,

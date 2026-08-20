@@ -68,9 +68,18 @@ export class ReminderModeController {
       if (!dateRes) {
         await sendLineReply(replyToken, {
           type: 'text',
-          text: `❌ ไม่เข้าใจรูปแบบวันที่ครับ กรุณาระบุใหม่ เช่น "17/8/26" หรือ "พรุ่งนี้" (หรือกดปุ่มด้านล่าง)`,
+          text: `❌ ไม่เข้าใจรูปแบบวันที่ครับ กรุณาระบุใหม่ เช่น "17/8/26" หรือ "พรุ่งนี้" (หรือแตะเลือกปุ่มด้านล่าง)`,
           quickReply: {
             items: [
+              {
+                type: 'action',
+                action: {
+                  type: 'datetimepicker',
+                  label: '📅 เลือกวันและเวลา',
+                  data: 'action=new_reminder_datetime_picker',
+                  mode: 'datetime'
+                }
+              },
               { type: 'action', action: { type: 'message', label: '📅 วันนี้', text: 'วันนี้' } },
               { type: 'action', action: { type: 'message', label: '📅 พรุ่งนี้', text: 'พรุ่งนี้' } },
               { type: 'action', action: { type: 'message', label: '📅 สัปดาห์หน้า', text: 'สัปดาห์หน้า' } },
@@ -128,9 +137,18 @@ export class ReminderModeController {
 
       await sendLineReply(replyToken, {
         type: 'text',
-        text: `⏰ **ต้องการให้แจ้งเตือนเวลาไหนดีครับ?**\n📅 วันที่: ${dateRes.displayStr}\n📝 เรื่อง: "${title}"\n\n(พิมพ์เวลา เช่น 07:00, 8 โมงเช้า หรือแตะเลือกปุ่มด้านล่าง)`,
+        text: `⏰ **ต้องการให้แจ้งเตือนเวลาไหนดีครับ?**\n📅 วันที่: ${dateRes.displayStr}\n📝 เรื่อง: "${title}"\n\n(แตะปุ่ม "⏰ เลือกเวลา" หรือพิมพ์เวลา เช่น 08:00, 9 โมงเช้า)`,
         quickReply: {
           items: [
+            {
+              type: 'action',
+              action: {
+                type: 'datetimepicker',
+                label: '⏰ เลือกเวลา',
+                data: 'action=new_reminder_time_picker',
+                mode: 'time'
+              }
+            },
             { type: 'action', action: { type: 'message', label: '⏰ 08:00 น.', text: '08:00' } },
             { type: 'action', action: { type: 'message', label: '⏰ 09:00 น.', text: '09:00' } },
             { type: 'action', action: { type: 'message', label: '⏰ 12:00 น.', text: '12:00' } },
@@ -152,9 +170,18 @@ export class ReminderModeController {
       if (!timeRes) {
         await sendLineReply(replyToken, {
           type: 'text',
-          text: `❌ ไม่เข้าใจรูปแบบเวลาครับ กรุณาระบุใหม่ เช่น "07:00", "8 โมงเช้า" หรือ "14:30" (หรือกดปุ่มด้านล่าง)`,
+          text: `❌ ไม่เข้าใจรูปแบบเวลาครับ กรุณาระบุใหม่ เช่น "07:00", "8 โมงเช้า" หรือ "14:30" (หรือแตะเลือกปุ่มด้านล่าง)`,
           quickReply: {
             items: [
+              {
+                type: 'action',
+                action: {
+                  type: 'datetimepicker',
+                  label: '⏰ เลือกเวลา',
+                  data: 'action=new_reminder_time_picker',
+                  mode: 'time'
+                }
+              },
               { type: 'action', action: { type: 'message', label: '⏰ 08:00 น.', text: '08:00' } },
               { type: 'action', action: { type: 'message', label: '⏰ 09:00 น.', text: '09:00' } },
               { type: 'action', action: { type: 'message', label: '⏰ 12:00 น.', text: '12:00' } },
@@ -258,9 +285,18 @@ export class ReminderModeController {
 
     await sendLineReply(replyToken, {
       type: 'text',
-      text: `📅 **ต้องการให้แจ้งเตือนวันไหนดีครับ?**\nสำหรับรายการ: "${title}"\n\n(พิมพ์วันที่ เช่น 17/8/26, พรุ่งนี้ หรือแตะเลือกปุ่มด้านล่าง)`,
+      text: `📅 **ต้องการให้แจ้งเตือนวันไหนดีครับ?**\nสำหรับรายการ: "${title}"\n\n(แตะปุ่ม "📅 เลือกวันและเวลา" เพื่อเปิดปฏิทิน หรือพิมพ์วันที่ เช่น 17/8/26, พรุ่งนี้)`,
       quickReply: {
         items: [
+          {
+            type: 'action',
+            action: {
+              type: 'datetimepicker',
+              label: '📅 เลือกวันและเวลา',
+              data: 'action=new_reminder_datetime_picker',
+              mode: 'datetime'
+            }
+          },
           { type: 'action', action: { type: 'message', label: '📅 วันนี้', text: 'วันนี้' } },
           { type: 'action', action: { type: 'message', label: '📅 พรุ่งนี้', text: 'พรุ่งนี้' } },
           { type: 'action', action: { type: 'message', label: '📅 สัปดาห์หน้า', text: 'สัปดาห์หน้า' } },

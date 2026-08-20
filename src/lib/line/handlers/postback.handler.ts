@@ -171,7 +171,7 @@ export async function handlePostbackEvent(
     const datetimeStr = event.postback.params?.datetime;
     if (!datetimeStr || !itemId) return;
 
-    const localISO = `${datetimeStr}:00+07:00`;
+    const localISO = `${datetimeStr.replace('t', 'T')}:00+07:00`;
     const dateObj = new Date(localISO);
     if (isNaN(dateObj.getTime())) return;
 
@@ -194,6 +194,111 @@ export async function handlePostbackEvent(
       const formattedDate = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' });
       const formattedTime = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
       await sendLineReply(replyToken, `🔔 ตั้งเวลาแจ้งเตือนสำเร็จ!\n\nรายการ: "${updatedItem.title}"\nเวลาแจ้งเตือนใหม่: ${formattedDate} (เวลา ${formattedTime} น.)`);
+    }
+  } else if (action === 'new_reminder_datetime_picker') {
+    const datetimeStr = event.postback.params?.datetime;
+    if (!datetimeStr) return;
+
+    const userState = await getConversationState(lineUserId, profile, supabaseAdmin);
+    if (!userState || !userState.title) {
+      await sendLineReply(replyToken, '❌ ข้อมูลการบันทึกหมดอายุหรือไม่พบข้อมูล กรุณาลองใหม่อีกครั้งครับ');
+      return;
+    }
+
+    const title = userState.title;
+    const localISO = `${datetimeStr.replace('t', 'T')}:00+07:00`;
+    const dateObj = new Date(localISO);
+    if (isNaN(dateObj.getTime())) {
+      await sendLineReply(replyToken, '❌ รูปแบบวันเวลาไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+      return;
+    }
+
+    const userProfile = profile || await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
+    if (!userProfile) {
+      await sendLineReply(replyToken, '❌ ไม่พบบัญชีผู้ใช้งานที่เชื่อมต่อ');
+      return;
+    }
+
+    const { data: insertedItem, error } = await supabaseAdmin
+      .from('items')
+      .insert([{
+        user_id: userProfile.id,
+        title: title,
+        description: `บันทึกผ่าน LINE Bot: ${title}`,
+        status: 'Pending',
+        reminder_date: dateObj.toISOString(),
+        is_pr: false
+      }])
+      .select('*')
+      .single();
+
+    await clearConversationState(lineUserId, supabaseAdmin, userProfile.id);
+
+    if (error || !insertedItem) {
+      await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+    } else {
+      const formattedDate = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' });
+      const formattedTime = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+      const bubble = createItemFlexBubble(insertedItem, requestUrlOrigin);
+      await sendLineReply(replyToken, [
+        `🎉 บันทึกช่วยจำเรียบร้อยแล้วครับ!\n\n📝 **เรื่อง:** "${title}"\n🔔 **แจ้งเตือน:** ${formattedDate} (เวลา ${formattedTime} น.)`,
+        {
+          type: 'flex',
+          altText: `📝 บันทึกช่วยจำ "${title}"`,
+          contents: bubble
+        }
+      ]);
+    }
+  } else if (action === 'new_reminder_time_picker') {
+    const timeStr = event.postback.params?.time;
+    if (!timeStr) return;
+
+    const userState = await getConversationState(lineUserId, profile, supabaseAdmin);
+    if (!userState || !userState.title || !userState.targetDate) {
+      await sendLineReply(replyToken, '❌ ข้อมูลการบันทึกหมดอายุหรือไม่พบข้อมูล กรุณาลองใหม่อีกครั้งครับ');
+      return;
+    }
+
+    const title = userState.title;
+    const targetDate = userState.targetDate;
+    const targetDateDisplay = userState.targetDateDisplay || targetDate;
+    const isoString = `${targetDate}T${timeStr}:00+07:00`;
+    const dateObj = new Date(isoString);
+
+    const userProfile = profile || await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
+    if (!userProfile) {
+      await sendLineReply(replyToken, '❌ ไม่พบบัญชีผู้ใช้งานที่เชื่อมต่อ');
+      return;
+    }
+
+    const { data: insertedItem, error } = await supabaseAdmin
+      .from('items')
+      .insert([{
+        user_id: userProfile.id,
+        title: title,
+        description: `บันทึกผ่าน LINE Bot: ${title}`,
+        status: 'Pending',
+        reminder_date: dateObj.toISOString(),
+        is_pr: false
+      }])
+      .select('*')
+      .single();
+
+    await clearConversationState(lineUserId, supabaseAdmin, userProfile.id);
+
+    if (error || !insertedItem) {
+      await sendLineReply(replyToken, '❌ เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+    } else {
+      const formattedTime = `${timeStr} น.`;
+      const bubble = createItemFlexBubble(insertedItem, requestUrlOrigin);
+      await sendLineReply(replyToken, [
+        `🎉 บันทึกช่วยจำเรียบร้อยแล้วครับ!\n\n📝 **เรื่อง:** "${title}"\n🔔 **แจ้งเตือน:** ${targetDateDisplay} (เวลา ${formattedTime})`,
+        {
+          type: 'flex',
+          altText: `📝 บันทึกช่วยจำ "${title}"`,
+          contents: bubble
+        }
+      ]);
     }
   } else if (action === 'cancel_edit') {
     await clearConversationState(lineUserId, supabaseAdmin, profile?.id);
