@@ -267,34 +267,30 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* 3. Security & Features Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+      {/* 4. Privacy & Cookie Policy Card */}
+      <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs backdrop-blur-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3.5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">
-              การแยกข้อมูลส่วนตัว (Data Isolation)
+            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+              นโยบายความเป็นส่วนตัว & คุกกี้ (Privacy & Cookies)
             </h4>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-              ปกป้องด้วย Supabase Row Level Security ข้อมูลทั้งหมดเป็นส่วนตัวของคุณเท่านั้น
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              ความโปร่งใสในการจัดเก็บข้อมูลตามมาตรฐาน PDPA พ.ศ. 2562
             </p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400 shrink-0">
-            <Bell className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100">
-              การแจ้งเตือน Realtime
-            </h4>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-              ระบบส่งแจ้งเตือนผ่าน LINE ทันทีเมื่อถึงกำหนดเวลาที่คุณบันทึกไว้
-            </p>
-          </div>
+        <div className="flex items-center gap-2">
+          <a
+            href="/privacy-policy"
+            className="w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-950/40 hover:bg-violet-100 dark:hover:bg-violet-900/50 border border-violet-200 dark:border-violet-800/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+          >
+            <span>อ่านนโยบายและสิทธิ์</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </div>
       </div>
     </div>

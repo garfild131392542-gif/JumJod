@@ -32,6 +32,8 @@ export const viewport: Viewport = {
   ],
 };
 
+import CookieConsent from "@/components/common/cookie-consent";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,6 +49,7 @@ export default function RootLayout({
           <ThemeProvider>
             <AuthProvider>
               {children}
+              <CookieConsent />
             </AuthProvider>
           </ThemeProvider>
         </QueryProvider>

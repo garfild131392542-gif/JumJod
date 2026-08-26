@@ -80,10 +80,15 @@ function LoginContent() {
               <span>Continue with Google</span>
             </button>
 
-            <div className="pt-3 border-t border-slate-800/80 text-center">
+            <div className="pt-3 border-t border-slate-800/80 text-center space-y-1">
               <p className="text-[11px] text-slate-500">
                 Secure authentication provided by Supabase OAuth.
               </p>
+              <div className="flex items-center justify-center gap-3 text-[10px] text-slate-400">
+                <a href="/privacy-policy" className="hover:text-violet-400 underline transition-colors">
+                  นโยบายความเป็นส่วนตัว & คุกกี้ (PDPA)
+                </a>
+              </div>
             </div>
           </div>
 
