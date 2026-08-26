@@ -39,53 +39,61 @@ interface ToolbarProps {
 
 const CustomToolbar = ({ label, onNavigate, onView, view }: ToolbarProps) => {
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6 p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm backdrop-blur-sm">
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => onNavigate('TODAY')}
-          className="px-4 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
-        >
-          วันนี้
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate('PREV')}
-          className="px-3.5 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
-        >
-          ก่อนหน้า
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate('NEXT')}
-          className="px-3.5 py-2.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-[0.98] transition-all cursor-pointer shadow-sm"
-        >
-          ถัดไป
-        </button>
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4 p-3 sm:p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm backdrop-blur-sm">
+      <div className="flex items-center justify-between sm:justify-start gap-2">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onNavigate('TODAY')}
+            className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-95 transition-all cursor-pointer shadow-xs"
+          >
+            วันนี้
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('PREV')}
+            className="px-2.5 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-95 transition-all cursor-pointer shadow-xs"
+            title="ก่อนหน้า"
+          >
+            ◀
+          </button>
+          <button
+            type="button"
+            onClick={() => onNavigate('NEXT')}
+            className="px-2.5 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-95 transition-all cursor-pointer shadow-xs"
+            title="ถัดไป"
+          >
+            ▶
+          </button>
+        </div>
+
+        <span className="sm:hidden text-sm font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+          {label}
+        </span>
       </div>
 
-      <span className="text-base font-extrabold text-slate-805 dark:text-slate-100 tracking-tight text-center">
+      <span className="hidden sm:block text-base font-extrabold text-slate-800 dark:text-slate-100 tracking-tight text-center">
         {label}
       </span>
 
-      <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
+      <div className="flex items-center justify-center gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
         {(['month', 'week', 'day', 'agenda'] as const).map((v) => {
           const isActive = view === v;
           let labelText = '';
           if (v === 'month') labelText = 'เดือน';
           if (v === 'week') labelText = 'สัปดาห์';
           if (v === 'day') labelText = 'วัน';
-          if (v === 'agenda') labelText = 'กิจกรรม';
+          if (v === 'agenda') labelText = 'รายการ';
 
           return (
             <button
               key={v}
               type="button"
               onClick={() => onView(v)}
-              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                 isActive
                   ? 'bg-white dark:bg-slate-900 text-violet-600 dark:text-violet-400 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-850 dark:hover:text-slate-350'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
               }`}
             >
               {labelText}
@@ -235,7 +243,7 @@ export default function CalendarPage() {
             <p className="text-xs text-slate-400">{(error as any)?.message}</p>
           </div>
         ) : (
-          <div className="p-6 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm">
+          <div className="p-2 sm:p-4 md:p-6 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm overflow-hidden flex flex-col h-[560px] md:h-[680px]">
             <BigCalendar
               localizer={localizer}
               events={events}
@@ -245,7 +253,7 @@ export default function CalendarPage() {
               onView={(view) => setCurrentView(view as any)}
               startAccessor={(event: any) => event.start as Date}
               endAccessor={(event: any) => event.end as Date}
-              style={{ height: 600 }}
+              style={{ height: '100%', width: '100%' }}
               eventPropGetter={eventStyleGetter as any}
               onSelectEvent={(event) => setSelectedEvent(event as CustomEvent)}
               components={{
@@ -265,27 +273,32 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* Detail Overlay Modal */}
+      {/* Detail Overlay Modal / Bottom Sheet */}
       {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center items-center p-0 md:p-4">
           {/* Backdrop */}
           <div 
-            className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+            className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm transition-opacity"
             onClick={() => setSelectedEvent(null)}
           />
           
           {/* Modal Container */}
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col z-10 animate-scale-up max-h-[85vh] overflow-y-auto">
+          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border-t md:border border-slate-200 dark:border-slate-800 rounded-t-[28px] md:rounded-2xl shadow-2xl p-5 md:p-6 flex flex-col z-10 animate-slide-up md:animate-scale-up max-h-[90vh] md:max-h-[85vh] overflow-y-auto">
+            {/* Drag handle on mobile */}
+            <div className="md:hidden pt-1 pb-3 flex items-center justify-center cursor-pointer" onClick={() => setSelectedEvent(null)}>
+              <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+            </div>
+
             {/* Close and Title */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800/80 mb-6 shrink-0">
-              <h2 className="text-lg font-bold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-200 bg-clip-text text-transparent">
+            <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-slate-200 dark:border-slate-800/80 mb-4 md:mb-6 shrink-0">
+              <h2 className="text-base md:text-lg font-bold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-200 bg-clip-text text-transparent">
                 รายละเอียดบันทึกช่วยจำ
               </h2>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 md:w-5 md:h-5" />
               </button>
             </div>
 
