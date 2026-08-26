@@ -170,6 +170,9 @@ export default function CalendarPage() {
   // Selected event state for detail drawer
   const [selectedEvent, setSelectedEvent] = useState<CustomEvent | null>(null);
 
+  // Selected day state for daily tasks modal
+  const [selectedDay, setSelectedDay] = useState<{ date: Date; events: CustomEvent[] } | null>(null);
+
   // Controlled calendar states
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [currentView, setCurrentView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
@@ -197,16 +200,22 @@ export default function CalendarPage() {
       const { error } = await supabase.from('items').delete().eq('id', itemId);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ['items'] });
       setSelectedEvent(null);
+      if (selectedDay) {
+        setSelectedDay({
+          ...selectedDay,
+          events: selectedDay.events.filter(e => e.item.id !== deletedId),
+        });
+      }
     },
     onError: (err: any) => {
       alert('เกิดข้อผิดพลาดในการลบรายการ: ' + (err?.message || ''));
     }
   });
 
-  // Map database items to calendar events
+  // Map database items to calendar events (using clean item.title without redundant prefix)
   const events: CustomEvent[] = [];
 
   items.forEach((item) => {
@@ -220,7 +229,7 @@ export default function CalendarPage() {
       
       events.push({
         id: `${item.id}-reminder`,
-        title: isCompleted ? `✅ สำเร็จ: ${item.title}` : `🔔 เตือน: ${item.title}`,
+        title: item.title,
         start: remDate,
         end: remEndDate,
         allDay: false,
@@ -266,6 +275,17 @@ export default function CalendarPage() {
     setIsFullscreen(!isFullscreen);
   };
 
+  const handleSelectSlot = (slotInfo: { start: Date; end: Date; action?: string }) => {
+    const dayDate = slotInfo.start;
+    const dayEvts = events.filter((e) =>
+      moment(e.start).isSame(dayDate, 'day')
+    );
+    setSelectedDay({
+      date: dayDate,
+      events: dayEvts,
+    });
+  };
+
   return (
     <div className="space-y-4 flex flex-col min-h-0 relative">
       {/* Header Panel */}
@@ -275,7 +295,7 @@ export default function CalendarPage() {
             ปฏิทินบันทึกช่วยจำ
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            วางแผนและติดตามวันแจ้งเตือนการบันทึกช่วยจำส่วนตัว
+            แตะที่วันที่หรือรายการเพื่อดูและจัดการรายการบันทึกของวันนั้นๆ
           </p>
         </div>
 
@@ -316,6 +336,8 @@ export default function CalendarPage() {
               events={events}
               date={currentDate}
               view={currentView}
+              selectable={true}
+              onSelectSlot={handleSelectSlot}
               formats={calendarFormats}
               onNavigate={(date) => setCurrentDate(date)}
               onView={(view) => setCurrentView(view as any)}
@@ -346,6 +368,130 @@ export default function CalendarPage() {
           </div>
         )}
       </div>
+
+      {/* ======================================================== */}
+      {/* DAY EVENTS LIST MODAL / BOTTOM SHEET                      */}
+      {/* ======================================================== */}
+      {selectedDay && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center items-center p-0 md:p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm transition-opacity"
+            onClick={() => setSelectedDay(null)}
+          />
+          
+          {/* Modal Container */}
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border-t md:border border-slate-200 dark:border-slate-800 rounded-t-[28px] md:rounded-2xl shadow-2xl p-5 md:p-6 flex flex-col z-10 animate-slide-up md:animate-scale-up max-h-[85vh] overflow-hidden">
+            {/* Drag handle on mobile */}
+            <div className="md:hidden pt-1 pb-3 flex items-center justify-center cursor-pointer" onClick={() => setSelectedDay(null)}>
+              <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 dark:border-slate-800/80 mb-4 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400">
+                  <CalendarIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                    รายการประจำวัน
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
+                    {moment(selectedDay.date).format('ddddที่ D MMMM YYYY')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  {selectedDay.events.length} รายการ
+                </span>
+                <button
+                  onClick={() => setSelectedDay(null)}
+                  className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Events List */}
+            <div className="space-y-3 flex-1 overflow-y-auto pr-1">
+              {selectedDay.events.length === 0 ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center gap-2 text-slate-400">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800/60 flex items-center justify-center text-slate-400">
+                    <Clock className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    ไม่มีรายการบันทึกในวันนี้
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    วันที่ {moment(selectedDay.date).format('D MMMM YYYY')} ยังไม่มีการแจ้งเตือน
+                  </p>
+                </div>
+              ) : (
+                selectedDay.events.map((evt) => {
+                  const isCompleted = evt.type === 'completed';
+                  return (
+                    <div
+                      key={evt.id}
+                      onClick={() => setSelectedEvent(evt)}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] flex items-start justify-between gap-3 shadow-xs ${
+                        isCompleted
+                          ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-800/40 hover:border-emerald-400'
+                          : 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-800/40 hover:border-amber-400'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            isCompleted 
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' 
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                          }`}>
+                            {isCompleted ? '✅ สำเร็จแล้ว' : '🔔 กำลังเตือน'}
+                          </span>
+                          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            {moment(evt.start).format('HH:mm น.')}
+                          </span>
+                        </div>
+
+                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+                          {evt.item.title}
+                        </h4>
+
+                        {evt.item.description && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5">
+                            {evt.item.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="shrink-0 flex items-center gap-1.5 self-center">
+                        <span className="text-xs text-violet-600 dark:text-violet-400 font-bold px-2 py-1 rounded-lg bg-violet-50 dark:bg-violet-950/50 border border-violet-200/60 dark:border-violet-800/60">
+                          ดูรายละเอียด
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-3.5 border-t border-slate-200 dark:border-slate-800/80 mt-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setSelectedDay(null)}
+                className="w-full py-2.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs transition-all duration-200 cursor-pointer"
+              >
+                ปิดหน้าต่าง
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* Detail Overlay Modal / Bottom Sheet                      */}
