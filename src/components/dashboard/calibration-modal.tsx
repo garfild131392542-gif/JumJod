@@ -108,28 +108,33 @@ export default function CalibrationModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[90vh] animate-scale-up">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center items-center p-0 md:p-4 bg-slate-950/60 backdrop-blur-sm">
+      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border-t md:border border-slate-200 dark:border-slate-800 rounded-t-[28px] md:rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[92vh] md:max-h-[90vh] animate-slide-up md:animate-scale-up">
+        {/* Mobile Drag Indicator Handle */}
+        <div className="md:hidden pt-3 pb-1 flex items-center justify-center cursor-pointer" onClick={onClose}>
+          <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+        </div>
+
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="px-5 py-3 md:px-6 md:py-4 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400">
-              <Scale className="w-5 h-5" />
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 shrink-0">
+              <Scale className="w-4 h-4 md:w-5 md:h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+            <div className="min-w-0">
+              <h3 className="text-sm md:text-base font-bold text-slate-800 dark:text-slate-100 truncate">
                 {calToEdit ? 'แก้ไขรอบ Calibrate เครื่องมือ' : 'เพิ่มเครื่องมือวัด / เครื่องชั่งใหม่'}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                บันทึกชื่อเครื่องมือ, วันที่ Cal ครั้งก่อน และกำหนดการส่ง Cal ครั้งถัดไป
+              <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 truncate">
+                บันทึกชื่อเครื่องมือ, วันที่ Cal และรอบถัดไป
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 

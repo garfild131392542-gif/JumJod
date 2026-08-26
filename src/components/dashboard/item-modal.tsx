@@ -201,30 +201,35 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center items-center p-0 md:p-4">
       {/* Glass backdrop overlay */}
       <div
-        className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
-      {/* Modal Box */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[90vh] text-slate-800 dark:text-slate-200">
+      {/* Modal Box / Mobile Bottom Sheet */}
+      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border-t md:border border-slate-200 dark:border-slate-800 rounded-t-[28px] md:rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[92vh] md:max-h-[90vh] text-slate-800 dark:text-slate-200 animate-slide-up md:animate-scale-up">
+        {/* Mobile Drag Indicator Handle */}
+        <div className="md:hidden pt-3 pb-1 flex items-center justify-center cursor-pointer" onClick={onClose}>
+          <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+        </div>
+
         {/* Header */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-          <h2 className="text-xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-200 bg-clip-text text-transparent">
+        <div className="px-5 py-4 md:p-6 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
+          <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-200 bg-clip-text text-transparent">
             {itemToEdit ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่'}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 md:p-6 space-y-4 md:space-y-5">
           {error && (
             <div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-950/40 border border-red-900/50 text-red-200 text-xs">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
