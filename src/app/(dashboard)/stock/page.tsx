@@ -174,23 +174,29 @@ export default function StockPage() {
         const topAlert = [...stocks].filter(s => s.quantity <= (s.min_threshold ?? 0)).sort((a, b) => a.quantity - b.quantity).slice(0, 4);
 
         return (
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            {/* Stat Cards */}
-            <div className="xl:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 sm:gap-4">
+            {/* Stat Cards - 1 Row 4 Columns */}
+            <div className="xl:col-span-2 grid grid-cols-4 gap-2 sm:gap-3">
               {[
                 { label: 'วัสดุทั้งหมด', value: totalCount, icon: '📦', color: 'from-violet-500 to-indigo-500', textColor: 'text-white', subColor: 'text-violet-100' },
-                { label: 'สถานะปกติ', value: normalItems.length, icon: '✅', color: 'from-emerald-400 to-green-500', textColor: 'text-white', subColor: 'text-emerald-100' },
+                { label: 'ปกติ', value: normalItems.length, icon: '✅', color: 'from-emerald-400 to-green-500', textColor: 'text-white', subColor: 'text-emerald-100' },
                 { label: 'ใกล้หมด', value: alertItems.length, icon: '⚠️', color: 'from-amber-400 to-orange-400', textColor: 'text-white', subColor: 'text-amber-100' },
                 { label: 'หมดแล้ว', value: emptyItems.length, icon: '❌', color: 'from-red-400 to-rose-500', textColor: 'text-white', subColor: 'text-red-100' },
               ].map((stat) => (
                 <div
                   key={stat.label}
-                  className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${stat.color} p-4 shadow-sm flex flex-col gap-1`}
+                  className={`relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br ${stat.color} p-2 sm:p-3.5 shadow-sm flex flex-col items-center sm:items-start text-center sm:text-left gap-0.5 sm:gap-1`}
                 >
-                  <span className="text-2xl">{stat.icon}</span>
-                  <span className={`text-2xl font-black ${stat.textColor}`}>{stat.value}</span>
-                  <span className={`text-[11px] font-semibold ${stat.subColor}`}>{stat.label}</span>
-                  <div className="absolute -bottom-3 -right-3 w-14 h-14 rounded-full bg-white/10" />
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-sm sm:text-xl leading-none">{stat.icon}</span>
+                  </div>
+                  <span className={`text-base sm:text-2xl font-black ${stat.textColor} tracking-tight leading-tight mt-0.5`}>
+                    {stat.value}
+                  </span>
+                  <span className={`text-[10px] sm:text-xs font-semibold ${stat.subColor} truncate w-full`}>
+                    {stat.label}
+                  </span>
+                  <div className="absolute -bottom-2 -right-2 w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-white/10 pointer-events-none" />
                 </div>
               ))}
             </div>
