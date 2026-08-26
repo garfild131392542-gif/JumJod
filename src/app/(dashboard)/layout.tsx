@@ -112,13 +112,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isMoreActive = pathname === '/calibration' || pathname === '/completed' || pathname === '/settings';
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200 font-sans antialiased selection:bg-violet-500 selection:text-white">
+    <div className="h-[100dvh] w-full flex flex-col md:flex-row overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200 font-sans antialiased selection:bg-violet-500 selection:text-white">
       
       {/* ======================================================== */}
       {/* 1. DESKTOP SIDEBAR (Visible on md: and above)             */}
       {/* ======================================================== */}
       <aside
-        className={`hidden md:flex ${sidebarOpen ? 'w-72' : 'w-20'} shrink-0 bg-white dark:bg-slate-900/40 border-r border-slate-200 dark:border-slate-800/80 backdrop-blur-md transition-all duration-300 flex-col justify-between z-20 sticky top-0 h-screen`}
+        className={`hidden md:flex ${sidebarOpen ? 'w-72' : 'w-20'} shrink-0 bg-white dark:bg-slate-900/40 border-r border-slate-200 dark:border-slate-800/80 backdrop-blur-md transition-all duration-300 flex-col justify-between z-20 h-full overflow-y-auto`}
       >
         <div>
           {/* Header Branding */}
@@ -226,9 +226,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* ======================================================== */}
-      {/* 2. MOBILE TOP APP BAR (Sticky header on mobile)          */}
+      {/* 2. MOBILE TOP APP BAR (Fixed at top of screen)           */}
       {/* ======================================================== */}
-      <header className="md:hidden sticky top-0 z-30 pt-safe backdrop-blur-xl bg-white/85 dark:bg-slate-950/85 border-b border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+      <header className="md:hidden shrink-0 z-30 pt-safe backdrop-blur-xl bg-white/90 dark:bg-slate-950/90 border-b border-slate-200/80 dark:border-slate-800/80 shadow-xs">
         <div className="px-4 py-2.5 flex items-center justify-between">
           {/* Logo & App Name */}
           <Link href="/dashboard" className="flex items-center gap-2.5 active:scale-95 transition-transform">
@@ -285,23 +285,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </header>
 
       {/* ======================================================== */}
-      {/* 3. MAIN CONTENT AREA (Responsive scroll container)       */}
+      {/* 3. MAIN CONTENT AREA (Scrolls smoothly in middle)        */}
       {/* ======================================================== */}
-      <main className="flex-1 flex flex-col min-w-0 relative">
+      <main className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden relative overscroll-contain">
         {/* Background decorative ambient glows */}
         <div className="absolute top-0 right-1/4 w-[350px] md:w-[500px] h-[350px] md:h-[500px] bg-violet-600/[0.04] dark:bg-violet-600/5 blur-[100px] md:blur-[120px] rounded-full pointer-events-none -z-10" />
         <div className="absolute bottom-0 left-1/4 w-[350px] md:w-[500px] h-[350px] md:h-[500px] bg-emerald-600/[0.04] dark:bg-emerald-600/5 blur-[100px] md:blur-[120px] rounded-full pointer-events-none -z-10" />
 
-        {/* Dynamic Padding: Extra bottom padding on mobile for Dock */}
-        <div className="flex-1 overflow-auto px-4 py-4 pb-28 md:p-8 md:pb-8 relative">
+        <div className="px-4 py-4 pb-8 md:p-8 relative">
           {children}
         </div>
       </main>
 
       {/* ======================================================== */}
-      {/* 4. MOBILE BOTTOM NAVIGATION DOCK (App-Like Tab Bar)       */}
+      {/* 4. MOBILE BOTTOM NAVIGATION DOCK (Permanently pinned)     */}
       {/* ======================================================== */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 pb-safe backdrop-blur-2xl bg-white/90 dark:bg-slate-950/90 border-t border-slate-200/90 dark:border-slate-800/90 shadow-[0_-4px_25px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_25px_rgba(0,0,0,0.4)]">
+      <nav className="md:hidden shrink-0 z-40 pb-safe backdrop-blur-2xl bg-white/95 dark:bg-slate-950/95 border-t border-slate-200/90 dark:border-slate-800/90 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_25px_rgba(0,0,0,0.4)]">
         <div className="grid grid-cols-5 items-center justify-around px-2 py-1.5">
           {mobileTabItems.map((item) => {
             const Icon = item.icon;
@@ -310,7 +309,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 relative group active:scale-95 ${
+                className={`flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 relative group active:scale-95 ${
                   isActive
                     ? 'text-violet-600 dark:text-violet-400 font-bold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -336,7 +335,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* 5th Tab: "เมนูอื่นๆ" (More / Drawer Trigger) */}
           <button
             onClick={() => setMobileDrawerOpen(true)}
-            className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-2xl transition-all duration-200 relative active:scale-95 cursor-pointer ${
+            className={`flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 relative active:scale-95 cursor-pointer ${
               isMoreActive || mobileDrawerOpen
                 ? 'text-violet-600 dark:text-violet-400 font-bold'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
