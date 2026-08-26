@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { Item, ItemStatus } from '@/lib/types';
 import { uploadItemImage } from '@/lib/supabase/storage';
-import { X, Calendar, Image as ImageIcon, FileText, AlertCircle, Loader2 } from 'lucide-react';
+import { X, Calendar, Image as ImageIcon, FileText, AlertCircle, Loader2, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 
 interface ItemModalProps {
@@ -157,6 +157,37 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
       setSubmitting(false);
     }
   });
+
+  // Delete Mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!itemToEdit) return;
+      setSubmitting(true);
+      setError(null);
+      const { error: delError } = await supabase
+        .from('items')
+        .delete()
+        .eq('id', itemToEdit.id);
+      if (delError) throw delError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      setSubmitting(false);
+      onClose();
+    },
+    onError: (err: any) => {
+      console.error('Error deleting item:', err);
+      setError(err?.message || 'เกิดข้อผิดพลาดในการลบรายการ');
+      setSubmitting(false);
+    }
+  });
+
+  const handleDelete = () => {
+    if (!itemToEdit) return;
+    if (confirm(`คุณต้องการลบรายการ "${itemToEdit.title}" ใช่หรือไม่?`)) {
+      deleteMutation.mutate();
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -344,14 +375,28 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
         </form>
 
         {/* Footer Actions */}
-        <div className="p-6 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 flex items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
-          >
-            ยกเลิก
-          </button>
+        <div className="p-6 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 flex items-center justify-between gap-3">
+          {itemToEdit ? (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={submitting}
+              className="px-4 py-2 rounded-xl text-sm font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 border border-transparent hover:border-red-200 dark:hover:border-red-900/50 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>ลบรายการ</span>
+            </button>
+          ) : (
+            <div />
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
+            >
+              ยกเลิก
+            </button>
           <button
             type="button"
             onClick={handleSubmit}
@@ -370,5 +415,6 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

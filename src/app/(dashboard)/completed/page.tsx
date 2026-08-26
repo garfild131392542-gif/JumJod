@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Item } from '@/lib/types';
 import { 
   Search, FileText, CheckCircle2, Image as ImageIcon, 
   ExternalLink, Calendar, CheckSquare, Square,
-  Clock, AlertCircle, RefreshCw, X
+  Clock, AlertCircle, RefreshCw, X, Trash2
 } from 'lucide-react';
 import Image from 'next/image';
 import moment from 'moment';
@@ -48,6 +48,37 @@ export default function CompletedItemsPage() {
     },
     enabled: !!user?.id,
   });
+
+  // Delete Mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const { error } = await supabase.from('items').delete().eq('id', itemId);
+      if (error) throw error;
+    },
+    onSuccess: (_, itemId) => {
+      const saved = localStorage.getItem('audited_items');
+      if (saved) {
+        try {
+          const audited = JSON.parse(saved);
+          delete audited[itemId];
+          localStorage.setItem('audited_items', JSON.stringify(audited));
+          setAuditedItems(audited);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      refetch();
+    },
+    onError: (err: any) => {
+      alert('เกิดข้อผิดพลาดในการลบรายการ: ' + (err?.message || ''));
+    }
+  });
+
+  const handleDelete = (item: Item) => {
+    if (confirm(`คุณต้องการลบรายการ "${item.title}" ออกจากระบบใช่หรือไม่?`)) {
+      deleteMutation.mutate(item.id);
+    }
+  };
 
   const toggleAudit = async (itemId: string) => {
     if (confirm('คุณต้องการนำรายการนี้กลับไปยังบอร์ดรายการใช่หรือไม่?')) {
@@ -155,6 +186,7 @@ export default function CompletedItemsPage() {
                   <th className="py-4 px-4">วันแจ้งเตือน</th>
                   <th className="py-4 px-4">เอกสารแนบ</th>
                   <th className="py-4 px-4 w-28 text-center">วันที่ทำสำเร็จ</th>
+                  <th className="py-4 px-4 w-16 text-center">จัดการ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-150 dark:divide-slate-850/50 text-slate-700 dark:text-slate-300">
@@ -173,6 +205,7 @@ export default function CompletedItemsPage() {
                         <button
                           onClick={() => toggleAudit(item.id)}
                           className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+                          title="นำรายการกลับไปยังบอร์ด"
                         >
                           <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                         </button>
@@ -224,6 +257,17 @@ export default function CompletedItemsPage() {
                       {/* Date completed column */}
                       <td className="py-4 px-4 text-center text-slate-500 dark:text-slate-400">
                         {moment(item.updated_at).format('DD/MM/YYYY')}
+                      </td>
+
+                      {/* Delete action column */}
+                      <td className="py-4 px-4 text-center">
+                        <button
+                          onClick={() => handleDelete(item)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-colors cursor-pointer"
+                          title="ลบรายการ"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   );

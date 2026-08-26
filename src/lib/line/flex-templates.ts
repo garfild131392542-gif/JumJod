@@ -153,16 +153,36 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
     });
   }
 
-  // 3. Edit button in LINE
+  // 2. Edit and Delete buttons
   actions.push({
-    type: 'button',
-    style: 'secondary',
-    height: 'sm',
-    action: {
-      type: 'postback',
-      label: '✍️ แก้ไขรายการ',
-      data: `action=request_edit&itemId=${item.id}`
-    }
+    type: 'box',
+    layout: 'horizontal',
+    spacing: 'sm',
+    contents: [
+      {
+        type: 'button',
+        style: 'secondary',
+        height: 'sm',
+        flex: 1,
+        action: {
+          type: 'postback',
+          label: '✍️ แก้ไข',
+          data: `action=request_edit&itemId=${item.id}`
+        }
+      },
+      {
+        type: 'button',
+        style: 'secondary',
+        color: '#dc2626',
+        height: 'sm',
+        flex: 1,
+        action: {
+          type: 'postback',
+          label: '🗑️ ลบรายการ',
+          data: `action=delete&itemId=${item.id}`
+        }
+      }
+    ]
   });
 
   // Snooze Actions if isAlert is true

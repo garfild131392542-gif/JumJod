@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { momentLocalizer, Event as CalendarEvent } from 'react-big-calendar';
 import dynamic from 'next/dynamic';
 
@@ -17,7 +17,7 @@ import { useTheme } from '@/components/providers/theme-provider';
 import { Item } from '@/lib/types';
 import { 
   X, Calendar as CalendarIcon, Clock, 
-  FileText, Image as ImageIcon, AlertCircle 
+  FileText, Image as ImageIcon, AlertCircle, Trash2
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -101,6 +101,7 @@ export default function CalendarPage() {
   const { user } = useAuth();
   const { theme } = useTheme();
   const supabase = createClient();
+  const queryClient = useQueryClient();
   
   // Selected event state for detail drawer
   const [selectedEvent, setSelectedEvent] = useState<CustomEvent | null>(null);
@@ -121,6 +122,21 @@ export default function CalendarPage() {
       return data || [];
     },
     enabled: !!user?.id,
+  });
+
+  // Delete Mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (itemId: string) => {
+      const { error } = await supabase.from('items').delete().eq('id', itemId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+      setSelectedEvent(null);
+    },
+    onError: (err: any) => {
+      alert('เกิดข้อผิดพลาดในการลบรายการ: ' + (err?.message || ''));
+    }
   });
 
   // Map database items to calendar events
@@ -354,11 +370,25 @@ export default function CalendarPage() {
               </div>
             </div>
 
-            {/* Footer Close */}
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 mt-6 shrink-0">
+            {/* Footer Actions */}
+            <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 mt-6 shrink-0 flex items-center justify-between gap-3">
               <button
+                type="button"
+                onClick={() => {
+                  if (confirm(`คุณต้องการลบรายการ "${selectedEvent.item.title}" ใช่หรือไม่?`)) {
+                    deleteMutation.mutate(selectedEvent.item.id);
+                  }
+                }}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2.5 rounded-xl font-bold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs border border-red-500/20 transition-all duration-200 cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>ลบรายการ</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setSelectedEvent(null)}
-                className="w-full py-2.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs transition-all duration-200 cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs transition-all duration-200 cursor-pointer"
               >
                 ปิดหน้าต่างรายละเอียด
               </button>
