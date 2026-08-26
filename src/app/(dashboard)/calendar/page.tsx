@@ -95,8 +95,12 @@ const CustomToolbar = ({ label, onNavigate, onView, view, onToggleFullscreen, is
           <button
             type="button"
             onClick={onToggleFullscreen}
-            className="sm:hidden p-1.5 rounded-xl border border-violet-200 dark:border-violet-800/60 bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 active:scale-90 transition-transform cursor-pointer"
-            title={isFullscreen ? 'ย่อหน้าต่าง' : 'ขยายเต็มจอ / แนวนอน'}
+            className={`sm:hidden p-1.5 rounded-xl border transition-transform active:scale-90 cursor-pointer ${
+              isFullscreen
+                ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/60'
+                : 'bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800/60'
+            }`}
+            title={isFullscreen ? 'ย่อหน้าต่างกลับ' : 'ขยายเต็มจอ'}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
@@ -141,8 +145,12 @@ const CustomToolbar = ({ label, onNavigate, onView, view, onToggleFullscreen, is
           <button
             type="button"
             onClick={onToggleFullscreen}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-violet-200 dark:border-violet-800/60 bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-900/50 text-xs font-bold transition-all cursor-pointer shadow-xs"
-            title={isFullscreen ? 'ย่อหน้าต่าง' : 'ขยายเต็มจอ'}
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-xs ${
+              isFullscreen
+                ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/60 hover:bg-red-100'
+                : 'bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800/60 hover:bg-violet-100 dark:hover:bg-violet-900/50'
+            }`}
+            title={isFullscreen ? 'ย่อหน้าต่างกลับ' : 'ขยายเต็มจอ'}
           >
             {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
             <span>{isFullscreen ? 'ย่อกลับ' : 'ขยายเต็มจอ'}</span>
@@ -166,12 +174,8 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [currentView, setCurrentView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
 
-  // Fullscreen & Landscape mode states
+  // Fullscreen state
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-  const [isLandscapeMode, setIsLandscapeMode] = useState<boolean>(false);
-
-  // Item Modal for adding directly from calendar
-  const [isItemModalOpen, setIsItemModalOpen] = useState<boolean>(false);
 
   // Fetch items using TanStack Query
   const { data: items = [], isLoading, error } = useQuery<Item[]>({
@@ -302,95 +306,10 @@ export default function CalendarPage() {
             <p className="text-xs text-slate-400">{(error as any)?.message}</p>
           </div>
         ) : (
-          <div className="p-2 sm:p-4 md:p-6 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm overflow-hidden flex flex-col h-[calc(100dvh-230px)] min-h-[480px]">
-            <BigCalendar
-              localizer={localizer}
-              events={events}
-              date={currentDate}
-              view={currentView}
-              formats={calendarFormats}
-              onNavigate={(date) => setCurrentDate(date)}
-              onView={(view) => setCurrentView(view as any)}
-              startAccessor={(event: any) => event.start as Date}
-              endAccessor={(event: any) => event.end as Date}
-              style={{ height: '100%', width: '100%' }}
-              eventPropGetter={eventStyleGetter as any}
-              onSelectEvent={(event) => setSelectedEvent(event as CustomEvent)}
-              components={{
-                toolbar: (props: any) => (
-                  <CustomToolbar 
-                    {...props} 
-                    onToggleFullscreen={toggleFullscreen} 
-                    isFullscreen={false} 
-                  />
-                ),
-              }}
-              messages={{
-                next: 'ถัดไป',
-                previous: 'ก่อนหน้า',
-                today: 'วันนี้',
-                month: 'เดือน',
-                week: 'สัปดาห์',
-                day: 'วัน',
-                agenda: 'รายการ',
-              }}
-            />
-          </div>
-        )}
-
-        {/* Floating Action Button (FAB) for adding new memo directly */}
-        <button
-          onClick={() => setIsItemModalOpen(true)}
-          className="fixed right-5 bottom-20 md:bottom-8 z-30 w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-xl shadow-indigo-600/30 flex items-center justify-center active:scale-90 transition-all cursor-pointer"
-          title="จดบันทึกช่วยจำใหม่"
-        >
-          <Plus className="w-6 h-6" />
-        </button>
-      </div>
-
-      {/* ======================================================== */}
-      {/* FULLSCREEN & LANDSCAPE VIEW OVERLAY                      */}
-      {/* ======================================================== */}
-      {isFullscreen && (
-        <div className="fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 flex flex-col p-2 sm:p-4 animate-fade-in overscroll-none">
-          {/* Fullscreen Top Control Bar */}
-          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-slate-800 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-base text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                <CalendarIcon className="w-5 h-5 text-violet-600 dark:text-violet-400" />
-                <span>ปฏิทินเต็มจอ (Fullscreen View)</span>
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Force Landscape / Wide Mode Toggle */}
-              <button
-                onClick={() => setIsLandscapeMode(!isLandscapeMode)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                  isLandscapeMode
-                    ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-600/20'
-                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:bg-slate-100'
-                }`}
-                title="สลับมุมมองแนวนอนกว้างพิเศษ"
-              >
-                <RotateCw className="w-3.5 h-3.5" />
-                <span>{isLandscapeMode ? 'แนวนอนกว้าง (เปิดอยู่)' : 'มุมมองแนวนอนกว้าง'}</span>
-              </button>
-
-              {/* Exit Fullscreen Button */}
-              <button
-                onClick={toggleFullscreen}
-                className="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
-                title="ปิดเต็มจอ"
-              >
-                <Minimize2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Fullscreen Calendar Canvas */}
-          <div className={`flex-1 min-h-0 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 sm:p-4 overflow-hidden flex flex-col ${
-            isLandscapeMode ? 'overflow-x-auto min-w-[700px]' : ''
+          <div className={`transition-all ${
+            isFullscreen 
+              ? 'fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 overflow-hidden flex flex-col h-full' 
+              : 'p-2 sm:p-4 md:p-6 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm overflow-hidden flex flex-col h-[calc(100dvh-230px)] min-h-[480px]'
           }`}>
             <BigCalendar
               localizer={localizer}
@@ -410,7 +329,7 @@ export default function CalendarPage() {
                   <CustomToolbar 
                     {...props} 
                     onToggleFullscreen={toggleFullscreen} 
-                    isFullscreen={true} 
+                    isFullscreen={isFullscreen} 
                   />
                 ),
               }}
@@ -425,26 +344,8 @@ export default function CalendarPage() {
               }}
             />
           </div>
-
-          {/* Fullscreen Floating Action Button */}
-          <button
-            onClick={() => setIsItemModalOpen(true)}
-            className="fixed right-6 bottom-6 z-30 w-14 h-14 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-2xl shadow-indigo-600/40 flex items-center justify-center active:scale-90 transition-all cursor-pointer"
-            title="จดบันทึกช่วยจำใหม่"
-          >
-            <Plus className="w-6 h-6" />
-          </button>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* Item Modal (Create/Edit Memo)                            */}
-      {/* ======================================================== */}
-      <ItemModal
-        isOpen={isItemModalOpen}
-        onClose={() => setIsItemModalOpen(false)}
-        userId={user?.id || ''}
-      />
+        )}
+      </div>
 
       {/* ======================================================== */}
       {/* Detail Overlay Modal / Bottom Sheet                      */}

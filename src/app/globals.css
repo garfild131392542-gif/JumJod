@@ -61,6 +61,53 @@ body {
   height: 100% !important;
 }
 
+/* Agenda View Scrolling & Visible Scrollbar */
+.rbc-calendar .rbc-agenda-content {
+  flex: 1 1 0% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  max-height: 100% !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #cbd5e1 transparent !important;
+}
+
+.rbc-calendar .rbc-agenda-content::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.rbc-calendar .rbc-agenda-content::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1 !important;
+  border-radius: 9999px !important;
+}
+
+.rbc-calendar .rbc-agenda-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.rbc-calendar .rbc-agenda-date-cell,
+.rbc-calendar .rbc-agenda-time-cell,
+.rbc-calendar .rbc-agenda-event-cell {
+  padding: 10px 8px !important;
+  vertical-align: middle !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  font-size: 12px !important;
+}
+
+.dark .rbc-calendar .rbc-agenda-content {
+  scrollbar-color: #475569 transparent !important;
+}
+
+.dark .rbc-calendar .rbc-agenda-content::-webkit-scrollbar-thumb {
+  background-color: #475569 !important;
+}
+
+.dark .rbc-calendar .rbc-agenda-date-cell,
+.dark .rbc-calendar .rbc-agenda-time-cell,
+.dark .rbc-calendar .rbc-agenda-event-cell {
+  border-bottom: 1px solid #1e293b !important;
+}
+
 .rbc-calendar .rbc-header {
   border-bottom: 1px solid #e2e8f0 !important;
   border-left: 1px solid #e2e8f0 !important;
