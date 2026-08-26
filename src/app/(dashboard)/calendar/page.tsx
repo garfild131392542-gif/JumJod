@@ -10,19 +10,35 @@ const BigCalendar = dynamic(
   { ssr: false }
 );
 import moment from 'moment';
+import 'moment/locale/th';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useTheme } from '@/components/providers/theme-provider';
 import { Item } from '@/lib/types';
+import ItemModal from '@/components/dashboard/item-modal';
 import { 
   X, Calendar as CalendarIcon, Clock, 
-  FileText, Image as ImageIcon, AlertCircle, Trash2
+  FileText, Image as ImageIcon, AlertCircle, Trash2,
+  Maximize2, Minimize2, RotateCw, Plus
 } from 'lucide-react';
 import Image from 'next/image';
 
+// Configure moment to use Thai locale
+moment.locale('th');
+
 // Configure localizer for React Big Calendar
 const localizer = momentLocalizer(moment);
+
+const calendarFormats = {
+  dateFormat: 'D',
+  dayFormat: (date: Date) => moment(date).format('ddd'),
+  weekdayFormat: (date: Date) => moment(date).format('ddd'),
+  monthHeaderFormat: (date: Date) => moment(date).format('MMMM YYYY'),
+  dayHeaderFormat: (date: Date) => moment(date).format('dddd D MMMM YYYY'),
+  dayRangeHeaderFormat: ({ start, end }: { start: Date; end: Date }) =>
+    `${moment(start).format('D MMMM')} - ${moment(end).format('D MMMM YYYY')}`,
+};
 
 interface CustomEvent extends CalendarEvent {
   id: string;
@@ -35,71 +51,103 @@ interface ToolbarProps {
   onNavigate: (navigate: 'PREV' | 'NEXT' | 'TODAY') => void;
   onView: (view: 'month' | 'week' | 'day' | 'agenda') => void;
   view: string;
+  onToggleFullscreen?: () => void;
+  isFullscreen?: boolean;
 }
 
-const CustomToolbar = ({ label, onNavigate, onView, view }: ToolbarProps) => {
+const CustomToolbar = ({ label, onNavigate, onView, view, onToggleFullscreen, isFullscreen }: ToolbarProps) => {
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-4 p-3 sm:p-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm backdrop-blur-sm">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 mb-3 p-2.5 sm:p-3.5 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-xs backdrop-blur-sm">
+      {/* Navigation Controls */}
       <div className="flex items-center justify-between sm:justify-start gap-2">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => onNavigate('TODAY')}
-            className="px-3 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-95 transition-all cursor-pointer shadow-xs"
+            className="px-3 py-1.5 text-xs font-extrabold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all cursor-pointer shadow-xs"
           >
             วันนี้
           </button>
           <button
             type="button"
             onClick={() => onNavigate('PREV')}
-            className="px-2.5 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-95 transition-all cursor-pointer shadow-xs"
-            title="ก่อนหน้า"
+            className="w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all cursor-pointer shadow-xs"
+            title="เดือนก่อนหน้า"
           >
             ◀
           </button>
           <button
             type="button"
             onClick={() => onNavigate('NEXT')}
-            className="px-2.5 py-1.5 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-850 active:scale-95 transition-all cursor-pointer shadow-xs"
-            title="ถัดไป"
+            className="w-8 h-8 flex items-center justify-center text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all cursor-pointer shadow-xs"
+            title="เดือนถัดไป"
           >
             ▶
           </button>
         </div>
 
-        <span className="sm:hidden text-sm font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+        <span className="sm:hidden text-sm font-extrabold text-slate-800 dark:text-slate-100 tracking-tight capitalize">
           {label}
         </span>
+
+        {/* Mobile Fullscreen Toggle Button */}
+        {onToggleFullscreen && (
+          <button
+            type="button"
+            onClick={onToggleFullscreen}
+            className="sm:hidden p-1.5 rounded-xl border border-violet-200 dark:border-violet-800/60 bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 active:scale-90 transition-transform cursor-pointer"
+            title={isFullscreen ? 'ย่อหน้าต่าง' : 'ขยายเต็มจอ / แนวนอน'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
+        )}
       </div>
 
-      <span className="hidden sm:block text-base font-extrabold text-slate-800 dark:text-slate-100 tracking-tight text-center">
+      {/* Center Month Label (Desktop) */}
+      <span className="hidden sm:block text-base font-extrabold text-slate-800 dark:text-slate-100 tracking-tight text-center capitalize">
         {label}
       </span>
 
-      <div className="flex items-center justify-center gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
-        {(['month', 'week', 'day', 'agenda'] as const).map((v) => {
-          const isActive = view === v;
-          let labelText = '';
-          if (v === 'month') labelText = 'เดือน';
-          if (v === 'week') labelText = 'สัปดาห์';
-          if (v === 'day') labelText = 'วัน';
-          if (v === 'agenda') labelText = 'รายการ';
+      {/* View Selectors & Desktop Expand Button */}
+      <div className="flex items-center justify-center sm:justify-end gap-1.5">
+        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
+          {(['month', 'week', 'day', 'agenda'] as const).map((v) => {
+            const isActive = view === v;
+            let labelText = '';
+            if (v === 'month') labelText = 'เดือน';
+            if (v === 'week') labelText = 'สัปดาห์';
+            if (v === 'day') labelText = 'วัน';
+            if (v === 'agenda') labelText = 'รายการ';
 
-          return (
-            <button
-              key={v}
-              type="button"
-              onClick={() => onView(v)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
-                isActive
-                  ? 'bg-white dark:bg-slate-900 text-violet-600 dark:text-violet-400 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-              }`}
-            >
-              {labelText}
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() => onView(v)}
+                className={`px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-white dark:bg-slate-900 text-violet-600 dark:text-violet-400 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                }`}
+              >
+                {labelText}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Desktop Expand Button */}
+        {onToggleFullscreen && (
+          <button
+            type="button"
+            onClick={onToggleFullscreen}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border border-violet-200 dark:border-violet-800/60 bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-900/50 text-xs font-bold transition-all cursor-pointer shadow-xs"
+            title={isFullscreen ? 'ย่อหน้าต่าง' : 'ขยายเต็มจอ'}
+          >
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <span>{isFullscreen ? 'ย่อกลับ' : 'ขยายเต็มจอ'}</span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -117,6 +165,13 @@ export default function CalendarPage() {
   // Controlled calendar states
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [currentView, setCurrentView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
+
+  // Fullscreen & Landscape mode states
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isLandscapeMode, setIsLandscapeMode] = useState<boolean>(false);
+
+  // Item Modal for adding directly from calendar
+  const [isItemModalOpen, setIsItemModalOpen] = useState<boolean>(false);
 
   // Fetch items using TanStack Query
   const { data: items = [], isLoading, error } = useQuery<Item[]>({
@@ -183,13 +238,13 @@ export default function CalendarPage() {
     let opacity = 1;
 
     if (event.type === 'completed') {
-      backgroundColor = isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)'; // emerald-500/10
-      textColor = isDark ? '#34d399' : '#047857'; // emerald-400 / emerald-700
-      border = isDark ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(16, 185, 129, 0.2)';
+      backgroundColor = isDark ? 'rgba(16, 185, 129, 0.18)' : 'rgba(16, 185, 129, 0.12)';
+      textColor = isDark ? '#34d399' : '#047857';
+      border = isDark ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid rgba(16, 185, 129, 0.25)';
     } else { // 'reminder'
-      backgroundColor = isDark ? 'rgba(217, 119, 6, 0.15)' : 'rgba(217, 119, 6, 0.08)'; // amber-600
-      textColor = isDark ? '#fbbf24' : '#b45309'; // amber-400 / amber-700
-      border = isDark ? '1px solid rgba(217, 119, 6, 0.3)' : '1px solid rgba(217, 119, 6, 0.2)';
+      backgroundColor = isDark ? 'rgba(217, 119, 6, 0.18)' : 'rgba(217, 119, 6, 0.12)';
+      textColor = isDark ? '#fbbf24' : '#b45309';
+      border = isDark ? '1px solid rgba(217, 119, 6, 0.35)' : '1px solid rgba(217, 119, 6, 0.25)';
     }
 
     return {
@@ -199,56 +254,61 @@ export default function CalendarPage() {
         border,
         textDecoration,
         opacity,
-        display: 'block',
-      },
+      }
     };
   };
 
-  return (
-    <div className="space-y-6 min-h-[80vh] flex flex-col">
-      {/* Header Panel */}
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-transparent dark:bg-gradient-to-r dark:from-white dark:via-slate-100 dark:to-slate-400 dark:bg-clip-text">
-          ปฏิทินบันทึกช่วยจำ & การแจ้งเตือน (Memos & Reminders Calendar)
-        </h1>
-        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-          วางแผนและติดตามวันแจ้งเตือนการบันทึกช่วยจำส่วนตัวของคุณ
-        </p>
-      </div>
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
 
-      {/* Legend / Key indicator */}
-      <div className="flex flex-wrap items-center gap-4 p-4 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm text-xs font-semibold">
-        <span className="text-slate-500 dark:text-slate-400 font-bold">สัญลักษณ์ปฏิทิน:</span>
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
-          <span className="w-2 h-2 rounded-full bg-amber-600 dark:bg-amber-400 animate-ping" />
-          <span>🔔 เตือน (กำลังดำเนินการ)</span>
+  return (
+    <div className="space-y-4 flex flex-col min-h-0 relative">
+      {/* Header Panel */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-transparent dark:bg-gradient-to-r dark:from-white dark:via-slate-100 dark:to-slate-400 dark:bg-clip-text">
+            ปฏิทินบันทึกช่วยจำ
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            วางแผนและติดตามวันแจ้งเตือนการบันทึกช่วยจำส่วนตัว
+          </p>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-ping" />
-          <span>✅ สำเร็จ (ดำเนินการแล้ว)</span>
+
+        {/* Legend / Key indicator */}
+        <div className="flex items-center gap-2 p-2 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xs backdrop-blur-sm text-[11px] font-semibold shrink-0">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-600 dark:bg-amber-400 animate-ping" />
+            <span>🔔 กำลังเตือน</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-ping" />
+            <span>✅ สำเร็จแล้ว</span>
+          </div>
         </div>
       </div>
 
       {/* Main Calendar View Container */}
-      <div className="flex-1 min-h-[550px] relative">
+      <div className="flex-1 min-h-[480px] relative">
         {isLoading ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-950/20 z-10">
+          <div className="h-[480px] flex flex-col items-center justify-center gap-3 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl">
             <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
             <span className="text-xs text-slate-400 font-semibold">กำลังโหลดข้อมูลปฏิทิน...</span>
           </div>
         ) : error ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 border border-red-900/30 bg-red-950/10 rounded-2xl gap-3">
+          <div className="h-[300px] flex flex-col items-center justify-center text-center p-6 border border-red-900/30 bg-red-950/10 rounded-2xl gap-3">
             <AlertCircle className="w-8 h-8 text-red-400" />
             <h3 className="text-sm font-bold text-red-200">เกิดข้อผิดพลาดในการโหลดปฏิทิน</h3>
             <p className="text-xs text-slate-400">{(error as any)?.message}</p>
           </div>
         ) : (
-          <div className="p-2 sm:p-4 md:p-6 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm overflow-hidden flex flex-col h-[560px] md:h-[680px]">
+          <div className="p-2 sm:p-4 md:p-6 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm overflow-hidden flex flex-col h-[calc(100dvh-230px)] min-h-[480px]">
             <BigCalendar
               localizer={localizer}
               events={events}
               date={currentDate}
               view={currentView}
+              formats={calendarFormats}
               onNavigate={(date) => setCurrentDate(date)}
               onView={(view) => setCurrentView(view as any)}
               startAccessor={(event: any) => event.start as Date}
@@ -257,7 +317,13 @@ export default function CalendarPage() {
               eventPropGetter={eventStyleGetter as any}
               onSelectEvent={(event) => setSelectedEvent(event as CustomEvent)}
               components={{
-                toolbar: CustomToolbar as any,
+                toolbar: (props: any) => (
+                  <CustomToolbar 
+                    {...props} 
+                    onToggleFullscreen={toggleFullscreen} 
+                    isFullscreen={false} 
+                  />
+                ),
               }}
               messages={{
                 next: 'ถัดไป',
@@ -266,14 +332,123 @@ export default function CalendarPage() {
                 month: 'เดือน',
                 week: 'สัปดาห์',
                 day: 'วัน',
-                agenda: 'รายละเอียดกิจกรรม',
+                agenda: 'รายการ',
               }}
             />
           </div>
         )}
+
+        {/* Floating Action Button (FAB) for adding new memo directly */}
+        <button
+          onClick={() => setIsItemModalOpen(true)}
+          className="fixed right-5 bottom-20 md:bottom-8 z-30 w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-xl shadow-indigo-600/30 flex items-center justify-center active:scale-90 transition-all cursor-pointer"
+          title="จดบันทึกช่วยจำใหม่"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
       </div>
 
-      {/* Detail Overlay Modal / Bottom Sheet */}
+      {/* ======================================================== */}
+      {/* FULLSCREEN & LANDSCAPE VIEW OVERLAY                      */}
+      {/* ======================================================== */}
+      {isFullscreen && (
+        <div className="fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 flex flex-col p-2 sm:p-4 animate-fade-in overscroll-none">
+          {/* Fullscreen Top Control Bar */}
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 dark:border-slate-800 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-base text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                <span>ปฏิทินเต็มจอ (Fullscreen View)</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Force Landscape / Wide Mode Toggle */}
+              <button
+                onClick={() => setIsLandscapeMode(!isLandscapeMode)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  isLandscapeMode
+                    ? 'bg-violet-600 text-white border-violet-600 shadow-md shadow-violet-600/20'
+                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:bg-slate-100'
+                }`}
+                title="สลับมุมมองแนวนอนกว้างพิเศษ"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+                <span>{isLandscapeMode ? 'แนวนอนกว้าง (เปิดอยู่)' : 'มุมมองแนวนอนกว้าง'}</span>
+              </button>
+
+              {/* Exit Fullscreen Button */}
+              <button
+                onClick={toggleFullscreen}
+                className="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+                title="ปิดเต็มจอ"
+              >
+                <Minimize2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Fullscreen Calendar Canvas */}
+          <div className={`flex-1 min-h-0 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 sm:p-4 overflow-hidden flex flex-col ${
+            isLandscapeMode ? 'overflow-x-auto min-w-[700px]' : ''
+          }`}>
+            <BigCalendar
+              localizer={localizer}
+              events={events}
+              date={currentDate}
+              view={currentView}
+              formats={calendarFormats}
+              onNavigate={(date) => setCurrentDate(date)}
+              onView={(view) => setCurrentView(view as any)}
+              startAccessor={(event: any) => event.start as Date}
+              endAccessor={(event: any) => event.end as Date}
+              style={{ height: '100%', width: '100%' }}
+              eventPropGetter={eventStyleGetter as any}
+              onSelectEvent={(event) => setSelectedEvent(event as CustomEvent)}
+              components={{
+                toolbar: (props: any) => (
+                  <CustomToolbar 
+                    {...props} 
+                    onToggleFullscreen={toggleFullscreen} 
+                    isFullscreen={true} 
+                  />
+                ),
+              }}
+              messages={{
+                next: 'ถัดไป',
+                previous: 'ก่อนหน้า',
+                today: 'วันนี้',
+                month: 'เดือน',
+                week: 'สัปดาห์',
+                day: 'วัน',
+                agenda: 'รายการ',
+              }}
+            />
+          </div>
+
+          {/* Fullscreen Floating Action Button */}
+          <button
+            onClick={() => setIsItemModalOpen(true)}
+            className="fixed right-6 bottom-6 z-30 w-14 h-14 rounded-full bg-gradient-to-tr from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-2xl shadow-indigo-600/40 flex items-center justify-center active:scale-90 transition-all cursor-pointer"
+            title="จดบันทึกช่วยจำใหม่"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* Item Modal (Create/Edit Memo)                            */}
+      {/* ======================================================== */}
+      <ItemModal
+        isOpen={isItemModalOpen}
+        onClose={() => setIsItemModalOpen(false)}
+        userId={user?.id || ''}
+      />
+
+      {/* ======================================================== */}
+      {/* Detail Overlay Modal / Bottom Sheet                      */}
+      {/* ======================================================== */}
       {selectedEvent && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center items-center p-0 md:p-4">
           {/* Backdrop */}
