@@ -30,31 +30,31 @@ function LoginContent() {
     : error;
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-950 px-4">
+    <div className="fixed inset-0 h-[100dvh] w-full flex items-center justify-center overflow-hidden bg-slate-950 px-4 py-4 select-none overscroll-none">
       {/* Background ambient glowing blobs */}
-      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-violet-600/10 blur-3xl" />
-      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-emerald-600/10 blur-3xl" />
+      <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-80 sm:w-96 h-80 sm:h-96 rounded-full bg-violet-600/10 blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-80 sm:w-96 h-80 sm:h-96 rounded-full bg-emerald-600/10 blur-3xl pointer-events-none" />
 
       {/* Main Container */}
-      <div className="relative w-full max-w-md z-10">
-        <div className="backdrop-blur-md bg-slate-900/60 border border-slate-800 rounded-3xl p-8 shadow-2xl transition-all duration-300 hover:shadow-violet-500/5">
+      <div className="relative w-full max-w-md z-10 my-auto">
+        <div className="backdrop-blur-md bg-slate-900/70 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl transition-all duration-300 hover:shadow-violet-500/5">
           
           {/* Logo / Branding */}
-          <div className="flex flex-col items-center text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center shadow-lg shadow-indigo-500/20 mb-4 animate-pulse">
-              <Image src="/Logo.png" alt="Logo" width={64} height={64} className="object-cover" />
+          <div className="flex flex-col items-center text-center mb-6 sm:mb-8">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center shadow-lg shadow-indigo-500/20 mb-3 sm:mb-4">
+              <Image src="/Logo.png" alt="Logo" width={64} height={64} className="object-cover" priority />
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 via-indigo-200 to-emerald-400 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 via-indigo-200 to-emerald-400 bg-clip-text text-transparent">
               จำจด • JumJod
             </h1>
-            <p className="text-sm text-slate-400 mt-2 max-w-xs">
+            <p className="text-xs sm:text-sm text-slate-400 mt-1.5 sm:mt-2 max-w-xs">
               Smart procurement tracking and memory-assistant for budget planning.
             </p>
           </div>
 
           {/* Error Message */}
           {errorMessage && (
-            <div className="mb-6 flex items-start gap-3 p-4 rounded-xl bg-red-950/40 border border-red-900/50 text-red-200 text-xs">
+            <div className="mb-5 flex items-start gap-2.5 p-3.5 rounded-xl bg-red-950/40 border border-red-900/50 text-red-200 text-xs">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
@@ -65,7 +65,7 @@ function LoginContent() {
             <button
               onClick={handleLogin}
               disabled={loading || authLoading}
-              className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl font-semibold bg-white text-slate-950 hover:bg-slate-100 transition-all duration-200 shadow-md shadow-white/5 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl font-semibold bg-white text-slate-950 hover:bg-slate-100 transition-all duration-200 shadow-md shadow-white/5 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
@@ -80,7 +80,7 @@ function LoginContent() {
               <span>Continue with Google</span>
             </button>
 
-            <div className="pt-4 border-t border-slate-800/80 text-center">
+            <div className="pt-3 border-t border-slate-800/80 text-center">
               <p className="text-[11px] text-slate-500">
                 Secure authentication provided by Supabase OAuth.
               </p>
@@ -96,9 +96,9 @@ function LoginContent() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-slate-950 px-4">
-        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-150 flex items-center justify-center shadow-lg shadow-indigo-500/20 animate-pulse">
-          <Image src="/Logo.png" alt="Logo" width={64} height={64} className="object-cover" />
+      <div className="fixed inset-0 h-[100dvh] w-full flex items-center justify-center overflow-hidden bg-slate-950 px-4">
+        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 flex items-center justify-center shadow-lg shadow-indigo-500/20 animate-pulse">
+          <Image src="/Logo.png" alt="Logo" width={64} height={64} className="object-cover" priority />
         </div>
       </div>
     }>
