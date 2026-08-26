@@ -49,7 +49,7 @@ interface CustomEvent extends CalendarEvent {
 interface ToolbarProps {
   label: string;
   onNavigate: (navigate: 'PREV' | 'NEXT' | 'TODAY') => void;
-  onView: (view: 'month' | 'week' | 'day' | 'agenda') => void;
+  onView: (view: 'month' | 'week' | 'day') => void;
   view: string;
   onToggleFullscreen?: () => void;
   isFullscreen?: boolean;
@@ -115,20 +115,19 @@ const CustomToolbar = ({ label, onNavigate, onView, view, onToggleFullscreen, is
       {/* View Selectors & Desktop Expand Button */}
       <div className="flex items-center justify-center sm:justify-end gap-1.5">
         <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0">
-          {(['month', 'week', 'day', 'agenda'] as const).map((v) => {
+          {(['month', 'week', 'day'] as const).map((v) => {
             const isActive = view === v;
             let labelText = '';
             if (v === 'month') labelText = 'เดือน';
             if (v === 'week') labelText = 'สัปดาห์';
             if (v === 'day') labelText = 'วัน';
-            if (v === 'agenda') labelText = 'รายการ';
 
             return (
               <button
                 key={v}
                 type="button"
                 onClick={() => onView(v)}
-                className={`px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
                   isActive
                     ? 'bg-white dark:bg-slate-900 text-violet-600 dark:text-violet-400 shadow-sm'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
@@ -175,7 +174,7 @@ export default function CalendarPage() {
 
   // Controlled calendar states
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
-  const [currentView, setCurrentView] = useState<'month' | 'week' | 'day' | 'agenda'>('month');
+  const [currentView, setCurrentView] = useState<'month' | 'week' | 'day'>('month');
 
   // Fullscreen state
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -336,6 +335,7 @@ export default function CalendarPage() {
               events={events}
               date={currentDate}
               view={currentView}
+              views={['month', 'week', 'day']}
               selectable={true}
               onSelectSlot={handleSelectSlot}
               formats={calendarFormats}
@@ -372,7 +372,6 @@ export default function CalendarPage() {
                 month: 'เดือน',
                 week: 'สัปดาห์',
                 day: 'วัน',
-                agenda: 'รายการ',
               }}
             />
           </div>
