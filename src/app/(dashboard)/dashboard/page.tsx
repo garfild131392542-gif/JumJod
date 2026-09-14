@@ -241,7 +241,7 @@ export default function DashboardPage() {
       {/* Header Panel */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             บันทึกช่วยจำ
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -250,7 +250,7 @@ export default function DashboardPage() {
         </div>
         <button
           onClick={handleAddItem}
-          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-sm shadow-lg shadow-indigo-600/10 active:scale-[0.98] transition-all cursor-pointer shrink-0"
+          className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white text-sm shadow-sm active:scale-[0.98] transition-all cursor-pointer shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>จดบันทึก</span>

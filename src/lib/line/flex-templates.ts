@@ -19,7 +19,7 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
           contents: [
             {
               type: 'text',
-              text: '📌 บันทึกช่วยจำ',
+              text: '📝 บันทึกช่วยจำ',
               weight: 'bold',
               size: 'xs',
               color: '#64748b',
@@ -43,7 +43,7 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
           size: 'md',
           margin: 'md',
           wrap: true,
-          color: '#1e293b'
+          color: '#0f172a'
         }
       ]
     }
@@ -55,7 +55,7 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
       type: 'text',
       text: item.description,
       size: 'xs',
-      color: '#64748b',
+      color: '#334155',
       margin: 'sm',
       wrap: true
     });
@@ -81,7 +81,7 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
               type: 'text',
               text: 'สถานะ:',
               size: 'xs',
-              color: '#94a3b8',
+              color: '#64748b',
               flex: 2
             },
             {
@@ -112,14 +112,14 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
           type: 'text',
           text: 'แจ้งเตือน:',
           size: 'xs',
-          color: '#94a3b8',
+          color: '#64748b',
           flex: 2
         },
         {
           type: 'text',
-          text: `🔔 ${dateStr} (เวลา ${timeStr} น.)`,
+          text: `${dateStr} (เวลา ${timeStr} น.)`,
           size: 'xs',
-          color: '#8b5cf6',
+          color: '#4f46e5',
           weight: 'bold',
           flex: 8
         }
@@ -147,7 +147,7 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
       color: '#10b981',
       action: {
         type: 'postback',
-        label: '✅ สำเร็จ',
+        label: 'ทำรายการเสร็จสิ้น',
         data: `action=complete&itemId=${item.id}`
       }
     });
@@ -166,19 +166,19 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
         flex: 1,
         action: {
           type: 'postback',
-          label: '✍️ แก้ไข',
+          label: 'แก้ไข',
           data: `action=request_edit&itemId=${item.id}`
         }
       },
       {
         type: 'button',
         style: 'secondary',
-        color: '#dc2626',
+        color: '#e11d48',
         height: 'sm',
         flex: 1,
         action: {
           type: 'postback',
-          label: '🗑️ ลบรายการ',
+          label: 'ลบรายการ',
           data: `action=delete&itemId=${item.id}`
         }
       }
@@ -199,7 +199,7 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
           height: 'sm',
           action: {
             type: 'postback',
-            label: '⏳ 15 น.',
+            label: '15 นาที',
             data: `action=snooze&itemId=${item.id}&minutes=15`
           }
         },
@@ -209,7 +209,7 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
           height: 'sm',
           action: {
             type: 'postback',
-            label: '⏰ 1 ชม.',
+            label: '1 ชั่วโมง',
             data: `action=snooze&itemId=${item.id}&minutes=60`
           }
         },
@@ -219,7 +219,7 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
           height: 'sm',
           action: {
             type: 'postback',
-            label: '📅 พรุ่งนี้เช้า',
+            label: 'พรุ่งนี้เช้า',
             data: `action=snooze&itemId=${item.id}&time=tomorrow_morning`
           }
         }
@@ -235,7 +235,7 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
 export function createStockFlexBubble(stock: any, op: string, qty: number | null) {
   const isAlert = stock.quantity <= (stock.min_threshold ?? 0);
   const displayName = stock.name;
-  const priorityLabel = stock.priority === 'High' ? '🔴 ด่วนมาก' : stock.priority === 'Medium' ? '🟡 ปานกลาง' : '🟢 ทั่วไป';
+  const priorityLabel = stock.priority === 'High' ? 'ด่วนมาก' : stock.priority === 'Medium' ? 'ปานกลาง' : 'ทั่วไป';
   
   const bubble: any = {
     type: 'bubble',
@@ -400,7 +400,7 @@ export function createStockFlexBubble(stock: any, op: string, qty: number | null
           height: 'sm',
           action: {
             type: 'postback',
-            label: '✅ เลือกวัสดุนี้',
+            label: 'เลือกวัสดุนี้',
             data: `action=stock_select_action&id=${stock.id}`
           }
         }
@@ -442,7 +442,7 @@ export function createStockActionMenuFlex(stock: any) {
           type: 'text',
           text: `คงเหลือปัจจุบัน: ${stock.quantity} ${stock.unit}${isAlert ? ' ⚠️ (ต่ำกว่าเกณฑ์)' : ''}`,
           size: 'xs',
-          color: isAlert ? '#ef4444' : '#64748b',
+          color: isAlert ? '#e11d48' : '#64748b',
           margin: 'xs'
         }
       ]
@@ -473,7 +473,7 @@ export function createStockActionMenuFlex(stock: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '🔻 เบิกออก',
+                label: 'เบิกออก',
                 data: `action=stock_execute&id=${stock.id}&op=SUBTRACT&qty=`
               }
             },
@@ -484,7 +484,7 @@ export function createStockActionMenuFlex(stock: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '🔺 เติมสต็อก',
+                label: 'เติมสต็อก',
                 data: `action=stock_execute&id=${stock.id}&op=ADD&qty=`
               }
             }
@@ -502,7 +502,7 @@ export function createStockActionMenuFlex(stock: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '⚙️ ปรับยอด',
+                label: 'ปรับยอด',
                 data: `action=stock_execute&id=${stock.id}&op=SET&qty=`
               }
             },
@@ -513,7 +513,7 @@ export function createStockActionMenuFlex(stock: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '📊 เช็คยอด',
+                label: 'เช็คยอด',
                 data: `action=stock_execute&id=${stock.id}&op=CHECK&qty=`
               }
             }
@@ -531,19 +531,19 @@ export function createStockActionMenuFlex(stock: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '✏️ แก้ไขข้อมูล',
+                label: 'แก้ไขข้อมูล',
                 data: `action=stock_edit_menu&id=${stock.id}`
               }
             },
             {
               type: 'button',
               style: 'secondary',
-              color: '#dc2626',
+              color: '#e11d48',
               height: 'sm',
               flex: 1,
               action: {
                 type: 'postback',
-                label: '🗑️ ลบจากคลัง',
+                label: 'ลบจากคลัง',
                 data: `action=stock_delete_confirm&id=${stock.id}`
               }
             }
@@ -608,7 +608,7 @@ export function createStockEditMenuFlex(stock: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '🏷️ แก้ชื่อวัสดุ',
+                label: 'แก้ชื่อวัสดุ',
                 data: `action=stock_request_edit&id=${stock.id}&field=name`
               }
             },
@@ -619,7 +619,7 @@ export function createStockEditMenuFlex(stock: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '📝 แก้รายละเอียด',
+                label: 'แก้รายละเอียด',
                 data: `action=stock_request_edit&id=${stock.id}&field=desc`
               }
             }
@@ -637,7 +637,7 @@ export function createStockEditMenuFlex(stock: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '🔔 เกณฑ์ขั้นต่ำ',
+                label: 'เกณฑ์ขั้นต่ำ',
                 data: `action=stock_request_edit&id=${stock.id}&field=min`
               }
             },
@@ -648,7 +648,7 @@ export function createStockEditMenuFlex(stock: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '⚡ ความสำคัญ',
+                label: 'ความสำคัญ',
                 data: `action=stock_request_edit&id=${stock.id}&field=priority`
               }
             }
@@ -667,7 +667,7 @@ export function createStockEditMenuFlex(stock: any) {
           height: 'sm',
           action: {
             type: 'postback',
-            label: '⬅️ ย้อนกลับ',
+            label: 'ย้อนกลับ',
             data: `action=stock_manage&id=${stock.id}`
           }
         }
@@ -829,7 +829,7 @@ export function createStockDashboardFlex(stocks: any[]) {
             layout: 'horizontal',
             contents: [
               { type: 'text', text: s.name, size: 'xs', color: '#334155', flex: 7, wrap: true },
-              { type: 'text', text: `${s.quantity} ${s.unit}`, size: 'xs', color: '#8b5cf6', align: 'end', flex: 3 }
+              { type: 'text', text: `${s.quantity} ${s.unit}`, size: 'xs', color: '#4f46e5', align: 'end', flex: 3 }
             ]
           }))
         ] : [])
@@ -852,7 +852,7 @@ export function createStockCreateFlexBubble(searchName: string, qty: number | nu
           text: '➕ เพิ่มวัสดุใหม่',
           weight: 'bold',
           size: 'md',
-          color: '#8b5cf6'
+          color: '#4f46e5'
         },
         {
           type: 'text',
@@ -871,7 +871,7 @@ export function createStockCreateFlexBubble(searchName: string, qty: number | nu
         {
           type: 'button',
           style: 'primary',
-          color: '#8b5cf6',
+          color: '#4f46e5',
           height: 'sm',
           action: {
             type: 'postback',
@@ -928,7 +928,7 @@ export function createModeSelectionFlex() {
               flex: 1,
               action: {
                 type: 'message',
-                label: '📌 ช่วยจำ',
+                label: 'ช่วยจำ',
                 text: 'ช่วยจำ'
               }
             },
@@ -939,7 +939,7 @@ export function createModeSelectionFlex() {
               flex: 1,
               action: {
                 type: 'message',
-                label: '📦 สต็อกวัสดุ',
+                label: 'สต็อกวัสดุ',
                 text: 'สต็อก'
               }
             }
@@ -957,7 +957,7 @@ export function createModeSelectionFlex() {
               flex: 1,
               action: {
                 type: 'message',
-                label: '📄 ติดตาม PR',
+                label: 'ติดตาม PR',
                 text: 'ติดตาม PR'
               }
             },
@@ -968,7 +968,7 @@ export function createModeSelectionFlex() {
               flex: 1,
               action: {
                 type: 'message',
-                label: '🔬 Calibrate',
+                label: 'Calibrate',
                 text: 'Calibrate'
               }
             }
@@ -1093,7 +1093,7 @@ export function createCalibrationFlexBubble(item: any, appUrl: string) {
           height: 'sm',
           action: {
             type: 'postback',
-            label: '✅ Cal แล้ว (อัปเดตรอบถัดไป)',
+            label: 'อัปเดตรอบ Cal',
             data: `action=cal_complete&itemId=${item.id}`
           }
         },
@@ -1109,19 +1109,19 @@ export function createCalibrationFlexBubble(item: any, appUrl: string) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '✍️ แก้ไข',
+                label: 'แก้ไข',
                 data: `action=request_cal_edit&itemId=${item.id}`
               }
             },
             {
               type: 'button',
               style: 'secondary',
-              color: '#dc2626',
+              color: '#e11d48',
               height: 'sm',
               flex: 1,
               action: {
                 type: 'postback',
-                label: '🗑️ ลบรายการ',
+                label: 'ลบรายการ',
                 data: `action=cal_delete&itemId=${item.id}`
               }
             }
@@ -1134,7 +1134,7 @@ export function createCalibrationFlexBubble(item: any, appUrl: string) {
           color: '#0d9488',
           action: {
             type: 'uri',
-            label: '🌐 เปิดดูบนเว็บ',
+            label: 'เปิดดูบนเว็บ',
             uri: editUrl
           }
         }
@@ -1157,7 +1157,7 @@ export function createPrFlexBubble(prItem: any, appUrl: string) {
     statusColor = '#3b82f6';
   } else if (prItem.status === 'PO Issued') {
     statusText = '📑 ออก PO แล้ว';
-    statusColor = '#8b5cf6';
+    statusColor = '#4f46e5';
   } else if (prItem.status === 'Completed') {
     statusText = '✅ เสร็จสมบูรณ์';
     statusColor = '#10b981';
@@ -1172,7 +1172,7 @@ export function createPrFlexBubble(prItem: any, appUrl: string) {
       color: '#10b981',
       action: {
         type: 'postback',
-        label: '✅ ทำรายการเสร็จสิ้น',
+        label: 'ทำรายการเสร็จสิ้น',
         data: `action=pr_complete&itemId=${prItem.id}`
       }
     });
@@ -1185,17 +1185,18 @@ export function createPrFlexBubble(prItem: any, appUrl: string) {
       height: 'sm',
       action: {
         type: 'postback',
-        label: '✍️ แก้ไขรายการ',
+        label: 'แก้ไขรายการ',
         data: `action=request_pr_edit&itemId=${prItem.id}`
       }
     },
     {
       type: 'button',
       style: 'secondary',
+      color: '#e11d48',
       height: 'sm',
       action: {
         type: 'postback',
-        label: '🗑️ ลบรายการ',
+        label: 'ลบรายการ',
         data: `action=pr_delete&itemId=${prItem.id}`
       }
     },
@@ -1203,10 +1204,10 @@ export function createPrFlexBubble(prItem: any, appUrl: string) {
       type: 'button',
       style: 'primary',
       height: 'sm',
-      color: '#6366f1',
+      color: '#4f46e5',
       action: {
         type: 'postback',
-        label: '✍️ เติมเลข PR / PO / QT',
+        label: 'เติมเลข PR / PO / QT',
         data: `action=request_pr_fill_numbers&itemId=${prItem.id}`
       }
     }
@@ -1273,7 +1274,7 @@ export function createPrFlexBubble(prItem: any, appUrl: string) {
           layout: 'horizontal',
           contents: [
             { type: 'text', text: 'เลข PR:', size: 'xs', color: '#94a3b8', flex: 3 },
-            { type: 'text', text: prItem.pr_no || '(ยังไม่ระบุ)', size: 'xs', weight: prItem.pr_no ? 'bold' : 'regular', color: prItem.pr_no ? '#8b5cf6' : '#94a3b8', flex: 7 }
+            { type: 'text', text: prItem.pr_no || '(ยังไม่ระบุ)', size: 'xs', weight: prItem.pr_no ? 'bold' : 'regular', color: prItem.pr_no ? '#4f46e5' : '#94a3b8', flex: 7 }
           ]
         },
         {
@@ -1326,7 +1327,7 @@ export function createPrFlexBubble(prItem: any, appUrl: string) {
             layout: 'horizontal',
             contents: [
               { type: 'text', text: 'ราคารวมสุทธิ:', size: 'xs', color: '#94a3b8', flex: 3 },
-              { type: 'text', text: `${Number(prItem.total_amount || 0).toLocaleString('th-TH')} บาท`, size: 'xs', weight: 'bold', color: '#8b5cf6', flex: 7 }
+              { type: 'text', text: `${Number(prItem.total_amount || 0).toLocaleString('th-TH')} บาท`, size: 'xs', weight: 'bold', color: '#4f46e5', flex: 7 }
             ]
           }
         ] : [])
@@ -1351,7 +1352,7 @@ export function createPrListMenuFlex() {
       header: {
         type: 'box',
         layout: 'vertical',
-        backgroundColor: '#8b5cf6',
+        backgroundColor: '#4f46e5',
         contents: [
           {
             type: 'text',
@@ -1377,11 +1378,11 @@ export function createPrListMenuFlex() {
           {
             type: 'button',
             style: 'primary',
-            color: '#8b5cf6',
+            color: '#4f46e5',
             height: 'sm',
             action: {
               type: 'postback',
-              label: '⏳ PR ที่กำลังติดตาม',
+              label: 'PR ที่กำลังติดตาม',
               data: 'action=view_prs&status=pending'
             }
           },
@@ -1391,7 +1392,7 @@ export function createPrListMenuFlex() {
             height: 'sm',
             action: {
               type: 'postback',
-              label: '✅ PR ที่เสร็จสมบูรณ์แล้ว',
+              label: 'PR ที่เสร็จสมบูรณ์แล้ว',
               data: 'action=view_prs&status=completed'
             }
           },
@@ -1401,7 +1402,7 @@ export function createPrListMenuFlex() {
             height: 'sm',
             action: {
               type: 'postback',
-              label: '📋 ดูรายการ PR ทั้งหมด',
+              label: 'ดูรายการ PR ทั้งหมด',
               data: 'action=view_prs&status=all'
             }
           }
@@ -1451,7 +1452,7 @@ export function createCalibrationListMenuFlex() {
             height: 'sm',
             action: {
               type: 'postback',
-              label: '⚠️ เครื่องมือใกล้ถึงกำหนด Cal',
+              label: '️ เครื่องมือใกล้ถึงกำหนด Cal',
               data: 'action=view_calibrations&status=due'
             }
           },
@@ -1461,7 +1462,7 @@ export function createCalibrationListMenuFlex() {
             height: 'sm',
             action: {
               type: 'postback',
-              label: '🔬 ดูรายการเครื่องมือทั้งหมด',
+              label: 'ดูรายการเครื่องมือทั้งหมด',
               data: 'action=view_calibrations&status=all'
             }
           }
@@ -1533,7 +1534,7 @@ export function createOcrStockConfirmationFlex(items: Array<{ name: string, quan
           margin: 'xs',
           action: {
             type: 'postback',
-            label: '➕ แอดเข้าคลัง',
+            label: 'แอดเข้าคลัง',
             data: `action=stock_create_prompt&name=${encodeURIComponent(item.name)}&qty=${item.quantity}`
           }
         }
@@ -1574,7 +1575,7 @@ export function createOcrReminderConfirmationFlex(reminder: { title: string, des
           text: '📸 สแกนบันทึกช่วยจำจากภาพ',
           weight: 'bold',
           size: 'md',
-          color: '#8b5cf6'
+          color: '#4f46e5'
         }
       ]
     },
@@ -1654,11 +1655,11 @@ export function createOcrReminderConfirmationFlex(reminder: { title: string, des
         {
           type: 'button',
           style: 'primary',
-          color: '#8b5cf6',
+          color: '#4f46e5',
           height: 'sm',
           action: {
             type: 'postback',
-            label: '✅ ตกลงบันทึก',
+            label: 'ตกลงบันทึก',
             data: 'action=confirm_ocr_reminder'
           }
         },
@@ -1668,7 +1669,7 @@ export function createOcrReminderConfirmationFlex(reminder: { title: string, des
           height: 'sm',
           action: {
             type: 'postback',
-            label: '❌ ยกเลิก',
+            label: 'ยกเลิก',
             data: 'action=cancel_ocr_reminder'
           }
         }
@@ -1692,7 +1693,7 @@ export function createPrFillNumbersMenuFlex(prItem: any) {
           text: '📑 เติมเลขเอกสาร & ราคา PR',
           weight: 'bold',
           size: 'xxs',
-          color: '#6366f1'
+          color: '#4f46e5'
         },
         {
           type: 'text',
@@ -1735,14 +1736,14 @@ export function createPrFillNumbersMenuFlex(prItem: any) {
                   flex: 5,
                   contents: [
                     { type: 'text', text: 'เลข PR', size: 'xxs', color: '#94a3b8', weight: 'bold' },
-                    { type: 'text', text: prItem.pr_no || '(ยังไม่ระบุ)', size: 'xs', weight: 'bold', color: prItem.pr_no ? '#6366f1' : '#cbd5e1', wrap: true }
+                    { type: 'text', text: prItem.pr_no || '(ยังไม่ระบุ)', size: 'xs', weight: 'bold', color: prItem.pr_no ? '#4f46e5' : '#cbd5e1', wrap: true }
                   ]
                 },
                 {
                   type: 'button',
                   style: 'primary',
                   height: 'sm',
-                  color: '#6366f1',
+                  color: '#4f46e5',
                   flex: 5,
                   action: {
                     type: 'postback',
@@ -1765,14 +1766,14 @@ export function createPrFillNumbersMenuFlex(prItem: any) {
                   flex: 5,
                   contents: [
                     { type: 'text', text: 'เลข PO', size: 'xxs', color: '#94a3b8', weight: 'bold' },
-                    { type: 'text', text: prItem.po_no || '(ยังไม่ระบุ)', size: 'xs', weight: 'bold', color: prItem.po_no ? '#8b5cf6' : '#cbd5e1', wrap: true }
+                    { type: 'text', text: prItem.po_no || '(ยังไม่ระบุ)', size: 'xs', weight: 'bold', color: prItem.po_no ? '#4f46e5' : '#cbd5e1', wrap: true }
                   ]
                 },
                 {
                   type: 'button',
                   style: 'primary',
                   height: 'sm',
-                  color: '#8b5cf6',
+                  color: '#4f46e5',
                   flex: 5,
                   action: {
                     type: 'postback',
@@ -1857,7 +1858,7 @@ export function createPrFillNumbersMenuFlex(prItem: any) {
           color: '#ef4444',
           action: {
             type: 'postback',
-            label: '✕ ปิดเมนู',
+            label: 'ปิดเมนู',
             data: 'action=cancel_edit'
           }
         }
@@ -1921,7 +1922,7 @@ export function createPrEditMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '📄 เลข PR',
+                label: 'เลข PR',
                 data: `action=request_pr_field&field=pr_no&itemId=${prItem.id}`
               }
             },
@@ -1932,7 +1933,7 @@ export function createPrEditMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '📑 เลข PO',
+                label: 'เลข PO',
                 data: `action=request_pr_field&field=po_no&itemId=${prItem.id}`
               }
             }
@@ -1950,7 +1951,7 @@ export function createPrEditMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '🏷️ เลข QT',
+                label: '️ เลข QT',
                 data: `action=request_pr_field&field=qt_no&itemId=${prItem.id}`
               }
             },
@@ -1961,7 +1962,7 @@ export function createPrEditMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '💰 ราคา & VAT',
+                label: 'ราคา & VAT',
                 data: `action=request_pr_field&field=subtotal&itemId=${prItem.id}`
               }
             }
@@ -1987,7 +1988,7 @@ export function createPrEditMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '🔄 เปลี่ยนสถานะ',
+                label: 'เปลี่ยนสถานะ',
                 data: `action=request_pr_status_menu&itemId=${prItem.id}`
               }
             },
@@ -1998,7 +1999,7 @@ export function createPrEditMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '✏️ แก้ไขหัวข้อ',
+                label: '️ แก้ไขหัวข้อ',
                 data: `action=request_pr_field&field=title&itemId=${prItem.id}`
               }
             }
@@ -2016,7 +2017,7 @@ export function createPrEditMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '📝 แก้หมายเหตุ',
+                label: 'แก้หมายเหตุ',
                 data: `action=request_pr_field&field=notes&itemId=${prItem.id}`
               }
             },
@@ -2028,7 +2029,7 @@ export function createPrEditMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '✕ ยกเลิก',
+                label: 'ยกเลิก',
                 data: 'action=cancel_edit'
               }
             }
@@ -2084,7 +2085,7 @@ export function createPrStatusMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '⏳ รอเลข PR',
+                label: 'รอเลข PR',
                 data: `action=set_pr_status&status=Pending&itemId=${prItem.id}`
               }
             },
@@ -2095,7 +2096,7 @@ export function createPrStatusMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '📄 ออก PR แล้ว',
+                label: 'ออก PR แล้ว',
                 data: `action=set_pr_status&status=PR Issued&itemId=${prItem.id}`
               }
             }
@@ -2113,7 +2114,7 @@ export function createPrStatusMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '📑 ออก PO แล้ว',
+                label: 'ออก PO แล้ว',
                 data: `action=set_pr_status&status=PO Issued&itemId=${prItem.id}`
               }
             },
@@ -2124,7 +2125,7 @@ export function createPrStatusMenuFlex(prItem: any) {
               flex: 1,
               action: {
                 type: 'postback',
-                label: '✅ เสร็จสมบูรณ์',
+                label: 'เสร็จสมบูรณ์',
                 data: `action=set_pr_status&status=Completed&itemId=${prItem.id}`
               }
             }

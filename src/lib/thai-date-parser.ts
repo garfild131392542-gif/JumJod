@@ -156,20 +156,19 @@ export function parseThaiTime(input: string): { timeStr: string; displayStr: str
   }
 
   // 3. Spoken hours: "7 โมงเช้า", "9 โมง", "บ่าย 2", "บ่าย 3 โมงครึ่ง", "2 ทุ่ม"
-  // Thai morning hours: "X โมง" / "X โมงเช้า" (X = 6..11)
-  const morningMatch = text.match(/(\d{1,2})\s*โมง(?:\s*(?:เช้า))?(?:\s*(ครึ่ง|\d{1,2}))?/);
-  if (morningMatch) {
-    let hour = parseInt(morningMatch[1], 10);
+  // Thai evening: "X โมงเย็น" (X = 4..6 -> 16..18)
+  const eveningMatch = text.match(/(\d{1,2})\s*โมงเย็น(?:\s*(ครึ่ง|\d{1,2}))?/);
+  if (eveningMatch) {
+    let rawHour = parseInt(eveningMatch[1], 10);
     let min = 0;
-    if (morningMatch[2] === 'ครึ่ง') min = 30;
-    else if (morningMatch[2]) min = parseInt(morningMatch[2], 10);
+    if (eveningMatch[2] === 'ครึ่ง') min = 30;
+    else if (eveningMatch[2]) min = parseInt(eveningMatch[2], 10);
 
-    if (hour >= 1 && hour <= 11) {
-      return {
-        timeStr: `${pad(hour)}:${pad(min)}:00`,
-        displayStr: `${pad(hour)}:${pad(min)} น.`
-      };
-    }
+    let hour = rawHour <= 6 ? rawHour + 12 : rawHour;
+    return {
+      timeStr: `${pad(hour)}:${pad(min)}:00`,
+      displayStr: `${pad(hour)}:${pad(min)} น.`
+    };
   }
 
   // Thai afternoon: "บ่าย X" / "บ่าย X โมง" (X = 1..4 -> 13..16)
@@ -187,19 +186,22 @@ export function parseThaiTime(input: string): { timeStr: string; displayStr: str
     };
   }
 
-  // Thai evening: "X โมงเย็น" (X = 4..6 -> 16..18)
-  const eveningMatch = text.match(/(\d{1,2})\s*โมงเย็น(?:\s*(ครึ่ง|\d{1,2}))?/);
-  if (eveningMatch) {
-    let rawHour = parseInt(eveningMatch[1], 10);
-    let min = 0;
-    if (eveningMatch[2] === 'ครึ่ง') min = 30;
-    else if (eveningMatch[2]) min = parseInt(eveningMatch[2], 10);
+  // Thai morning hours: "X โมง" / "X โมงเช้า" (X = 6..11)
+  if (!text.includes('บ่าย') && !text.includes('เย็น')) {
+    const morningMatch = text.match(/(\d{1,2})\s*โมง(?:\s*(?:เช้า))?(?:\s*(ครึ่ง|\d{1,2}))?/);
+    if (morningMatch) {
+      let hour = parseInt(morningMatch[1], 10);
+      let min = 0;
+      if (morningMatch[2] === 'ครึ่ง') min = 30;
+      else if (morningMatch[2]) min = parseInt(morningMatch[2], 10);
 
-    let hour = rawHour <= 6 ? rawHour + 12 : rawHour;
-    return {
-      timeStr: `${pad(hour)}:${pad(min)}:00`,
-      displayStr: `${pad(hour)}:${pad(min)} น.`
-    };
+      if (hour >= 1 && hour <= 11) {
+        return {
+          timeStr: `${pad(hour)}:${pad(min)}:00`,
+          displayStr: `${pad(hour)}:${pad(min)} น.`
+        };
+      }
+    }
   }
 
   // Thai night: "X ทุ่ม" (X = 1..5 -> 19..23)

@@ -128,7 +128,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Image src="/Logo.png" alt="Logo" width={40} height={40} className="object-cover" />
               </div>
               {sidebarOpen && (
-                <span className="font-extrabold text-lg bg-gradient-to-r from-violet-600 to-indigo-500 dark:from-violet-400 dark:to-indigo-200 bg-clip-text text-transparent truncate">
+                <span className="font-extrabold text-lg text-indigo-600 dark:text-indigo-400 truncate">
                   จำจด • JumJod
                 </span>
               )}
@@ -236,7 +236,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Image src="/Logo.png" alt="Logo" width={32} height={32} className="object-cover" />
             </div>
             <div className="flex flex-col">
-              <span className="font-black text-sm tracking-tight bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-500 dark:from-violet-400 dark:via-indigo-300 dark:to-violet-200 bg-clip-text text-transparent leading-tight">
+              <span className="font-black text-sm tracking-tight text-indigo-600 dark:text-indigo-400 leading-tight">
                 จำจด • JumJod
               </span>
               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none">
@@ -288,9 +288,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* 3. MAIN CONTENT AREA (Scrolls smoothly in middle)        */}
       {/* ======================================================== */}
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden relative overscroll-contain">
-        {/* Background decorative ambient glows */}
-        <div className="absolute top-0 right-1/4 w-[350px] md:w-[500px] h-[350px] md:h-[500px] bg-violet-600/[0.04] dark:bg-violet-600/5 blur-[100px] md:blur-[120px] rounded-full pointer-events-none -z-10" />
-        <div className="absolute bottom-0 left-1/4 w-[350px] md:w-[500px] h-[350px] md:h-[500px] bg-emerald-600/[0.04] dark:bg-emerald-600/5 blur-[100px] md:blur-[120px] rounded-full pointer-events-none -z-10" />
+
 
         <div className="px-4 py-4 pb-8 md:p-8 relative">
           {children}

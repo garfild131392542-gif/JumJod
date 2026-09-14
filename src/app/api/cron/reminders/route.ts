@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  }
 );
 
 async function sendLinePush(to: string, content: any) {
@@ -56,16 +65,32 @@ export async function GET(request: Request) {
     const appUrl = requestUrl.origin;
     let sentCount = 0;
 
+    const threeDaysLater = new Date();
+    threeDaysLater.setDate(threeDaysLater.getDate() + 3);
+    const threeDaysStr = threeDaysLater.toISOString().substring(0, 10);
+
     // ==========================================
-    // 1. Group normal user reminders by user_id to save LINE Push quota
-    // Limit to 100 items per batch to prevent RAM overflow (DoS)
+    // Fetch both reminder items and budget due items concurrently
+    // This halves the latency and prevents Gateway Timeout (504)
     // ==========================================
-    const { data: items, error } = await supabaseAdmin
-      .from('items')
-      .select('*')
-      .lte('reminder_date', now)
-      .eq('reminder_sent', false)
-      .limit(100);
+    const [remindersQuery, dueItemsQuery] = await Promise.all([
+      supabaseAdmin
+        .from('items')
+        .select('*')
+        .lte('reminder_date', now)
+        .eq('reminder_sent', false)
+        .limit(100),
+      supabaseAdmin
+        .from('items')
+        .select('*')
+        .neq('status', 'Issuing Item') // Not completed yet
+        .lte('budget_due_date', threeDaysStr)
+        .eq('due_reminder_sent', false)
+        .limit(100),
+    ]);
+
+    const { data: items, error } = remindersQuery;
+    const { data: dueItems, error: dueError } = dueItemsQuery;
 
     if (error) {
       console.error('Error fetching items for reminders:', error);
@@ -138,17 +163,6 @@ export async function GET(request: Request) {
     // ==========================================
     // 2. Group budget due date alerts by user_id
     // ==========================================
-    const threeDaysLater = new Date();
-    threeDaysLater.setDate(threeDaysLater.getDate() + 3);
-    const threeDaysStr = threeDaysLater.toISOString().substring(0, 10);
-
-    const { data: dueItems, error: dueError } = await supabaseAdmin
-      .from('items')
-      .select('*')
-      .neq('status', 'Issuing Item') // Not completed yet
-      .lte('budget_due_date', threeDaysStr)
-      .eq('due_reminder_sent', false)
-      .limit(100);
 
     if (dueError) {
       console.error('Error fetching items for budget due reminders:', dueError);

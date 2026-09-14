@@ -68,10 +68,10 @@ export function getGeminiApiKey(): string | undefined {
 }
 
 const GEMINI_CANDIDATE_MODELS = [
-  'gemini-3.7-flash',
   'gemini-3.5-flash-lite',
+  'gemini-3.6-flash',
   'gemini-2.5-flash',
-  'gemini-3.6-flash'
+  'gemini-3.7-flash'
 ];
 
 /**
@@ -496,96 +496,122 @@ export async function classifyAndParseMessageWithAI(
   const apiKey = getGeminiApiKey();
   if (apiKey) {
     try {
-      // Step 1: Classify intent
-      const intent = await classifyIntentWithAI(messageText, existingItems, apiKey);
-      console.log(`[AI Modular] Classified intent: ${intent} for message: "${messageText}"`);
+      const nowUtc = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const localDate = new Date(nowUtc.getTime() + 7 * 60 * 60 * 1000);
+      const localDateTimeStr = `${localDate.getUTCFullYear()}-${pad(localDate.getUTCMonth() + 1)}-${pad(localDate.getUTCDate())}T${pad(localDate.getUTCHours())}:${pad(localDate.getUTCMinutes())}:${pad(localDate.getUTCSeconds())}+07:00`;
+      
+      const itemsContext = existingItems.map(item => ({ id: item.id, title: item.title, description: item.description, status: item.status }));
 
-      // Dispatch to specialized parsers
-      if (intent === 'STOCK') {
-        const stockData = await parseStockMessageWithAI(messageText, apiKey);
-        return {
-          intent: 'STOCK',
-          stock_data: stockData
-        };
-      }
+      const body = {
+        contents: [{
+          parts: [{
+            text: `You are an intelligent assistant for JodJum (จำจด) - a procurement and inventory planner system.
+Today's local date and time in Thailand is ${localDateTimeStr}.
+Current user mode: ${activeMode || 'none'}.
 
-      if (intent === 'CREATE') {
-        const createData = await parseCreateMessageWithAI(messageText, apiKey);
-        return {
-          intent: 'CREATE',
-          create_data: createData
-        };
-      }
+Active Items Context:
+${JSON.stringify(itemsContext)}
 
-      if (intent === 'UPDATE') {
-        const updateResult = await parseUpdateMessageWithAI(messageText, existingItems, apiKey);
-        let itemId = updateResult.item_id;
-        if (!itemId) {
-          // Fallback to search query matching
-          const query = messageText.replace(/^(แก้ไข|แก้|edit|update)\s*/i, '').trim();
-          itemId = await findClosestItemWithAI(query, existingItems, apiKey);
+Analyze this message from the user: "${messageText}"
+
+Your task is to determine the intent and extract relevant data in a SINGLE SHOT.
+Possible intents: 'STOCK', 'CREATE', 'SEARCH', 'UPDATE', 'DELETE', 'COMPLETE', 'UNKNOWN'.
+
+If the user's message is ambiguous, lacks critical information, or doesn't match a clear action, set intent to 'UNKNOWN' and provide a polite, friendly Thai \`message\` asking for clarification.
+Example: user says "เพิ่มกระดาษ", you clarify "ต้องการเพิ่มกระดาษกี่รีมครับ?".
+Example: user says "สวัสดี", you greet back "สวัสดีครับ มีอะไรให้ผมช่วยจดไหมครับ 😊".
+
+Format the output strictly as a JSON object matching this structure:
+{
+  "intent": "STOCK" | "CREATE" | "SEARCH" | "UPDATE" | "DELETE" | "COMPLETE" | "UNKNOWN",
+  "search_query": "string (for SEARCH)",
+  "item_id": "string UUID of matched item from context (for UPDATE, DELETE, COMPLETE, SEARCH)",
+  "create_data": {
+    "title": "Clean, short title (strip keywords like 'แจ้งเตือน', 'บันทึก', etc.)",
+    "description": "string or null",
+    "reminder_date": "ISOString with +07:00 or null (parse Thai relative times e.g. ตอนบ่ายสาม -> 15:00:00. Note Thai short year like '26' means 2026 C.E.)"
+  },
+  "update_data": {
+    "title": "New title if changed",
+    "description": "New desc if changed",
+    "status": "Pending" | "Issuing Item"
+  },
+  "stock_data": {
+    "action": "ADD" | "SUBTRACT" | "SET" | "DELETE" | "CHECK" | "EDIT_NAME" | "EDIT_DESC" | "EDIT_MIN" | "EDIT_PRIORITY" | "EDIT_CATEGORY" | "CONFIRM_NEEDED",
+    "name": "Current item name in stock (strip action verbs)",
+    "quantity": number or null,
+    "unit": "string or null",
+    "category": "Laboratory" | "อุปกรณ์สำนักงาน" | null,
+    "new_name": "string or null",
+    "description": "string or null",
+    "new_min_threshold": number or null,
+    "new_priority": "High" | "Medium" | "Low" | null,
+    "confidence": number (1-100),
+    "confirm_message": "string or null (Thai question to confirm if confidence < 70)"
+  },
+  "message": "Friendly response for UNKNOWN intent, greetings, or clarifications. Keep it polite, Thai language, 'ครับ/ค่ะ'."
+}
+
+Few-shot examples:
+User: "นัดประชุมพรุ่งนี้บ่าย 2"
+Output: {"intent":"CREATE","create_data":{"title":"นัดประชุม","description":"บันทึกผ่าน LINE Bot: นัดประชุมพรุ่งนี้บ่าย 2","reminder_date":"2026-09-15T14:00:00+07:00"}}
+
+User: "เบิกแอลกอฮอล์ 2 ขวด"
+Output: {"intent":"STOCK","stock_data":{"action":"SUBTRACT","name":"แอลกอฮอล์","quantity":2,"unit":"ขวด","confidence":95}}
+
+User: "ค้นหากระดาษ"
+Output: {"intent":"SEARCH","search_query":"กระดาษ"}
+
+User: "เสร็จแล้ว b78"
+Output: {"intent":"COMPLETE","item_id":"<full_uuid_of_b78>"}
+
+User: "สวัสดีจ้า"
+Output: {"intent":"UNKNOWN","message":"สวัสดีครับ ยินดีต้อนรับสู่จำจด! มีอะไรให้ผมช่วยบันทึกหรือช่วยจำวันนี้ไหมครับ 😊"}
+
+User: "เพิ่มของ"
+Output: {"intent":"UNKNOWN","message":"ต้องการเพิ่มวัสดุอะไร จำนวนเท่าไหร่ครับ? พิมพ์บอกได้เลย เช่น 'เพิ่มปากกา 10 ด้าม' 😊"}`
+          }]
+        }],
+        generationConfig: {
+          responseMimeType: "application/json"
         }
-        return {
-          intent: 'UPDATE',
-          item_id: itemId || undefined,
-          update_data: updateResult.update_data
-        };
-      }
-
-      if (intent === 'DELETE') {
-        const query = messageText.replace(/^(ลบ|delete|ยกเลิก)\s*/i, '').trim();
-        let matched = findClosestItem(query, existingItems);
-        if (!matched) {
-          const aiMatchedId = await findClosestItemWithAI(query, existingItems, apiKey);
-          if (aiMatchedId) {
-            matched = existingItems.find(item => item.id === aiMatchedId);
-          }
-        }
-        return {
-          intent: 'DELETE',
-          item_id: matched?.id || undefined
-        };
-      }
-
-      if (intent === 'COMPLETE') {
-        const query = messageText.replace(/^(เสร็จแล้ว|สำเร็จ|complete|เสร็จ|ออกรหัส|ออกไอเทม)\s*/i, '').trim();
-        let matched = findClosestItem(query, existingItems);
-        if (!matched) {
-          const aiMatchedId = await findClosestItemWithAI(query, existingItems, apiKey);
-          if (aiMatchedId) {
-            matched = existingItems.find(item => item.id === aiMatchedId);
-          }
-        }
-        return {
-          intent: 'COMPLETE',
-          item_id: matched?.id || undefined
-        };
-      }
-
-      if (intent === 'SEARCH') {
-        const query = messageText.replace(/^(ค้นหา|หา|search|find|ดู)\s*/i, '').trim();
-        let matched = findClosestItem(query, existingItems);
-        if (!matched) {
-          const aiMatchedId = await findClosestItemWithAI(query, existingItems, apiKey);
-          if (aiMatchedId) {
-            matched = existingItems.find(item => item.id === aiMatchedId);
-          }
-        }
-        return {
-          intent: 'SEARCH',
-          search_query: matched ? matched.title : query,
-          item_id: matched ? matched.id : undefined
-        };
-      }
-
-      const fallbackMessage = await generateHelpfulFallbackResponseWithAI(messageText, existingItems, activeMode, apiKey);
-      return {
-        intent: 'UNKNOWN',
-        message: fallbackMessage
       };
 
+      const data = await fetchGeminiWithFallback(body, apiKey);
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const parsed = JSON.parse(rawText.trim()) as GeminiParsedOutput;
+      
+      console.log(`[AI Single-Shot] Parsed intent: ${parsed.intent} for message: "${messageText}"`);
+
+      // Clean up title in create_data if exists, just in case
+      if (parsed.create_data?.title) {
+        let t = parsed.create_data.title;
+        t = t.replace(/^(?:ให้แจ้งเตือน|ไม่แจ้งเตือน|ช่วยแจ้งเตือน|แจ้งเตือน|ช่วยเตือน|เตือน|บันทึก|จด|เพิ่ม)\s*/i, '').trim();
+        t = t.replace(/(?:แจ้งเตือน)?วันที่\s*\d+[\/\.\-]\d+[\/\.\-]\d+(?:\s*(?:ตอน|เวลา)?\s*\d+[\.\:]\d+\s*น\.?)?$/i, '').trim();
+        t = t.replace(/(?:\s*(?:ตอน|เวลา)?\s*\d+[\.\:]\d+\s*น\.?)$/i, '').trim();
+        t = t.replace(/^[:\-ー\s\.]+/, '').trim();
+        t = t.replace(/[:\-ー\s\.]+$/, '').trim();
+        parsed.create_data.title = t;
+      }
+
+      // Ensure item_id is not missing for actions that require it (but might not have found it in context)
+      if ((parsed.intent === 'DELETE' || parsed.intent === 'COMPLETE') && !parsed.item_id) {
+         // try local regex fallback finding if AI missed it
+         const query = messageText.replace(/^(ลบ|delete|ยกเลิก|เสร็จแล้ว|สำเร็จ|complete|เสร็จ|ออกรหัส|ออกไอเทม)\s*/i, '').trim();
+         const matched = findClosestItem(query, existingItems);
+         if (matched) parsed.item_id = matched.id;
+      }
+      
+      if (parsed.intent === 'SEARCH' && !parsed.item_id) {
+         const query = messageText.replace(/^(ค้นหา|หา|search|find|ดู)\s*/i, '').trim();
+         const matched = findClosestItem(query, existingItems);
+         if (matched) parsed.item_id = matched.id;
+      }
+
+      return parsed;
     } catch (err) {
-      console.error('[AI Modular] Error, falling back to local parser:', err);
+      console.error('[AI Single-Shot] Error, falling back to local parser:', err);
     }
   }
 

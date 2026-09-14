@@ -138,7 +138,7 @@ export default function StockPage() {
       {/* Header Panel */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             ระบบคลังวัสดุ & สต็อก (Inventory & Stock)
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -155,7 +155,7 @@ export default function StockPage() {
           </button>
           <button
             onClick={handleAddStock}
-            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-gradient-to-r from-violet-650 to-indigo-650 hover:from-violet-600 hover:to-indigo-600 text-white text-sm shadow-lg shadow-indigo-650/10 active:scale-[0.98] transition-all cursor-pointer"
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white text-sm shadow-sm active:scale-[0.98] transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>เพิ่มวัสดุ</span>
@@ -178,14 +178,14 @@ export default function StockPage() {
             {/* Stat Cards - 1 Row 4 Columns */}
             <div className="xl:col-span-2 grid grid-cols-4 gap-2 sm:gap-3">
               {[
-                { label: 'วัสดุทั้งหมด', value: totalCount, icon: '📦', color: 'from-violet-500 to-indigo-500', textColor: 'text-white', subColor: 'text-violet-100' },
-                { label: 'ปกติ', value: normalItems.length, icon: '✅', color: 'from-emerald-400 to-green-500', textColor: 'text-white', subColor: 'text-emerald-100' },
-                { label: 'ใกล้หมด', value: alertItems.length, icon: '⚠️', color: 'from-amber-400 to-orange-400', textColor: 'text-white', subColor: 'text-amber-100' },
-                { label: 'หมดแล้ว', value: emptyItems.length, icon: '❌', color: 'from-red-400 to-rose-500', textColor: 'text-white', subColor: 'text-red-100' },
-              ].map((stat) => (
+                { label: 'วัสดุทั้งหมด', value: totalCount, icon: '📦', color: 'bg-indigo-600', textColor: 'text-white', subColor: 'text-indigo-100' },
+                { label: 'ปกติ', value: normalItems.length, icon: '✅', color: 'bg-emerald-600', textColor: 'text-white', subColor: 'text-emerald-100' },
+                { label: 'ใกล้หมด', value: alertItems.length, icon: '⚠️', color: 'bg-amber-500', textColor: 'text-white', subColor: 'text-amber-100' },
+                { label: 'หมดแล้ว', value: emptyItems.length, icon: '❌', color: 'bg-rose-500', textColor: 'text-white', subColor: 'text-rose-100' },
+              ].map((stat, i) => (
                 <div
-                  key={stat.label}
-                  className={`relative overflow-hidden rounded-xl sm:rounded-2xl bg-gradient-to-br ${stat.color} p-2 sm:p-3.5 shadow-sm flex flex-col items-center sm:items-start text-center sm:text-left gap-0.5 sm:gap-1`}
+                  key={i}
+                  className={`relative overflow-hidden rounded-xl sm:rounded-2xl ${stat.color} p-2 sm:p-3.5 shadow-sm flex flex-col items-center sm:items-start text-center sm:text-left gap-0.5 sm:gap-1`}
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="text-sm sm:text-xl leading-none">{stat.icon}</span>
@@ -214,7 +214,7 @@ export default function StockPage() {
                     </div>
                     <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-500 transition-all duration-500"
+                        className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                         style={{ width: `${totalCount ? (labCount / totalCount) * 100 : 0}%` }}
                       />
                     </div>
@@ -228,7 +228,7 @@ export default function StockPage() {
                     </div>
                     <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-violet-400 to-indigo-500 transition-all duration-500"
+                        className="h-full rounded-full bg-indigo-500 transition-all duration-500"
                         style={{ width: `${totalCount ? (officeCount / totalCount) * 100 : 0}%` }}
                       />
                     </div>

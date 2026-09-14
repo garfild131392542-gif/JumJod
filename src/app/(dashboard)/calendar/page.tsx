@@ -290,7 +290,7 @@ export default function CalendarPage() {
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-transparent dark:bg-gradient-to-r dark:from-white dark:via-slate-100 dark:to-slate-400 dark:bg-clip-text">
+          <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             ปฏิทินบันทึกช่วยจำ
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
@@ -557,7 +557,7 @@ export default function CalendarPage() {
 
             {/* Close and Title */}
             <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-slate-200 dark:border-slate-800/80 mb-4 md:mb-6 shrink-0">
-              <h2 className="text-base md:text-lg font-bold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-200 bg-clip-text text-transparent">
+              <h2 className="text-base md:text-lg font-bold text-indigo-600 dark:text-indigo-400">
                 รายละเอียดบันทึกช่วยจำ
               </h2>
               <button

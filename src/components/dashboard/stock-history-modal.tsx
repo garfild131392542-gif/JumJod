@@ -69,7 +69,7 @@ export default function StockHistoryModal({ isOpen, onClose }: StockHistoryModal
               <History className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold bg-gradient-to-r from-violet-650 to-indigo-650 dark:from-violet-400 dark:to-indigo-200 bg-clip-text text-transparent">
+              <h2 className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
                 ประวัติการเบิก-จ่าย & ปรับปรุงคลัง
               </h2>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">

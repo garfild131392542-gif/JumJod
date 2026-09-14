@@ -124,7 +124,7 @@ export default function CompletedItemsPage() {
       {/* Header Panel */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-transparent dark:bg-gradient-to-r dark:from-white dark:via-slate-100 dark:to-slate-400 dark:bg-clip-text">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             ตรวจสอบรายการสำเร็จ (Completed Memos)
           </h1>
           <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">

@@ -217,7 +217,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
 
         {/* Header */}
         <div className="px-5 py-4 md:p-6 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
-          <h2 className="text-lg md:text-xl font-bold bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-200 bg-clip-text text-transparent">
+          <h2 className="text-lg md:text-xl font-bold text-indigo-600 dark:text-indigo-400">
             {itemToEdit ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่'}
           </h2>
           <button
@@ -406,7 +406,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
             type="button"
             onClick={handleSubmit}
             disabled={submitting}
-            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-indigo-600/10 active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
+            className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
           >
             {submitting ? (
               <>

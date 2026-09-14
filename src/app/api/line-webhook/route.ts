@@ -122,9 +122,6 @@ export async function POST(request: Request) {
 
       if (!replyToken || !lineUserId) continue;
 
-      // Trigger LINE typing/loading animation immediately in the background
-      showLineLoadingAnimation(lineUserId).catch(console.error);
-
       // Mark messages as read in the background
       if (markAsReadToken) {
         markLineMessagesAsRead(markAsReadToken).catch(console.error);
@@ -145,6 +142,9 @@ export async function POST(request: Request) {
       if (event.type !== 'message') {
         continue;
       }
+
+      // Trigger LINE typing/loading animation only for messages that require processing
+      showLineLoadingAnimation(lineUserId).catch(console.error);
 
       if (event.message.type === 'image') {
         try {

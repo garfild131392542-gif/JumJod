@@ -155,7 +155,7 @@ export default function CalibrationPage() {
               <Scale className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
                 ระบบติดตามรอบ Calibrate เครื่องมือ
               </h1>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">

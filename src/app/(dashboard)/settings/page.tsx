@@ -98,7 +98,7 @@ export default function SettingsPage() {
     <div className="max-w-3xl mx-auto space-y-4 sm:space-y-6 pb-8">
       {/* Header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-transparent dark:bg-gradient-to-r dark:from-white dark:via-slate-100 dark:to-slate-400 dark:bg-clip-text">
+        <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
           การตั้งค่า & บัญชีผู้ใช้
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
@@ -118,7 +118,7 @@ export default function SettingsPage() {
               className="rounded-2xl border-2 border-violet-500/20 shadow-sm shrink-0"
             />
           ) : (
-            <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
+            <div className="w-13 h-13 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
               <UserIcon className="w-6 h-6" />
             </div>
           )}
@@ -236,7 +236,7 @@ export default function SettingsPage() {
 
             {/* Code Box / Generate Button */}
             {isCodeValid ? (
-              <div className="p-3.5 bg-gradient-to-r from-violet-500/10 to-indigo-500/10 border border-violet-500/20 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="p-3.5 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <span className="text-[10px] uppercase font-extrabold text-violet-600 dark:text-violet-400 tracking-wider block">
                     รหัสเชื่อมต่อ (พิมพ์ส่งให้บอทใน LINE):
@@ -247,7 +247,7 @@ export default function SettingsPage() {
                 </div>
                 <button
                   onClick={() => copyToClipboard(`#link ${profile.link_code}`)}
-                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-md shadow-indigo-600/20"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-sm"
                 >
                   {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   <span>{copied ? 'คัดลอกเรียบร้อย!' : 'คัดลอกข้อความ'}</span>
@@ -257,7 +257,7 @@ export default function SettingsPage() {
               <button
                 onClick={() => generateLinkCodeMutation.mutate()}
                 disabled={generateLinkCodeMutation.isPending}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all cursor-pointer active:scale-95 disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${generateLinkCodeMutation.isPending ? 'animate-spin' : ''}`} />
                 <span>{generateLinkCodeMutation.isPending ? 'กำลังสร้างรหัส...' : 'รับรหัสเชื่อมต่อ LINE'}</span>
