@@ -129,6 +129,7 @@ export async function POST(request: Request) {
 
       // A. Postback Event handling
       if (event.type === 'postback') {
+        showLineLoadingAnimation(lineUserId).catch(console.error);
         try {
           const requestUrl = new URL(request.url);
           await handlePostbackEvent(event, supabaseAdmin, requestUrl.origin);
