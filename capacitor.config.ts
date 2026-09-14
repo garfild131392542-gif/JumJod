@@ -1,4 +1,4 @@
-﻿import { CapacitorConfig } from '@capacitor/cli';
+import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.jumjod.app',
@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'public',
   bundledWebRuntime: false,
   server: {
-    url: 'https://your-vercel-domain.com', // เปลี่ยนเป็น URL จริงของ Vercel
+    url: 'https://jum-jod.vercel.app',
     cleartext: true
   }
 };
