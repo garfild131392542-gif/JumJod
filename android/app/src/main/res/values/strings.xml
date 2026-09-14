@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">JumJod</string>
+    <string name="title_activity_main">JumJod</string>
+    <string name="package_name">com.jumjod.app</string>
+    <string name="custom_url_scheme">com.jumjod.app</string>
+</resources>
