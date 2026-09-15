@@ -29,12 +29,7 @@ export async function handleCentralRouting(
 
     // If AI decided it's just a conversation
     if (aiResult.is_conversation) {
-      if (aiResult.reply_message) {
-        await sendLineReply(replyToken, aiResult.reply_message);
-      } else {
-        await sendLineReply(replyToken, 'สวัสดีครับ มีอะไรให้ผมช่วยจำหรือจัดการไหมครับ?');
-      }
-      return true;
+      return false;
     }
 
     // If it's a database command

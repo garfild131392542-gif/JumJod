@@ -261,6 +261,14 @@ export async function POST(request: Request) {
 
       const userState = await getConversationState(lineUserId, profile, supabaseAdmin);
 
+      // Allow central routing only if user is NOT in a conversation state
+      if (!userState && event.message.type === 'text') {
+        const { handleCentralRouting } = await import('@/lib/line/handlers/central-router');
+        const handled = await handleCentralRouting(messageText, replyToken, lineUserId, profile, supabaseAdmin);
+        if (handled) continue;
+      }
+
+
       // Global cancellation for any active conversation state
       if (userState) {
         const cancelKeywords = /^(ยกเลิก|cancel|ออก|ไม่|หยุด|ปิด|back|กลับ|ยกเลิกการทำรายการ)$/i;

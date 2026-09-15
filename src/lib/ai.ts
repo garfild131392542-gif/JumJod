@@ -1,4 +1,24 @@
-﻿import { ItemStatus } from './types';
+
+function safeJsonParse(text: string): any {
+  try {
+    const clean = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    return JSON.parse(clean);
+  } catch (e) {
+    console.error('safeJsonParse error on:', text);
+    throw e;
+  }
+}
+
+﻿function safeJsonParse(text: string): any {
+  try {
+    const clean = text.replace(/^`(?:json)?\s*/i, '').replace(/\s*`$/i, '').trim();
+    return JSON.parse(clean);
+  } catch (e) {
+    console.error("safeJsonParse error on:", text);
+    throw e;
+  }
+}
+import { ItemStatus } from './types';
 
 export interface ParsedProcurementData {
   title: string;
@@ -138,7 +158,7 @@ Format the output strictly as a JSON object:
 
   const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  const parsed = JSON.parse(rawText.trim());
+  const parsed = safeJsonParse(rawText);
   return parsed.intent;
 }
 
@@ -179,7 +199,7 @@ Extract the following fields and format strictly as JSON:
 
   const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  const parsed = JSON.parse(rawText.trim()) as ParsedProcurementData;
+  const parsed = safeJsonParse(rawText) as ParsedProcurementData;
 
   // Clean title prefix and suffix just in case Gemini missed it
   if (parsed.title) {
@@ -232,7 +252,7 @@ Format output strictly as JSON:
 
   const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  const parsed = JSON.parse(rawText.trim());
+  const parsed = safeJsonParse(rawText);
 
   if (parsed.update_data && parsed.update_data.title) {
     parsed.update_data.title = parsed.update_data.title.replace(/^(?:เนเธซเนเนเธเนเธเน€เธ•เธทเธญเธ|เนเธกเนเนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเนเธเนเธเน€เธ•เธทเธญเธ|เนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเน€เธ•เธทเธญเธ|เน€เธ•เธทเธญเธ|เธเธฑเธเธ—เธถเธ|เธเธ”|เน€เธเธดเนเธก)\s*/i, '').trim();
@@ -310,7 +330,7 @@ IMPORTANT RULES:
 
   const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  const parsed = JSON.parse(rawText.trim());
+  const parsed = safeJsonParse(rawText);
 
   // Clean stock name
   if (parsed.name) {
@@ -358,7 +378,7 @@ Return the UUID of the closest matching item as a JSON object. Do NOT guess if t
   try {
     const data = await fetchGeminiWithFallback(body, apiKey);
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const parsed = JSON.parse(rawText.trim());
+    const parsed = safeJsonParse(rawText);
     return parsed.item_id || null;
   } catch (err) {
     console.error('findClosestItemWithAI error:', err);
@@ -580,7 +600,7 @@ Output: {"intent":"UNKNOWN","message":"เธ•เนเธญเธเธ�
 
       const data = await fetchGeminiWithFallback(body, apiKey);
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const parsed = JSON.parse(rawText.trim()) as GeminiParsedOutput;
+      const parsed = safeJsonParse(rawText) as GeminiParsedOutput;
       
       console.log(`[AI Single-Shot] Parsed intent: ${parsed.intent} for message: "${messageText}"`);
 
@@ -882,7 +902,7 @@ Format the output strictly as JSON with the following structure (include only fi
 
   const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  const parsed = JSON.parse(rawText.trim());
+  const parsed = safeJsonParse(rawText);
 
   if (parsed.title) {
     parsed.title = parsed.title.replace(/^(?:เนเธซเนเนเธเนเธเน€เธ•เธทเธญเธ|เนเธกเนเนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเนเธเนเธเน€เธ•เธทเธญเธ|เนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเน€เธ•เธทเธญเธ|เน€เธ•เธทเธญเธ|เธเธฑเธเธ—เธถเธ|เธเธ”|เน€เธเธดเนเธก|เนเธเนเธเธทเนเธญเน€เธเนเธ|เน€เธเธฅเธตเนเธขเธเธเธทเนเธญเน€เธเนเธ|เนเธเนเธเธทเนเธญ|เน€เธเธฅเธตเนเธขเธเธเธทเนเธญ|เนเธเน|เน€เธเธฅเธตเนเธขเธ)\s*/i, '').trim();
@@ -965,7 +985,7 @@ Format the response strictly as JSON with the following structure:
 
   const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return JSON.parse(rawText.trim());
+  return safeJsonParse(rawText);
 }
 
 
@@ -1009,9 +1029,7 @@ ${boardsContext}
 
 INSTRUCTIONS:
 1. Determine if the user is just chatting/greeting, or if they want to perform a database operation (add, check, update, delete).
-2. If it is a conversation or unclear, set "is_conversation" to true, and provide a helpful, friendly, natural Thai response in "reply_message". (e.g., "@
-@@@
-@ @@@@@ @@@@@@@@@@@@@@@@@@@ @@@@@@@@ @@@@@@@@@"). Do not ask them to select a mode, just ask what they want to record.
+2. If it is a conversation or unclear, set "is_conversation" to true, and provide a helpful, friendly, natural Thai response in "reply_message". (e.g., "รับทราบครับ มีอะไรให้ผมช่วยบันทึกหรือเช็คสต็อกบอกได้เลยนะครับ"). Do not ask them to select a mode, just ask what they want to record.
 3. If it is a database command, set "is_conversation" to false.
 4. Determine WHICH board the user wants to interact with based on the context of their message and the board names/types.
 5. Determine the ACTION: 'ADD', 'UPDATE', 'DELETE', 'SEARCH', 'COMPLETE', 'CHECK_STOCK', 'SUBTRACT_STOCK', 'ADD_STOCK', 'LIST_ALL'.
@@ -1045,6 +1063,7 @@ Format output EXACTLY as this JSON structure:
 
   const data = await fetchGeminiWithFallback(body, apiKey);
   const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  return JSON.parse(rawText.trim());
+  return safeJsonParse(rawText);
 }
+
 
