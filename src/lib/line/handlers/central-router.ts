@@ -119,6 +119,16 @@ export async function handleCentralRouting(
 
     // Handle KANBAN
     if (targetBoard.type === 'KANBAN') {
+      if (cmd.action === 'LIST_ALL') {
+         const { data: allPrs } = await supabaseAdmin.from('pr_requests').select('*').eq('board_id', targetBoard.id).order('created_at', { ascending: false });
+         if (!allPrs || allPrs.length === 0) {
+            await sendLineReply(replyToken, `📋 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
+         } else {
+            const listStr = allPrs.map((s) => `- ${s.title} [${s.status}]`).join('\n');
+            await sendLineReply(replyToken, `📋 รายการทั้งหมดใน ${targetBoard.name}:\n${listStr}`);
+         }
+         return true;
+      }
       const title = cmd.fields.title || cmd.target_item_name;
       if (cmd.action === 'ADD') {
         await supabaseAdmin.from('pr_requests').insert([{
@@ -140,6 +150,16 @@ export async function handleCentralRouting(
 
     // Handle DATE_TRACKER
     if (targetBoard.type === 'DATE_TRACKER') {
+      if (cmd.action === 'LIST_ALL') {
+         const { data: allDates } = await supabaseAdmin.from('lab_calibrations').select('*').eq('board_id', targetBoard.id).order('next_due_date', { ascending: true });
+         if (!allDates || allDates.length === 0) {
+            await sendLineReply(replyToken, `📅 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
+         } else {
+            const listStr = allDates.map((s) => `- ${s.equipment_name} ${s.next_due_date ? '(' + s.next_due_date + ')' : ''}`).join('\n');
+            await sendLineReply(replyToken, `📅 รายการทั้งหมดใน ${targetBoard.name}:\n${listStr}`);
+         }
+         return true;
+      }
       const title = cmd.fields.title || cmd.target_item_name;
       if (cmd.action === 'ADD') {
         await supabaseAdmin.from('lab_calibrations').insert([{
@@ -156,6 +176,16 @@ export async function handleCentralRouting(
 
     // Handle GENERAL_LIST
     if (targetBoard.type === 'GENERAL_LIST') {
+      if (cmd.action === 'LIST_ALL') {
+         const { data: allItems } = await supabaseAdmin.from('items').select('*').eq('board_id', targetBoard.id).order('created_at', { ascending: false });
+         if (!allItems || allItems.length === 0) {
+            await sendLineReply(replyToken, `📝 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
+         } else {
+            const listStr = allItems.map((s) => `- ${s.title} [${s.status}]`).join('\n');
+            await sendLineReply(replyToken, `📝 รายการทั้งหมดใน ${targetBoard.name}:\n${listStr}`);
+         }
+         return true;
+      }
       const title = cmd.fields.title || cmd.target_item_name;
       if (cmd.action === 'ADD') {
         const firstDayOfMonth = new Date();
