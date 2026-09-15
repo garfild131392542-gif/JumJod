@@ -645,7 +645,7 @@ export async function handlePostbackEvent(
     }
 
     const page = parseInt(params.get('page') || '1', 10);
-    const limit = 10;
+    const limit = 9;
     const offset = (page - 1) * limit;
 
     let query = supabaseAdmin.from('items').select('*').eq('user_id', userProfile.id);
@@ -1022,7 +1022,7 @@ export async function handlePostbackEvent(
     const page = parseInt(params.get('page') || '1', 10);
     if (!boardId) return;
 
-    const limit = 10;
+    const limit = 9;
     const offset = (page - 1) * limit;
 
     const { data: boardData } = await supabaseAdmin.from('boards').select('type').eq('id', boardId).single();
@@ -1067,6 +1067,40 @@ export async function handlePostbackEvent(
     await sendLineReply(replyToken, [{
       type: 'flex',
       altText: 'รายการทั้งหมด (หน้า ' + page + ')',
+      contents: { type: 'carousel', contents: bubbles }
+    }]);
+  } else if (action === 'view_items_mode') {
+    const mode = params.get('mode');
+    const page = parseInt(params.get('page') || '1', 10);
+    const userProfile = profile || await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
+    if (!userProfile) return;
+
+    const limit = 9;
+    const offset = (page - 1) * limit;
+    let hasNextPage = false;
+    let bubbles: any[] = [];
+    const { createStockFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
+
+    if (mode === 'stock') {
+      const { data } = await supabaseAdmin.from('stocks').select('*').eq('user_id', userProfile.id).order('name').range(offset, offset + limit);
+      const list = data || [];
+      hasNextPage = list.length > limit;
+      bubbles = list.slice(0, limit).map(i => createStockFlexBubble(i, 'CHECK', null));
+    }
+    // (other modes can be added here if needed)
+
+    if (bubbles.length === 0) {
+      await sendLineReply(replyToken, `📋 ไม่มีรายการในหน้านี้ครับ`);
+      return;
+    }
+
+    if (hasNextPage) {
+      bubbles.push(createNextPageBubble(`action=view_items_mode&mode=${mode}&page=${page + 1}`));
+    }
+
+    await sendLineReply(replyToken, [{
+      type: 'flex',
+      altText: `รายการทั้งหมด (หน้า ${page})`,
       contents: { type: 'carousel', contents: bubbles }
     }]);
   } else {

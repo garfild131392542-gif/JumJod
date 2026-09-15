@@ -27,8 +27,8 @@ export class StockModeController {
       }
 
       const { createNextPageBubble } = await import('@/lib/line/flex-templates');
-      const bubbles: any[] = stocks.slice(0, 10).map(stock => createStockFlexBubble(stock, 'CHECK', null));
-      if (stocks.length > 10) {
+      const bubbles: any[] = stocks.slice(0, 9).map(stock => createStockFlexBubble(stock, 'CHECK', null));
+      if (stocks.length > 9) {
         bubbles.push(createNextPageBubble(`action=view_items_mode&mode=stock&page=2`));
       }
       

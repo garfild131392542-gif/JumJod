@@ -71,8 +71,8 @@ export async function handleCentralRouting(
              await sendLineReply(replyToken, '📦 บอร์ด ' + targetBoard.name + ' ยังไม่มีรายการสินค้าครับ');
           } else {
              const { createStockFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
-             const bubbles: any[] = allStocks.slice(0, 10).map(item => createStockFlexBubble(item, 'view', null));
-             if (allStocks.length > 10) {
+             const bubbles: any[] = allStocks.slice(0, 9).map(item => createStockFlexBubble(item, 'view', null));
+             if (allStocks.length > 9) {
                  bubbles.push(createNextPageBubble(`action=view_board_page&boardId=${targetBoard.id}&page=2`));
              }
              await sendLineReply(replyToken, [{
@@ -151,8 +151,8 @@ export async function handleCentralRouting(
               await sendLineReply(replyToken, `📋 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
            } else {
               const { createPrFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
-              const bubbles: any[] = allPrs.slice(0, 10).map(item => createPrFlexBubble(item, ''));
-              if (allPrs.length > 10) {
+              const bubbles: any[] = allPrs.slice(0, 9).map(item => createPrFlexBubble(item, ''));
+              if (allPrs.length > 9) {
                  bubbles.push(createNextPageBubble(`action=view_board_page&boardId=${targetBoard.id}&page=2`));
               }
               await sendLineReply(replyToken, [{
@@ -190,8 +190,8 @@ export async function handleCentralRouting(
               await sendLineReply(replyToken, `📅 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
            } else {
               const { createCalibrationFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
-              const bubbles: any[] = allDates.slice(0, 10).map(item => createCalibrationFlexBubble(item, ''));
-              if (allDates.length > 10) {
+              const bubbles: any[] = allDates.slice(0, 9).map(item => createCalibrationFlexBubble(item, ''));
+              if (allDates.length > 9) {
                  bubbles.push(createNextPageBubble(`action=view_board_page&boardId=${targetBoard.id}&page=2`));
               }
               await sendLineReply(replyToken, [{
@@ -224,8 +224,8 @@ export async function handleCentralRouting(
               await sendLineReply(replyToken, `📝 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
            } else {
               const { createItemFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
-              const bubbles: any[] = allItems.slice(0, 10).map(item => createItemFlexBubble(item, ''));
-              if (allItems.length > 10) {
+              const bubbles: any[] = allItems.slice(0, 9).map(item => createItemFlexBubble(item, ''));
+              if (allItems.length > 9) {
                  bubbles.push(createNextPageBubble(`action=view_board_page&boardId=${targetBoard.id}&page=2`));
               }
               await sendLineReply(replyToken, [{
