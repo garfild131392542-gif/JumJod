@@ -1,169 +1,127 @@
 export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean = false) {
   const shortId = item.id.substring(item.id.length - 3);
-  const isCompleted = item.status === 'Issuing Item'; // Assuming this means completed based on previous logic
-
-  // Format dates
-  let reminderSection = null;
-  if (item.reminder_date) {
-    const dateObj = new Date(item.reminder_date);
-    const dateStr = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' });
-    const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
-    
-    reminderSection = {
-      type: 'box',
-      layout: 'horizontal',
-      spacing: 'sm',
-      margin: 'md',
-      contents: [
-        {
-          type: 'text',
-          text: '•',
-          size: 'xs',
-          color: '#8A7A61',
-          flex: 0
-        },
-        {
-          type: 'text',
-          text: `${dateStr} ${timeStr} น.`,
-          size: 'sm',
-          weight: 'bold',
-          color: '#5C4A3D',
-          flex: 0
-        },
-        {
-          type: 'text',
-          text: '· เตือน',
-          size: 'sm',
-          color: '#D9534F',
-          weight: 'bold',
-          flex: 0
-        }
-      ]
-    };
-  }
-
-  // Tape at top
-  const tape = {
-    type: 'box',
-    layout: 'vertical',
-    contents: [
-      {
-        type: 'text',
-        text: 'จดแล้ว',
-        size: 'xxs',
-        color: '#766752',
-        weight: 'bold',
-        align: 'center'
-      }
-    ],
-    backgroundColor: '#E5D6A7', // Light yellow tape
-    paddingAll: '4px',
-    paddingStart: '12px',
-    paddingEnd: '12px',
-    position: 'absolute',
-    offsetTop: '12px',
-    offsetStart: '120px',
-    cornerRadius: 'sm',
-    style: 'border'
-  };
+  const editUrl = `${appUrl}/dashboard?edit=${item.id}`;
+  
+  // Determine Status text and badge color
+  let statusText = item.status === 'Pending' ? 'กำลังดำเนินการ' : 'สำเร็จ';
+  let statusColor = item.status === 'Pending' ? '#f59e0b' : '#10b981';
 
   const bubble: any = {
     type: 'bubble',
     size: 'mega',
-    styles: {
-      body: {
-        backgroundColor: '#F3E8D5' // Warm paper background
-      },
-      footer: {
-        backgroundColor: '#F3E8D5'
-      }
-    },
     body: {
       type: 'box',
       layout: 'vertical',
-      paddingAll: '24px',
       contents: [
-        tape,
         {
           type: 'box',
           layout: 'horizontal',
-          margin: 'xl',
           contents: [
             {
               type: 'text',
-              text: '✏️',
-              size: 'xl',
-              flex: 0
+              text: '📝 บันทึกช่วยจำ',
+              weight: 'bold',
+              size: 'xs',
+              color: '#64748b',
+              flex: 1
             },
             {
               type: 'text',
-              text: 'จำจด',
+              text: `#${shortId}`,
               weight: 'bold',
-              size: 'lg',
-              color: '#B68B40',
+              size: 'xs',
+              color: '#94a3b8',
               align: 'end',
-              decoration: 'underline'
+              flex: 0
             }
           ]
         },
         {
           type: 'text',
-          text: 'งาน',
-          size: 'xs',
-          color: '#8A7A61',
+          text: item.title,
           weight: 'bold',
-          margin: 'lg'
-        },
-        {
-          type: 'box',
-          layout: 'vertical',
-          backgroundColor: '#FFFFFF',
-          cornerRadius: 'md',
-          paddingAll: '12px',
-          margin: 'sm',
-          contents: [
-            {
-              type: 'text',
-              text: item.title,
-              weight: 'bold',
-              size: 'md',
-              wrap: true,
-              color: '#3B3024'
-            }
-          ]
+          size: 'md',
+          margin: 'md',
+          wrap: true,
+          color: '#0f172a'
         }
       ]
     }
   };
 
+  // Add description if exists
   if (item.description) {
     bubble.body.contents.push({
       type: 'text',
       text: item.description,
       size: 'xs',
-      color: '#8A7A61',
+      color: '#334155',
       margin: 'sm',
       wrap: true
     });
   }
 
-  if (reminderSection) {
-    bubble.body.contents.push(reminderSection);
-  }
-  
-  if (isCompleted) {
-    bubble.body.contents.push({
+  // Separator & Status Info
+  bubble.body.contents.push(
+    {
+      type: 'separator',
+      margin: 'md'
+    },
+    {
       type: 'box',
       layout: 'vertical',
       margin: 'md',
+      spacing: 'sm',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          contents: [
+            {
+              type: 'text',
+              text: 'สถานะ:',
+              size: 'xs',
+              color: '#64748b',
+              flex: 2
+            },
+            {
+              type: 'text',
+              text: statusText,
+              size: 'xs',
+              weight: 'bold',
+              color: statusColor,
+              flex: 8,
+              wrap: true
+            }
+          ]
+        }
+      ]
+    }
+  );
+
+  // Add reminder details if exists
+  if (item.reminder_date) {
+    const dateObj = new Date(item.reminder_date);
+    const dateStr = dateObj.toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok' });
+    const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+    bubble.body.contents[bubble.body.contents.length - 1].contents.push({
+      type: 'box',
+      layout: 'horizontal',
       contents: [
         {
           type: 'text',
-          text: '✅ ทำรายการเสร็จสิ้นแล้ว',
-          size: 'sm',
-          color: '#10B981',
+          text: 'แจ้งเตือน:',
+          size: 'xs',
+          color: '#64748b',
+          flex: 2
+        },
+        {
+          type: 'text',
+          text: `${dateStr} (เวลา ${timeStr} น.)`,
+          size: 'xs',
+          color: '#4f46e5',
           weight: 'bold',
-          align: 'center'
+          flex: 8
         }
       ]
     });
@@ -174,23 +132,22 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
     type: 'box',
     layout: 'vertical',
     spacing: 'sm',
-    paddingAll: '16px',
-    paddingTop: '0px',
     contents: []
   };
 
+  // Action buttons depending on state
   const actions = [];
   
-  // 1. Complete button
-  if (!isCompleted) {
+  // 1. "แจ้งสำเร็จ" button - always available if not finished yet
+  if (item.status !== 'Issuing Item') {
     actions.push({
       type: 'button',
       style: 'primary',
       height: 'sm',
-      color: '#4ADE80',
+      color: '#10b981',
       action: {
         type: 'postback',
-        label: '✅ เสร็จแล้ว',
+        label: 'ทำรายการเสร็จสิ้น',
         data: `action=complete&itemId=${item.id}`
       }
     });
@@ -204,9 +161,8 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
     contents: [
       {
         type: 'button',
-        style: 'primary',
+        style: 'secondary',
         height: 'sm',
-        color: '#CAA171', // Brown wooden color
         flex: 1,
         action: {
           type: 'postback',
@@ -216,13 +172,13 @@ export function createItemFlexBubble(item: any, appUrl: string, isAlert: boolean
       },
       {
         type: 'button',
-        style: 'primary',
+        style: 'secondary',
+        color: '#e11d48',
         height: 'sm',
-        color: '#E1746B', // Soft red
         flex: 1,
         action: {
           type: 'postback',
-          label: 'ลบ',
+          label: 'ลบรายการ',
           data: `action=delete&itemId=${item.id}`
         }
       }
@@ -929,129 +885,91 @@ export function createStockCreateFlexBubble(searchName: string, qty: number | nu
 }
 
 export function createModeSelectionFlex(titleText?: string, subtitleText?: string) {
-  const tape = {
-    type: 'box',
-    layout: 'vertical',
-    contents: [
-      {
-        type: 'text',
-        text: 'ยินดีต้อนรับ',
-        size: 'xxs',
-        color: '#766752',
-        weight: 'bold',
-        align: 'center'
-      }
-    ],
-    backgroundColor: '#AEC5D6', // Light blue tape
-    paddingAll: '4px',
-    paddingStart: '12px',
-    paddingEnd: '12px',
-    position: 'absolute',
-    offsetTop: '12px',
-    offsetStart: '110px',
-    cornerRadius: 'sm',
-    style: 'border'
-  };
-
   return {
     type: 'bubble',
     size: 'mega',
-    styles: {
-      body: {
-        backgroundColor: '#F3E8D5' // Warm paper background
-      }
+    header: {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#f8fafc',
+      paddingAll: '18px',
+      contents: [
+        {
+          type: 'text',
+          text: '🤖 ยินดีต้อนรับสู่ระบบ จำจด (JodJum)',
+          weight: 'bold',
+          size: 'md',
+          color: '#0f172a'
+        },
+        {
+          type: 'text',
+          text: 'กรุณาเลือกโหมดการทำงานเพื่อเริ่มป้อนข้อมูล:',
+          size: 'xs',
+          color: '#64748b',
+          margin: 'xs'
+        }
+      ]
     },
     body: {
       type: 'box',
       layout: 'vertical',
-      paddingAll: '24px',
+      spacing: 'sm',
+      paddingAll: '18px',
       contents: [
-        tape,
         {
           type: 'box',
           layout: 'horizontal',
-          margin: 'xl',
-          contents: [
-            {
-              type: 'text',
-              text: '✨',
-              size: 'xl',
-              flex: 0
-            },
-            {
-              type: 'text',
-              text: titleText || 'สวัสดีครับ คุณผู้ใช้งาน',
-              weight: 'bold',
-              size: 'md',
-              color: '#3B3024',
-              align: 'center',
-              wrap: true
-            },
-            {
-              type: 'text',
-              text: '✨',
-              size: 'xl',
-              flex: 0
-            }
-          ]
-        },
-        {
-          type: 'text',
-          text: subtitleText || 'ลองแตะเลือกโหมดด้านล่าง เพื่อเริ่มใช้งานได้เลยครับ',
-          size: 'xs',
-          color: '#8A7A61',
-          align: 'center',
-          margin: 'md',
-          wrap: true
-        },
-        {
-          type: 'box',
-          layout: 'vertical',
-          margin: 'xl',
           spacing: 'sm',
           contents: [
             {
               type: 'button',
-              style: 'primary',
-              color: '#E5D6A7',
+              style: 'secondary',
               height: 'sm',
+              flex: 1,
               action: {
                 type: 'message',
-                label: '📝 บันทึกช่วยจำ',
+                label: 'ช่วยจำ',
                 text: 'ช่วยจำ'
               }
             },
             {
               type: 'button',
-              style: 'primary',
-              color: '#D4C3A3',
+              style: 'secondary',
               height: 'sm',
+              flex: 1,
               action: {
                 type: 'message',
-                label: '📦 สต็อกวัสดุ',
+                label: 'สต็อกวัสดุ',
                 text: 'สต็อก'
               }
-            },
+            }
+          ]
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'sm',
+          contents: [
             {
               type: 'button',
-              style: 'primary',
-              color: '#C2AD8F',
+              style: 'secondary',
               height: 'sm',
+              flex: 1,
               action: {
                 type: 'message',
-                label: '📋 ติดตาม PR',
-                text: 'pr'
+                label: 'ติดตาม PR',
+                text: 'ติดตาม PR'
               }
             },
             {
               type: 'button',
-              style: 'primary',
-              color: '#B0977A',
+              style: 'secondary',
               height: 'sm',
+              flex: 1,
               action: {
                 type: 'message',
-                label: '🔬 Calibrate',
-                text: 'สอบเทียบ'
+                label: 'Calibrate',
+                text: 'Calibrate'
               }
             }
           ]
@@ -2298,113 +2216,5 @@ export function createCarouselFlex(items: any[], boardType: string, boardName: s
   return {
     type: 'carousel',
     contents: bubbles
-  };
-}
-
-export function createEmptySummaryFlex(profileName: string, dateStr: string) {
-  const tape = {
-    type: 'box',
-    layout: 'vertical',
-    contents: [
-      {
-        type: 'text',
-        text: 'ไม่มีรายการ',
-        size: 'xxs',
-        color: '#766752',
-        weight: 'bold',
-        align: 'center'
-      }
-    ],
-    backgroundColor: '#AEC5D6',
-    paddingAll: '4px',
-    paddingStart: '12px',
-    paddingEnd: '12px',
-    position: 'absolute',
-    offsetTop: '12px',
-    offsetStart: '110px',
-    cornerRadius: 'sm',
-    style: 'border'
-  };
-
-  return {
-    type: 'bubble',
-    size: 'mega',
-    styles: {
-      body: { backgroundColor: '#F3E8D5' }
-    },
-    body: {
-      type: 'box',
-      layout: 'vertical',
-      paddingAll: '24px',
-      contents: [
-        tape,
-        {
-          type: 'text',
-          text: `สรุปวันนี้ครับคุณ${profileName}`,
-          weight: 'bold',
-          size: 'lg',
-          color: '#3B3024',
-          align: 'center',
-          margin: 'xl',
-          decoration: 'underline',
-          wrap: true
-        },
-        {
-          type: 'text',
-          text: dateStr,
-          size: 'xs',
-          color: '#8A7A61',
-          align: 'center',
-          margin: 'sm'
-        },
-        {
-          type: 'box',
-          layout: 'horizontal',
-          margin: 'xl',
-          contents: [
-            {
-              type: 'text',
-              text: '0',
-              size: '3xl',
-              weight: 'bold',
-              color: '#5C4A3D',
-              flex: 0
-            },
-            {
-              type: 'text',
-              text: ' / 0 อย่าง',
-              size: 'sm',
-              color: '#8A7A61',
-              gravity: 'bottom',
-              flex: 1,
-              margin: 'sm'
-            },
-            {
-              type: 'text',
-              text: '0%',
-              size: 'lg',
-              weight: 'bold',
-              color: '#B68B40',
-              align: 'end',
-              gravity: 'bottom',
-              flex: 1
-            }
-          ]
-        },
-        {
-          type: 'separator',
-          margin: 'md',
-          color: '#D4C3A3'
-        },
-        {
-          type: 'text',
-          text: 'วันนี้ยังไม่มีอะไรในโน้ตเลยครับ',
-          size: 'sm',
-          color: '#5C4A3D',
-          align: 'center',
-          margin: 'xl'
-        }
-      ]
-    }
   };
 }

@@ -209,97 +209,52 @@ export async function handleTextEvent(
         contents: {
           type: 'bubble',
           size: 'mega',
-          styles: {
-            body: { backgroundColor: '#F3E8D5' }
+          header: {
+            type: 'box',
+            layout: 'vertical',
+            backgroundColor: '#8b5cf6',
+            contents: [
+              {
+                type: 'text',
+                text: '📋 เมนูเลือกดูรายการ',
+                weight: 'bold',
+                color: '#ffffff',
+                size: 'sm'
+              }
+            ]
           },
           body: {
             type: 'box',
             layout: 'vertical',
-            paddingAll: '24px',
+            spacing: 'md',
             contents: [
-              {
-                type: 'box',
-                layout: 'vertical',
-                contents: [
-                  {
-                    type: 'text',
-                    text: 'รายการ',
-                    size: 'xxs',
-                    color: '#766752',
-                    weight: 'bold',
-                    align: 'center'
-                  }
-                ],
-                backgroundColor: '#AEC5D6',
-                paddingAll: '4px',
-                paddingStart: '12px',
-                paddingEnd: '12px',
-                position: 'absolute',
-                offsetTop: '12px',
-                offsetStart: '120px',
-                cornerRadius: 'sm',
-                style: 'border'
-              },
-              {
-                type: 'box',
-                layout: 'horizontal',
-                margin: 'xl',
-                contents: [
-                  {
-                    type: 'text',
-                    text: '📋',
-                    size: 'xl',
-                    flex: 0
-                  },
-                  {
-                    type: 'text',
-                    text: 'เมนูเลือกดูรายการ',
-                    weight: 'bold',
-                    size: 'md',
-                    color: '#B68B40',
-                    align: 'center',
-                    wrap: true
-                  }
-                ]
-              },
               {
                 type: 'text',
                 text: 'กรุณาเลือกรายการที่คุณต้องการตรวจสอบ:',
                 size: 'xs',
-                color: '#8A7A61',
-                align: 'center',
-                margin: 'md',
+                color: '#64748b',
                 wrap: true
               },
               {
-                type: 'box',
-                layout: 'vertical',
-                margin: 'xl',
-                spacing: 'sm',
-                contents: [
-                  {
-                    type: 'button',
-                    style: 'primary',
-                    color: '#E5D6A7',
-                    height: 'sm',
-                    action: {
-                      type: 'postback',
-                      label: '⏳ ยังไม่สำเร็จ',
-                      data: 'action=view_items&status=active'
-                    }
-                  },
-                  {
-                    type: 'button',
-                    style: 'primary',
-                    color: '#D4C3A3',
-                    height: 'sm',
-                    action: {
-                      type: 'postback',
-                      label: '✅ สำเร็จแล้ว',
-                      data: 'action=view_items&status=completed'
-                    }
-                  }
-                ]
+                type: 'button',
+                style: 'primary',
+                color: '#8b5cf6',
+                height: 'sm',
+                action: {
+                  type: 'postback',
+                  label: '⏳ รายการที่ยังไม่สำเร็จ',
+                  data: 'action=view_items&status=active'
+                }
+              },
+              {
+                type: 'button',
+                style: 'secondary',
+                height: 'sm',
+                action: {
+                  type: 'postback',
+                  label: '✅ รายการที่สำเร็จแล้ว',
+                  data: 'action=view_items&status=completed'
+                }
               }
             ]
           }
