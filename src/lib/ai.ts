@@ -1,20 +1,10 @@
 
 function safeJsonParse(text: string): any {
   try {
-    const clean = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+    const clean = text.replace(/^\`\`\`(?:json)?\s*/i, '').replace(/\s*\`\`\`$/i, '').trim();
     return JSON.parse(clean);
   } catch (e) {
     console.error('safeJsonParse error on:', text);
-    throw e;
-  }
-}
-
-﻿function safeJsonParse(text: string): any {
-  try {
-    const clean = text.replace(/^`(?:json)?\s*/i, '').replace(/\s*`$/i, '').trim();
-    return JSON.parse(clean);
-  } catch (e) {
-    console.error("safeJsonParse error on:", text);
     throw e;
   }
 }
