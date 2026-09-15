@@ -979,7 +979,7 @@ export interface CentralAIParsedOutput {
   reply_message?: string;
   command?: {
     board_id: string;
-    action: 'ADD' | 'UPDATE' | 'DELETE' | 'SEARCH' | 'COMPLETE' | 'CHECK_STOCK' | 'SUBTRACT_STOCK' | 'ADD_STOCK';
+    action: 'ADD' | 'UPDATE' | 'DELETE' | 'SEARCH' | 'COMPLETE' | 'CHECK_STOCK' | 'SUBTRACT_STOCK' | 'ADD_STOCK' | 'LIST_ALL';
     target_item_name?: string;
     fields: {
       title?: string;
@@ -1014,7 +1014,7 @@ INSTRUCTIONS:
 @ @@@@@ @@@@@@@@@@@@@@@@@@@ @@@@@@@@ @@@@@@@@@"). Do not ask them to select a mode, just ask what they want to record.
 3. If it is a database command, set "is_conversation" to false.
 4. Determine WHICH board the user wants to interact with based on the context of their message and the board names/types.
-5. Determine the ACTION: 'ADD', 'UPDATE', 'DELETE', 'SEARCH', 'COMPLETE', 'CHECK_STOCK', 'SUBTRACT_STOCK', 'ADD_STOCK'.
+5. Determine the ACTION: 'ADD', 'UPDATE', 'DELETE', 'SEARCH', 'COMPLETE', 'CHECK_STOCK', 'SUBTRACT_STOCK', 'ADD_STOCK', 'LIST_ALL'.
 6. Extract relevant fields into "fields". 
    - For DATE_TRACKER, try to extract a 'date' (YYYY-MM-DD).
    - For INVENTORY, extract 'quantity' (number).
@@ -1027,7 +1027,7 @@ Format output EXACTLY as this JSON structure:
   "reply_message": "string or null",
   "command": {
     "board_id": "UUID",
-    "action": "ADD|UPDATE|DELETE|SEARCH|COMPLETE|CHECK_STOCK|SUBTRACT_STOCK|ADD_STOCK",
+    "action": "ADD|UPDATE|DELETE|SEARCH|COMPLETE|CHECK_STOCK|SUBTRACT_STOCK|ADD_STOCK|LIST_ALL",
     "target_item_name": "string or null",
     "fields": {
       "title": "string or null",

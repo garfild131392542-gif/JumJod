@@ -52,6 +52,16 @@ export async function handleCentralRouting(
 
     // Handle INVENTORY
     if (targetBoard.type === 'INVENTORY') {
+      if (cmd.action === 'LIST_ALL') {
+        const { data: allStocks } = await supabaseAdmin.from('stocks').select('*').eq('board_id', targetBoard.id).order('name');
+        if (!allStocks || allStocks.length === 0) {
+           await sendLineReply(replyToken, '📦 บอร์ด ' + targetBoard.name + ' ยังไม่มีรายการสินค้าครับ');
+        } else {
+           const listStr = allStocks.map(s => '- ' + s.name + ': ' + s.quantity + ' ' + (s.unit || 'ชิ้น')).join('\n');
+           await sendLineReply(replyToken, '📦 สต็อกทั้งหมดใน ' + targetBoard.name + ':\n' + listStr);
+        }
+        return true;
+      }
       if (cmd.action === 'ADD' || cmd.action === 'UPDATE' || cmd.action === 'ADD_STOCK' || cmd.action === 'SUBTRACT_STOCK' || cmd.action === 'CHECK_STOCK') {
         const title = cmd.target_item_name || cmd.fields.title;
         if (!title) {
