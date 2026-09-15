@@ -2156,7 +2156,7 @@ export function createPrStatusMenuFlex(prItem: any) {
 
 
 export function createCarouselFlex(items: any[], boardType: string, boardName: string) {
-  const bubbles = items.slice(0, 11).map(item => {
+  const bubbles: any[] = items.slice(0, 11).map(item => {
     let title = item.title || item.name || item.equipment_name || 'ไม่ระบุชื่อ';
     let subtitle = '';
     if (boardType === 'INVENTORY') {
@@ -2207,8 +2207,8 @@ export function createCarouselFlex(items: any[], boardType: string, boardName: s
         type: 'bubble',
         size: 'kilo',
         body: {
-           type: 'box', layout: 'vertical', justifyContent: 'center', alignItems: 'center', height: '200px',
-           contents: [ { type: 'text', text: `และอีก ${items.length - 11} รายการ...`, weight: 'bold', wrap: true, color: '#64748b' } ]
+           type: 'box', layout: 'vertical', spacing: 'sm',
+           contents: [ { type: 'text', text: `และอีก ${items.length - 11} รายการ...`, weight: 'bold', size: 'sm', wrap: true, color: '#64748b' } ]
         }
      });
   }
