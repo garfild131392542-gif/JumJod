@@ -884,7 +884,7 @@ export function createStockCreateFlexBubble(searchName: string, qty: number | nu
   };
 }
 
-export function createModeSelectionFlex() {
+export function createModeSelectionFlex(titleText?: string, subtitleText?: string) {
   return {
     type: 'bubble',
     size: 'mega',
@@ -2154,3 +2154,67 @@ export function createPrStatusMenuFlex(prItem: any) {
 }
 
 
+
+export function createCarouselFlex(items: any[], boardType: string, boardName: string) {
+  const bubbles = items.slice(0, 11).map(item => {
+    let title = item.title || item.name || item.equipment_name || 'ไม่ระบุชื่อ';
+    let subtitle = '';
+    if (boardType === 'INVENTORY') {
+      subtitle = `จำนวน: ${item.quantity} ${item.unit || 'ชิ้น'}`;
+    } else if (boardType === 'DATE_TRACKER') {
+      subtitle = `กำหนด: ${item.next_due_date || 'ไม่ระบุ'}`;
+    } else {
+      subtitle = `สถานะ: ${item.status || 'Pending'}`;
+    }
+    
+    return {
+      type: 'bubble',
+      size: 'kilo',
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        contents: [
+          { type: 'text', text: title, weight: 'bold', size: 'md', wrap: true, color: '#1e293b' },
+          { type: 'text', text: subtitle, size: 'sm', color: '#64748b' }
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'horizontal',
+        spacing: 'sm',
+        contents: [
+          {
+            type: 'button',
+            style: 'secondary',
+            height: 'sm',
+            action: { type: 'message', label: 'แก้ไข', text: `แก้ไข ${title}` }
+          },
+          {
+            type: 'button',
+            style: 'primary',
+            color: '#ef4444',
+            height: 'sm',
+            action: { type: 'message', label: 'ลบ', text: `ลบ ${title}` }
+          }
+        ]
+      }
+    };
+  });
+  
+  if (items.length > 11) {
+     bubbles.push({
+        type: 'bubble',
+        size: 'kilo',
+        body: {
+           type: 'box', layout: 'vertical', justifyContent: 'center', alignItems: 'center', height: '200px',
+           contents: [ { type: 'text', text: `และอีก ${items.length - 11} รายการ...`, weight: 'bold', wrap: true, color: '#64748b' } ]
+        }
+     });
+  }
+
+  return {
+    type: 'carousel',
+    contents: bubbles
+  };
+}

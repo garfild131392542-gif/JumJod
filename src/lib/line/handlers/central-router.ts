@@ -30,20 +30,15 @@ export async function handleCentralRouting(
     // If AI decided it's just a conversation
     if (aiResult.is_conversation) {
       const { createModeSelectionFlex } = await import('@/lib/line/flex-templates');
-      const messages = [];
-      if (aiResult.reply_message) {
-        messages.push(aiResult.reply_message);
-      } else {
-        messages.push('สวัสดีครับ มีอะไรให้ผมช่วยจำหรือจัดการไหมครับ?');
-      }
+      const reply = aiResult.reply_message || 'สวัสดีครับ มีอะไรให้ผมช่วยจำหรือจัดการไหมครับ?';
       
-      messages.push({
+      const flexMessage = {
         type: 'flex',
-        altText: '🤖 กรุณาเลือกโหมดการทำงาน',
-        contents: createModeSelectionFlex()
-      });
+        altText: reply,
+        contents: createModeSelectionFlex('🤖 ' + reply, 'หรือเลือกโหมดการทำงานด่วนด้านล่างนี้ได้เลยครับ:')
+      };
       
-      await sendLineReply(replyToken, messages);
+      await sendLineReply(replyToken, [flexMessage]);
       return true;
     }
 
@@ -65,13 +60,17 @@ export async function handleCentralRouting(
       if (cmd.action === 'LIST_ALL') {
         const { data: allStocks } = await supabaseAdmin.from('stocks').select('*').eq('board_id', targetBoard.id).order('name');
         if (!allStocks || allStocks.length === 0) {
-           await sendLineReply(replyToken, '📦 บอร์ด ' + targetBoard.name + ' ยังไม่มีรายการสินค้าครับ');
-        } else {
-           const listStr = allStocks.map(s => '- ' + s.name + ': ' + s.quantity + ' ' + (s.unit || 'ชิ้น')).join('\n');
-           await sendLineReply(replyToken, '📦 สต็อกทั้งหมดใน ' + targetBoard.name + ':\n' + listStr);
+             await sendLineReply(replyToken, '📦 บอร์ด ' + targetBoard.name + ' ยังไม่มีรายการสินค้าครับ');
+          } else {
+             const { createCarouselFlex } = await import('@/lib/line/flex-templates');
+             await sendLineReply(replyToken, [{
+               type: 'flex',
+               altText: '📦 รายการสต็อกทั้งหมด',
+               contents: createCarouselFlex(allStocks, targetBoard.type, targetBoard.name)
+             }]);
+          }
+          return true;
         }
-        return true;
-      }
       if (cmd.action === 'ADD' || cmd.action === 'UPDATE' || cmd.action === 'ADD_STOCK' || cmd.action === 'SUBTRACT_STOCK' || cmd.action === 'CHECK_STOCK') {
         const title = cmd.target_item_name || cmd.fields.title;
         if (!title) {
@@ -132,13 +131,17 @@ export async function handleCentralRouting(
       if (cmd.action === 'LIST_ALL') {
          const { data: allPrs } = await supabaseAdmin.from('pr_requests').select('*').eq('board_id', targetBoard.id).order('created_at', { ascending: false });
          if (!allPrs || allPrs.length === 0) {
-            await sendLineReply(replyToken, `📋 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
-         } else {
-            const listStr = allPrs.map((s) => `- ${s.title} [${s.status}]`).join('\n');
-            await sendLineReply(replyToken, `📋 รายการทั้งหมดใน ${targetBoard.name}:\n${listStr}`);
-         }
-         return true;
-      }
+              await sendLineReply(replyToken, `📋 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
+           } else {
+              const { createCarouselFlex } = await import('@/lib/line/flex-templates');
+              await sendLineReply(replyToken, [{
+                type: 'flex',
+                altText: '📋 รายการ PR ทั้งหมด',
+                contents: createCarouselFlex(allPrs, targetBoard.type, targetBoard.name)
+              }]);
+           }
+           return true;
+        }
       const title = cmd.fields.title || cmd.target_item_name;
       if (cmd.action === 'ADD') {
         await supabaseAdmin.from('pr_requests').insert([{
@@ -163,13 +166,17 @@ export async function handleCentralRouting(
       if (cmd.action === 'LIST_ALL') {
          const { data: allDates } = await supabaseAdmin.from('lab_calibrations').select('*').eq('board_id', targetBoard.id).order('next_due_date', { ascending: true });
          if (!allDates || allDates.length === 0) {
-            await sendLineReply(replyToken, `📅 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
-         } else {
-            const listStr = allDates.map((s) => `- ${s.equipment_name} ${s.next_due_date ? '(' + s.next_due_date + ')' : ''}`).join('\n');
-            await sendLineReply(replyToken, `📅 รายการทั้งหมดใน ${targetBoard.name}:\n${listStr}`);
-         }
-         return true;
-      }
+              await sendLineReply(replyToken, `📅 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
+           } else {
+              const { createCarouselFlex } = await import('@/lib/line/flex-templates');
+              await sendLineReply(replyToken, [{
+                type: 'flex',
+                altText: '📅 รายการแจ้งเตือนทั้งหมด',
+                contents: createCarouselFlex(allDates, targetBoard.type, targetBoard.name)
+              }]);
+           }
+           return true;
+        }
       const title = cmd.fields.title || cmd.target_item_name;
       if (cmd.action === 'ADD') {
         await supabaseAdmin.from('lab_calibrations').insert([{
@@ -189,13 +196,17 @@ export async function handleCentralRouting(
       if (cmd.action === 'LIST_ALL') {
          const { data: allItems } = await supabaseAdmin.from('items').select('*').eq('board_id', targetBoard.id).order('created_at', { ascending: false });
          if (!allItems || allItems.length === 0) {
-            await sendLineReply(replyToken, `📝 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
-         } else {
-            const listStr = allItems.map((s) => `- ${s.title} [${s.status}]`).join('\n');
-            await sendLineReply(replyToken, `📝 รายการทั้งหมดใน ${targetBoard.name}:\n${listStr}`);
-         }
-         return true;
-      }
+              await sendLineReply(replyToken, `📝 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
+           } else {
+              const { createCarouselFlex } = await import('@/lib/line/flex-templates');
+              await sendLineReply(replyToken, [{
+                type: 'flex',
+                altText: '📝 รายการบันทึกทั้งหมด',
+                contents: createCarouselFlex(allItems, targetBoard.type, targetBoard.name)
+              }]);
+           }
+           return true;
+        }
       const title = cmd.fields.title || cmd.target_item_name;
       if (cmd.action === 'ADD') {
         const firstDayOfMonth = new Date();
