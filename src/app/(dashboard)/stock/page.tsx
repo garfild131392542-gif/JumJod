@@ -421,9 +421,7 @@ export default function StockPage() {
                         </select>
                       )}
                     </div>
-                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-[9px] font-extrabold text-slate-400 dark:text-slate-550 select-all shrink-0">
-                      #stk-{stock.id.substring(stock.id.length - 3)}
-                    </span>
+
                   </div>
 
                   <div className="flex items-center justify-between gap-2 mt-3">
