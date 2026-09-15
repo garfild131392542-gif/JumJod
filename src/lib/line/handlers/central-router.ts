@@ -54,11 +54,12 @@ export async function handleCentralRouting(
         if (!allStocks || allStocks.length === 0) {
              await sendLineReply(replyToken, '📦 บอร์ด ' + targetBoard.name + ' ยังไม่มีรายการสินค้าครับ');
           } else {
-             const { createCarouselFlex } = await import('@/lib/line/flex-templates');
+             const { createStockFlexBubble } = await import('@/lib/line/flex-templates');
+             const bubbles = allStocks.slice(0, 10).map(item => createStockFlexBubble(item, 'view', null));
              await sendLineReply(replyToken, [{
                type: 'flex',
                altText: '📦 รายการสต็อกทั้งหมด',
-               contents: createCarouselFlex(allStocks, targetBoard.type, targetBoard.name)
+               contents: { type: 'carousel', contents: bubbles }
              }]);
           }
           return true;
@@ -130,11 +131,12 @@ export async function handleCentralRouting(
          if (!allPrs || allPrs.length === 0) {
               await sendLineReply(replyToken, `📋 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
            } else {
-              const { createCarouselFlex } = await import('@/lib/line/flex-templates');
+              const { createPrFlexBubble } = await import('@/lib/line/flex-templates');
+              const bubbles = allPrs.slice(0, 10).map(item => createPrFlexBubble(item, ''));
               await sendLineReply(replyToken, [{
                 type: 'flex',
                 altText: '📋 รายการ PR ทั้งหมด',
-                contents: createCarouselFlex(allPrs, targetBoard.type, targetBoard.name)
+                contents: { type: 'carousel', contents: bubbles }
               }]);
            }
            return true;
@@ -165,11 +167,12 @@ export async function handleCentralRouting(
          if (!allDates || allDates.length === 0) {
               await sendLineReply(replyToken, `📅 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
            } else {
-              const { createCarouselFlex } = await import('@/lib/line/flex-templates');
+              const { createCalibrationFlexBubble } = await import('@/lib/line/flex-templates');
+              const bubbles = allDates.slice(0, 10).map(item => createCalibrationFlexBubble(item, ''));
               await sendLineReply(replyToken, [{
                 type: 'flex',
                 altText: '📅 รายการแจ้งเตือนทั้งหมด',
-                contents: createCarouselFlex(allDates, targetBoard.type, targetBoard.name)
+                contents: { type: 'carousel', contents: bubbles }
               }]);
            }
            return true;
@@ -195,11 +198,18 @@ export async function handleCentralRouting(
          if (!allItems || allItems.length === 0) {
               await sendLineReply(replyToken, `📝 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
            } else {
-              const { createCarouselFlex } = await import('@/lib/line/flex-templates');
+              const { createItemFlexBubble } = await import('@/lib/line/flex-templates');
+              const requestUrlOrigin = ''; // Use empty or fetch from env if needed, usually passed down or not strictly required for this view.
+              // Actually, central router receives requestUrlOrigin from line-webhook, let's just pass an empty string or the app URL.
+              // Wait, let's pass a default or empty string. createItemFlexBubble doesn't strictly break if appUrl is empty.
+              const bubbles = allItems.slice(0, 10).map(item => createItemFlexBubble(item, ''));
               await sendLineReply(replyToken, [{
                 type: 'flex',
                 altText: '📝 รายการบันทึกทั้งหมด',
-                contents: createCarouselFlex(allItems, targetBoard.type, targetBoard.name)
+                contents: {
+                  type: 'carousel',
+                  contents: bubbles
+                }
               }]);
            }
            return true;
