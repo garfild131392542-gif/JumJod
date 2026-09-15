@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Link2, Unlink, CheckCircle2, Copy, Check, 
   RefreshCw, ShieldCheck, AlertCircle, User as UserIcon,
-  Bell, Lock, Smartphone, ExternalLink, Sparkles
+  Bell, Lock, Smartphone, ExternalLink, Sparkles, Settings
 } from 'lucide-react';
 import { UserProfile } from '@/lib/types';
 import Image from 'next/image';

@@ -1,4 +1,4 @@
-import { ItemStatus } from './types';
+﻿import { ItemStatus } from './types';
 
 export interface ParsedProcurementData {
   title: string;
@@ -110,19 +110,19 @@ async function classifyIntentWithAI(
   const body = {
     contents: [{
       parts: [{
-        text: `You are an intent classifier for JodJum (จำจด) - a procurement and inventory planner system.
+        text: `You are an intent classifier for JodJum (เธเธณเธเธ”) - a procurement and inventory planner system.
 Analyze this message from the user: "${messageText}"
 
 Existing items context (recent active procurement items):
 ${JSON.stringify(existingItems.map(item => ({ id: item.id, title: item.title })))}
 
 Classify the user's intent into one of the following:
-- STOCK: User wants to manage stock, inventory, laboratory, or office supplies (e.g. "เบิกแอลกอฮอล์ 2 ขวด", "เพิ่มกระดาษ 10 รีม", "เช็กสต็อกกระดาษ A4", "แอดแอลกอฮอล์ 95%", "สต็อก", "ตัดสต็อก", "ลบวัสดุแอลกอฮอล์ออกจากคลัง", "แอลกอฮอล์").
-- CREATE: User wants to add/remember a new procurement item, task, or purchase reminder (e.g. "บันทึก เคลียร์ไฟล์งบประมาณ", "สั่งซื้อคอม", "แจ้งเตือนสเก็ตงานพรุ่งนี้").
-- SEARCH: User wants to search or look up items (e.g. "ค้นหาระเบียบ", "หา กระดาษ").
-- UPDATE: User wants to edit/change/update details of an existing item (e.g. "แก้ไข ซื้อหมึก เพิ่มเครดิตเป็น 60 วัน", "แก้รายละเอียดคอม").
-- DELETE: User wants to delete or remove an item (e.g. "ลบรายการกระดาษ", "ลบ b77", "ยกเลิกใบสั่งคอม").
-- COMPLETE: User wants to mark an item as finished/done/completed/successful (e.g. "สำเร็จ b78", "เสร็จแล้วรายการซื้อคอม").
+- STOCK: User wants to manage stock, inventory, laboratory, or office supplies (e.g. "เน€เธเธดเธเนเธญเธฅเธเธญเธฎเธญเธฅเน 2 เธเธงเธ”", "เน€เธเธดเนเธกเธเธฃเธฐเธ”เธฒเธฉ 10 เธฃเธตเธก", "เน€เธเนเธเธชเธ•เนเธญเธเธเธฃเธฐเธ”เธฒเธฉ A4", "เนเธญเธ”เนเธญเธฅเธเธญเธฎเธญเธฅเน 95%", "เธชเธ•เนเธญเธ", "เธ•เธฑเธ”เธชเธ•เนเธญเธ", "เธฅเธเธงเธฑเธชเธ”เธธเนเธญเธฅเธเธญเธฎเธญเธฅเนเธญเธญเธเธเธฒเธเธเธฅเธฑเธ", "เนเธญเธฅเธเธญเธฎเธญเธฅเน").
+- CREATE: User wants to add/remember a new procurement item, task, or purchase reminder (e.g. "เธเธฑเธเธ—เธถเธ เน€เธเธฅเธตเธขเธฃเนเนเธเธฅเนเธเธเธเธฃเธฐเธกเธฒเธ“", "เธชเธฑเนเธเธเธทเนเธญเธเธญเธก", "เนเธเนเธเน€เธ•เธทเธญเธเธชเน€เธเนเธ•เธเธฒเธเธเธฃเธธเนเธเธเธตเน").
+- SEARCH: User wants to search or look up items (e.g. "เธเนเธเธซเธฒเธฃเธฐเน€เธเธตเธขเธ", "เธซเธฒ เธเธฃเธฐเธ”เธฒเธฉ").
+- UPDATE: User wants to edit/change/update details of an existing item (e.g. "เนเธเนเนเธ เธเธทเนเธญเธซเธกเธถเธ เน€เธเธดเนเธกเน€เธเธฃเธ”เธดเธ•เน€เธเนเธ 60 เธงเธฑเธ", "เนเธเนเธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เธเธญเธก").
+- DELETE: User wants to delete or remove an item (e.g. "เธฅเธเธฃเธฒเธขเธเธฒเธฃเธเธฃเธฐเธ”เธฒเธฉ", "เธฅเธ b77", "เธขเธเน€เธฅเธดเธเนเธเธชเธฑเนเธเธเธญเธก").
+- COMPLETE: User wants to mark an item as finished/done/completed/successful (e.g. "เธชเธณเน€เธฃเนเธ b78", "เน€เธชเธฃเนเธเนเธฅเนเธงเธฃเธฒเธขเธเธฒเธฃเธเธทเนเธญเธเธญเธก").
 - UNKNOWN: Generic greetings, friendly replies, help requests, or comments that do not perform operations.
 
 Format the output strictly as a JSON object:
@@ -157,18 +157,18 @@ async function parseCreateMessageWithAI(
   const body = {
     contents: [{
       parts: [{
-        text: `You are a data extraction AI for JodJum (จำจด).
+        text: `You are a data extraction AI for JodJum (เธเธณเธเธ”).
 Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
 Analyze this message from the user to extract details for creating a new item: "${messageText}"
 
 Extract the following fields and format strictly as JSON:
 {
-  "title": "Clean, short, and descriptive title of the procurement or task. CRITICAL: Never include keyword prefixes or suffixes related to dates, times, or reminder instructions in the title. Strip any phrases like 'แจ้งเตือนวันที่...', 'ตอน...', 'เตือน...', 'วันจันทร์หน้า', 'เวลา...' entirely. E.g. for 'มีอบรมการเพิ่มไอเทมในระบบAX แจ้งเตือนวันที่ 17/07/26 ตอน 07.00 น.' the title MUST BE ONLY 'มีอบรมการเพิ่มไอเทมในระบบAX', for 'บันทึก เคลียร์ไฟล์งบประมาณ ให้พี่เทียม' the title is 'เคลียร์ไฟล์งบประมาณ ให้พี่เทียม'",
+  "title": "Clean, short, and descriptive title of the procurement or task. CRITICAL: Never include keyword prefixes or suffixes related to dates, times, or reminder instructions in the title. Strip any phrases like 'เนเธเนเธเน€เธ•เธทเธญเธเธงเธฑเธเธ—เธตเน...', 'เธ•เธญเธ...', 'เน€เธ•เธทเธญเธ...', 'เธงเธฑเธเธเธฑเธเธ—เธฃเนเธซเธเนเธฒ', 'เน€เธงเธฅเธฒ...' entirely. E.g. for 'เธกเธตเธญเธเธฃเธกเธเธฒเธฃเน€เธเธดเนเธกเนเธญเน€เธ—เธกเนเธเธฃเธฐเธเธAX เนเธเนเธเน€เธ•เธทเธญเธเธงเธฑเธเธ—เธตเน 17/07/26 เธ•เธญเธ 07.00 เธ.' the title MUST BE ONLY 'เธกเธตเธญเธเธฃเธกเธเธฒเธฃเน€เธเธดเนเธกเนเธญเน€เธ—เธกเนเธเธฃเธฐเธเธAX', for 'เธเธฑเธเธ—เธถเธ เน€เธเธฅเธตเธขเธฃเนเนเธเธฅเนเธเธเธเธฃเธฐเธกเธฒเธ“ เนเธซเนเธเธตเนเน€เธ—เธตเธขเธก' the title is 'เน€เธเธฅเธตเธขเธฃเนเนเธเธฅเนเธเธเธเธฃเธฐเธกเธฒเธ“ เนเธซเนเธเธตเนเน€เธ—เธตเธขเธก'",
   "description": "Full description details (optional)",
-  "credit_term": 30 | 60 | 90 | null (if mentioned, e.g. เครดิต 30 วัน, otherwise null),
+  "credit_term": 30 | 60 | 90 | null (if mentioned, e.g. เน€เธเธฃเธ”เธดเธ• 30 เธงเธฑเธ, otherwise null),
   "po_date": "YYYY-MM-DD (default to today if credit term is matched, otherwise null)",
   "budget_due_date": "YYYY-MM-DD (calculated as po_date + credit_term if matched, otherwise null)",
-  "reminder_date": "ISOString in Thailand timezone (+07:00) or UTC (optional reminder date and time. Parse if message mentions when to remind, including time if specified. Pay close attention to Thai time formats like 'ตอน 07.00 น.' (which is 07:00:00), 'ตอน 7 โมงเช้า' (which is 07:00:00), 'ตอนบ่ายสาม' (which is 15:00:00). Always convert relative times accurately based on today's date/time. If only date is specified, default time to 09:00:00+07:00. Note: Thai short year like '26' in '17/07/26' means 2026 C.E. (not 2069 or 2026 B.E. B.E. 2569 is C.E. 2026))"
+  "reminder_date": "ISOString in Thailand timezone (+07:00) or UTC (optional reminder date and time. Parse if message mentions when to remind, including time if specified. Pay close attention to Thai time formats like 'เธ•เธญเธ 07.00 เธ.' (which is 07:00:00), 'เธ•เธญเธ 7 เนเธกเธเน€เธเนเธฒ' (which is 07:00:00), 'เธ•เธญเธเธเนเธฒเธขเธชเธฒเธก' (which is 15:00:00). Always convert relative times accurately based on today's date/time. If only date is specified, default time to 09:00:00+07:00. Note: Thai short year like '26' in '17/07/26' means 2026 C.E. (not 2069 or 2026 B.E. B.E. 2569 is C.E. 2026))"
 }`
       }]
     }],
@@ -183,12 +183,12 @@ Extract the following fields and format strictly as JSON:
 
   // Clean title prefix and suffix just in case Gemini missed it
   if (parsed.title) {
-    parsed.title = parsed.title.replace(/^(?:ให้แจ้งเตือน|ไม่แจ้งเตือน|ช่วยแจ้งเตือน|แจ้งเตือน|ช่วยเตือน|เตือน|บันทึก|จด|เพิ่ม)\s*/i, '').trim();
-    parsed.title = parsed.title.replace(/(?:แจ้งเตือน)?วันที่\s*\d+[\/\.\-]\d+[\/\.\-]\d+(?:\s*(?:ตอน|เวลา)?\s*\d+[\.\:]\d+\s*น\.?)?$/i, '').trim();
-    parsed.title = parsed.title.replace(/(?:แจ้งเตือน)?วันที่\s*\d+[\/\.\-]\d+[\/\.\-]\d+$/i, '').trim();
-    parsed.title = parsed.title.replace(/(?:\s*(?:ตอน|เวลา)?\s*\d+[\.\:]\d+\s*น\.?)$/i, '').trim();
-    parsed.title = parsed.title.replace(/^[:\-ー\s\.]+/, '').trim();
-    parsed.title = parsed.title.replace(/[:\-ー\s\.]+$/, '').trim();
+    parsed.title = parsed.title.replace(/^(?:เนเธซเนเนเธเนเธเน€เธ•เธทเธญเธ|เนเธกเนเนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเนเธเนเธเน€เธ•เธทเธญเธ|เนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเน€เธ•เธทเธญเธ|เน€เธ•เธทเธญเธ|เธเธฑเธเธ—เธถเธ|เธเธ”|เน€เธเธดเนเธก)\s*/i, '').trim();
+    parsed.title = parsed.title.replace(/(?:เนเธเนเธเน€เธ•เธทเธญเธ)?เธงเธฑเธเธ—เธตเน\s*\d+[\/\.\-]\d+[\/\.\-]\d+(?:\s*(?:เธ•เธญเธ|เน€เธงเธฅเธฒ)?\s*\d+[\.\:]\d+\s*เธ\.?)?$/i, '').trim();
+    parsed.title = parsed.title.replace(/(?:เนเธเนเธเน€เธ•เธทเธญเธ)?เธงเธฑเธเธ—เธตเน\s*\d+[\/\.\-]\d+[\/\.\-]\d+$/i, '').trim();
+    parsed.title = parsed.title.replace(/(?:\s*(?:เธ•เธญเธ|เน€เธงเธฅเธฒ)?\s*\d+[\.\:]\d+\s*เธ\.?)$/i, '').trim();
+    parsed.title = parsed.title.replace(/^[:\-ใผ\s\.]+/, '').trim();
+    parsed.title = parsed.title.replace(/[:\-ใผ\s\.]+$/, '').trim();
   }
 
   return parsed;
@@ -205,7 +205,7 @@ async function parseUpdateMessageWithAI(
   const body = {
     contents: [{
       parts: [{
-        text: `You are an update parser for JodJum (จำจด).
+        text: `You are an update parser for JodJum (เธเธณเธเธ”).
 Identify which item to update and what fields should be modified based on this message: "${messageText}"
 
 Here is the list of active/recent items for this user:
@@ -215,7 +215,7 @@ Format output strictly as JSON:
 {
   "item_id": "UUID of the matching item to update from the list, or null if no match",
   "update_data": {
-    "title": "New title if user requested to change the title (clean and descriptive, strip keywords like 'แจ้งเตือน', 'ให้แจ้งเตือน', 'บันทึก')",
+    "title": "New title if user requested to change the title (clean and descriptive, strip keywords like 'เนเธเนเธเน€เธ•เธทเธญเธ', 'เนเธซเนเนเธเนเธเน€เธ•เธทเธญเธ', 'เธเธฑเธเธ—เธถเธ')",
     "description": "New description details if requested",
     "credit_term": 30 | 60 | 90 | null (if user changed credit term),
     "po_date": "YYYY-MM-DD",
@@ -235,8 +235,8 @@ Format output strictly as JSON:
   const parsed = JSON.parse(rawText.trim());
 
   if (parsed.update_data && parsed.update_data.title) {
-    parsed.update_data.title = parsed.update_data.title.replace(/^(?:ให้แจ้งเตือน|ไม่แจ้งเตือน|ช่วยแจ้งเตือน|แจ้งเตือน|ช่วยเตือน|เตือน|บันทึก|จด|เพิ่ม)\s*/i, '').trim();
-    parsed.update_data.title = parsed.update_data.title.replace(/^[:\-ー\s\.]+/, '').trim();
+    parsed.update_data.title = parsed.update_data.title.replace(/^(?:เนเธซเนเนเธเนเธเน€เธ•เธทเธญเธ|เนเธกเนเนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเนเธเนเธเน€เธ•เธทเธญเธ|เนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเน€เธ•เธทเธญเธ|เน€เธ•เธทเธญเธ|เธเธฑเธเธ—เธถเธ|เธเธ”|เน€เธเธดเนเธก)\s*/i, '').trim();
+    parsed.update_data.title = parsed.update_data.title.replace(/^[:\-ใผ\s\.]+/, '').trim();
   }
 
   return parsed;
@@ -264,36 +264,36 @@ export async function parseStockMessageWithAI(
   const body = {
     contents: [{
       parts: [{
-        text: `You are an inventory data extraction AI for JodJum (จำจด).
+        text: `You are an inventory data extraction AI for JodJum (เธเธณเธเธ”).
 Analyze this user message related to stock: "${messageText}"
 
 Extract the following fields and format strictly as JSON:
 {
   "action": one of:
-    "ADD" (adding stock/deposit/new material, e.g. "เพิ่มกระดาษ 10 รีม", "แอดแอลกอฮอล์ 5 ขวด"),
-    "SUBTRACT" (withdrawing/reducing/using, e.g. "เบิกปากกา 2 แท่ง", "ตัดออก 1"),
-    "SET" (setting specific quantity, e.g. "ปรับยอดกระดาษเป็น 20"),
-    "DELETE" (removing from stock entirely, e.g. "ลบวัสดุแอลกอฮอล์ออก"),
-    "CHECK" (checking stock balance, e.g. "เช็คยอดปากกา", "มีกระดาษเท่าไหร่"),
-    "EDIT_NAME" (renaming a material, e.g. "เปลี่ยนชื่อปากกา Permanent เป็น ปากกาลบไม่ได้", "แก้ชื่อกระดาษ A4"),
-    "EDIT_DESC" (editing description/detail, e.g. "แก้รายละเอียดแอลกอฮอล์ว่า ใช้สำหรับทำความสะอาด", "เพิ่มคำอธิบาย"),
-    "EDIT_MIN" (changing min threshold, e.g. "ตั้งเกณฑ์ขั้นต่ำปากกาเป็น 5", "กำหนดการเตือนเมื่อเหลือน้อยกว่า 3"),
-    "EDIT_PRIORITY" (changing priority, e.g. "ตั้งด่วนกระดาษ A4 เป็น High", "เปลี่ยนความสำคัญ"),
-    "EDIT_CATEGORY" (changing category, e.g. "ย้ายถ้วย Crucible ไปหมวดหมู่ Lab", "เปลี่ยนหมวดหมู่กระดาษเป็นอุปกรณ์สำนักงาน"),
-  "name": "Current name of the material in stock (strip all action verbs like 'เบิก', 'เพิ่ม', 'แอด', 'ลด', 'ลบ', 'เช็ก', 'เช็ค', 'ดู', 'ตรวจสอบ', 'เปลี่ยนชื่อ', 'แก้ชื่อ', 'ตั้งเกณฑ์', 'กำหนด', 'แก้รายละเอียด', 'ย้ายหมวดหมู่', 'เปลี่ยนหมวด'). This should be the EXISTING name in stock.",
+    "ADD" (adding stock/deposit/new material, e.g. "เน€เธเธดเนเธกเธเธฃเธฐเธ”เธฒเธฉ 10 เธฃเธตเธก", "เนเธญเธ”เนเธญเธฅเธเธญเธฎเธญเธฅเน 5 เธเธงเธ”"),
+    "SUBTRACT" (withdrawing/reducing/using, e.g. "เน€เธเธดเธเธเธฒเธเธเธฒ 2 เนเธ—เนเธ", "เธ•เธฑเธ”เธญเธญเธ 1"),
+    "SET" (setting specific quantity, e.g. "เธเธฃเธฑเธเธขเธญเธ”เธเธฃเธฐเธ”เธฒเธฉเน€เธเนเธ 20"),
+    "DELETE" (removing from stock entirely, e.g. "เธฅเธเธงเธฑเธชเธ”เธธเนเธญเธฅเธเธญเธฎเธญเธฅเนเธญเธญเธ"),
+    "CHECK" (checking stock balance, e.g. "เน€เธเนเธเธขเธญเธ”เธเธฒเธเธเธฒ", "เธกเธตเธเธฃเธฐเธ”เธฒเธฉเน€เธ—เนเธฒเนเธซเธฃเน"),
+    "EDIT_NAME" (renaming a material, e.g. "เน€เธเธฅเธตเนเธขเธเธเธทเนเธญเธเธฒเธเธเธฒ Permanent เน€เธเนเธ เธเธฒเธเธเธฒเธฅเธเนเธกเนเนเธ”เน", "เนเธเนเธเธทเนเธญเธเธฃเธฐเธ”เธฒเธฉ A4"),
+    "EDIT_DESC" (editing description/detail, e.g. "เนเธเนเธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เนเธญเธฅเธเธญเธฎเธญเธฅเนเธงเนเธฒ เนเธเนเธชเธณเธซเธฃเธฑเธเธ—เธณเธเธงเธฒเธกเธชเธฐเธญเธฒเธ”", "เน€เธเธดเนเธกเธเธณเธญเธเธดเธเธฒเธข"),
+    "EDIT_MIN" (changing min threshold, e.g. "เธ•เธฑเนเธเน€เธเธ“เธ‘เนเธเธฑเนเธเธ•เนเธณเธเธฒเธเธเธฒเน€เธเนเธ 5", "เธเธณเธซเธเธ”เธเธฒเธฃเน€เธ•เธทเธญเธเน€เธกเธทเนเธญเน€เธซเธฅเธทเธญเธเนเธญเธขเธเธงเนเธฒ 3"),
+    "EDIT_PRIORITY" (changing priority, e.g. "เธ•เธฑเนเธเธ”เนเธงเธเธเธฃเธฐเธ”เธฒเธฉ A4 เน€เธเนเธ High", "เน€เธเธฅเธตเนเธขเธเธเธงเธฒเธกเธชเธณเธเธฑเธ"),
+    "EDIT_CATEGORY" (changing category, e.g. "เธขเนเธฒเธขเธ–เนเธงเธข Crucible เนเธเธซเธกเธงเธ”เธซเธกเธนเน Lab", "เน€เธเธฅเธตเนเธขเธเธซเธกเธงเธ”เธซเธกเธนเนเธเธฃเธฐเธ”เธฒเธฉเน€เธเนเธเธญเธธเธเธเธฃเธ“เนเธชเธณเธเธฑเธเธเธฒเธ"),
+  "name": "Current name of the material in stock (strip all action verbs like 'เน€เธเธดเธ', 'เน€เธเธดเนเธก', 'เนเธญเธ”', 'เธฅเธ”', 'เธฅเธ', 'เน€เธเนเธ', 'เน€เธเนเธ', 'เธ”เธน', 'เธ•เธฃเธงเธเธชเธญเธ', 'เน€เธเธฅเธตเนเธขเธเธเธทเนเธญ', 'เนเธเนเธเธทเนเธญ', 'เธ•เธฑเนเธเน€เธเธ“เธ‘เน', 'เธเธณเธซเธเธ”', 'เนเธเนเธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”', 'เธขเนเธฒเธขเธซเธกเธงเธ”เธซเธกเธนเน', 'เน€เธเธฅเธตเนเธขเธเธซเธกเธงเธ”'). This should be the EXISTING name in stock.",
   "quantity": number or null,
   "unit": "string or null",
   "category": CRITICAL RULE - Only provide category value in these specific cases:
-    1. User explicitly says 'เปลี่ยนหมวด', 'ย้ายหมวดหมู่', 'เพิ่มในหมวด Lab', etc.
+    1. User explicitly says 'เน€เธเธฅเธตเนเธขเธเธซเธกเธงเธ”', 'เธขเนเธฒเธขเธซเธกเธงเธ”เธซเธกเธนเน', 'เน€เธเธดเนเธกเนเธเธซเธกเธงเธ” Lab', etc.
     2. NEVER set category for CHECK action - always null.
     3. NEVER set category just because you think the item belongs to a category.
-    Set to "อุปกรณ์สำนักงาน" or "Laboratory" only when explicitly requested, otherwise null.,
+    Set to "เธญเธธเธเธเธฃเธ“เนเธชเธณเธเธฑเธเธเธฒเธ" or "Laboratory" only when explicitly requested, otherwise null.,
   "new_name": "The new name to rename to (only for EDIT_NAME action, otherwise null)",
   "description": "New description text (only for EDIT_DESC action, otherwise null)",
   "new_min_threshold": number or null (only for EDIT_MIN action, the new threshold value),
   "new_priority": "High" | "Medium" | "Low" | null (only for EDIT_PRIORITY action),
   "confidence": integer 1-100 (how confident you are about this interpretation),
-  "confirm_message": "Thai question to ask user to confirm if confidence < 70, e.g. 'คุณต้องการ [action] [name] ใช่ไหมครับ?', otherwise null"
+  "confirm_message": "Thai question to ask user to confirm if confidence < 70, e.g. 'เธเธธเธ“เธ•เนเธญเธเธเธฒเธฃ [action] [name] เนเธเนเนเธซเธกเธเธฃเธฑเธ?', otherwise null"
 }
 
 IMPORTANT RULES:
@@ -314,8 +314,8 @@ IMPORTANT RULES:
 
   // Clean stock name
   if (parsed.name) {
-    parsed.name = parsed.name.replace(/^(?:เบิก|เพิ่ม|แอด|ลด|ลบ|เช็ก|ดู|สต็อก|สต๊อก|เช็ค|เปลี่ยนชื่อ|แก้ชื่อ|ตั้งเกณฑ์|กำหนด|แก้รายละเอียด|ตั้ง)\s*/i, '').trim();
-    parsed.name = parsed.name.replace(/^[:\-ー\s\.]+/, '').trim();
+    parsed.name = parsed.name.replace(/^(?:เน€เธเธดเธ|เน€เธเธดเนเธก|เนเธญเธ”|เธฅเธ”|เธฅเธ|เน€เธเนเธ|เธ”เธน|เธชเธ•เนเธญเธ|เธชเธ•เนเธญเธ|เน€เธเนเธ|เน€เธเธฅเธตเนเธขเธเธเธทเนเธญ|เนเธเนเธเธทเนเธญ|เธ•เธฑเนเธเน€เธเธ“เธ‘เน|เธเธณเธซเธเธ”|เนเธเนเธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”|เธ•เธฑเนเธ)\s*/i, '').trim();
+    parsed.name = parsed.name.replace(/^[:\-ใผ\s\.]+/, '').trim();
   }
 
   // Enforce: CHECK action must never have a category
@@ -390,7 +390,7 @@ export async function generateHelpfulFallbackResponseWithAI(
   // Build list of existing items for typo matching and suggestions
   const itemsContext = existingItems.slice(0, 15).map(item => `- ${item.title} (Status: ${item.status || 'Pending'})`).join('\n');
 
-  const promptText = `You are a helpful inventory and procurement chatbot assistant named JodJum (จำจด) for LINE messaging.
+  const promptText = `You are a helpful inventory and procurement chatbot assistant named JodJum (เธเธณเธเธ”) for LINE messaging.
 The user sent a message that could not be recognized as a specific command: "${messageText}"
 Current mode of the user is: ${activeMode || 'none (no mode selected)'}
 
@@ -400,11 +400,11 @@ ${itemsContext || '(No items registered yet)'}
 Instructions:
 1. Analyze the user's message.
 2. If they have a typo matching an item (e.g. they typed 'Crucble' close to 'Crucible'), politely ask if they meant that item.
-3. If they typed a stock/inventory action but are not in stock mode (current mode is not 'stock'), tell them to switch to stock mode by sending "สต็อก" or guide them.
+3. If they typed a stock/inventory action but are not in stock mode (current mode is not 'stock'), tell them to switch to stock mode by sending "เธชเธ•เนเธญเธ" or guide them.
 4. If their message is completely incomprehensible, offer general help politely and suggest some clear examples of what they can do:
-   - For reminders/items: "ซื้อกระดาษ A4 10 รีม เครดิต 30 วัน"
-   - For stock/inventory: "เบิก แอลกอฮอล์ 2 ขวด"
-5. Respond in polite Thai (speak nicely, use 'ครับ/ค่ะ', keep it friendly and supportive). Keep the response brief, engaging, and clear (max 3-4 sentences).
+   - For reminders/items: "เธเธทเนเธญเธเธฃเธฐเธ”เธฒเธฉ A4 10 เธฃเธตเธก เน€เธเธฃเธ”เธดเธ• 30 เธงเธฑเธ"
+   - For stock/inventory: "เน€เธเธดเธ เนเธญเธฅเธเธญเธฎเธญเธฅเน 2 เธเธงเธ”"
+5. Respond in polite Thai (speak nicely, use 'เธเธฃเธฑเธ/เธเนเธฐ', keep it friendly and supportive). Keep the response brief, engaging, and clear (max 3-4 sentences).
 6. DO NOT repeat this prompt. Only output the friendly conversational response.`;
 
   const body = {
@@ -418,10 +418,10 @@ Instructions:
   try {
     const data = await fetchGeminiWithFallback(body, apiKey);
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    return rawText.trim() || '🤖 ขออภัยครับ ผมไม่เข้าใจคำสั่งนี้ กรุณาลองพิมพ์ข้อความใหม่อีกครั้ง หรือสลับโหมดการทำงานครับ';
+    return rawText.trim() || '๐ค– เธเธญเธญเธ เธฑเธขเธเธฃเธฑเธ เธเธกเนเธกเนเน€เธเนเธฒเนเธเธเธณเธชเธฑเนเธเธเธตเน เธเธฃเธธเธ“เธฒเธฅเธญเธเธเธดเธกเธเนเธเนเธญเธเธงเธฒเธกเนเธซเธกเนเธญเธตเธเธเธฃเธฑเนเธ เธซเธฃเธทเธญเธชเธฅเธฑเธเนเธซเธกเธ”เธเธฒเธฃเธ—เธณเธเธฒเธเธเธฃเธฑเธ';
   } catch (err) {
     console.error('Error generating fallback help message:', err);
-    return '🤖 ขออภัยครับ ผมไม่เข้าใจคำสั่งนี้ กรุณาลองพิมพ์ข้อความใหม่อีกครั้ง หรือสลับโหมดการทำงานครับ';
+    return '๐ค– เธเธญเธญเธ เธฑเธขเธเธฃเธฑเธ เธเธกเนเธกเนเน€เธเนเธฒเนเธเธเธณเธชเธฑเนเธเธเธตเน เธเธฃเธธเธ“เธฒเธฅเธญเธเธเธดเธกเธเนเธเนเธญเธเธงเธฒเธกเนเธซเธกเนเธญเธตเธเธเธฃเธฑเนเธ เธซเธฃเธทเธญเธชเธฅเธฑเธเนเธซเธกเธ”เธเธฒเธฃเธ—เธณเธเธฒเธเธเธฃเธฑเธ';
   }
 }
 
@@ -437,41 +437,41 @@ export async function classifyAndParseMessageWithAI(
   const matchedItem = findItemByShortId(messageText, existingItems);
 
   // 1. Intercept generic/empty commands to ask for details
-  const isGenericWord = /^(เพิ่มข้อมูล|เพิ่ม|จด|บันทึก|จดบันทึก|สั่ง|ซื้อ)$/i.test(text);
+  const isGenericWord = /^(เน€เธเธดเนเธกเธเนเธญเธกเธนเธฅ|เน€เธเธดเนเธก|เธเธ”|เธเธฑเธเธ—เธถเธ|เธเธ”เธเธฑเธเธ—เธถเธ|เธชเธฑเนเธ|เธเธทเนเธญ)$/i.test(text);
   if (isGenericWord) {
     return {
       intent: 'UNKNOWN',
-      message: 'ต้องการเพิ่มข้อมูลอะไรดีครับ? พิมพ์บอกจำจดได้เลยจ้า เช่น "นัดประชุมพรุ่งนี้ 10 โมงเช้า" หรือ "จ่ายค่าน้ำประปา วันที่ 20/07/26 เวลา 14:00" ครับ 😊'
+      message: 'เธ•เนเธญเธเธเธฒเธฃเน€เธเธดเนเธกเธเนเธญเธกเธนเธฅเธญเธฐเนเธฃเธ”เธตเธเธฃเธฑเธ? เธเธดเธกเธเนเธเธญเธเธเธณเธเธ”เนเธ”เนเน€เธฅเธขเธเนเธฒ เน€เธเนเธ "เธเธฑเธ”เธเธฃเธฐเธเธธเธกเธเธฃเธธเนเธเธเธตเน 10 เนเธกเธเน€เธเนเธฒ" เธซเธฃเธทเธญ "เธเนเธฒเธขเธเนเธฒเธเนเธณเธเธฃเธฐเธเธฒ เธงเธฑเธเธ—เธตเน 20/07/26 เน€เธงเธฅเธฒ 14:00" เธเธฃเธฑเธ ๐'
     };
   }
 
   // 2. Intercept greetings and help prompts for instant, friendly replies (no API delay)
-  const isGreeting = /^(สวัสดี|หวัดดี|ดีครับ|ดีค่ะ|ดีจ้า|hello|hi|hey|hola|greetings)/i.test(text);
-  const isHelpPrompt = /^(ช่วยจดบันทึก|ช่วยจด|จดบันทึก|จดหน่อย|ช่วยหน่อย|ทำอะไรได้บ้าง|คู่มือ|ใช้งานยังไง)/i.test(text);
+  const isGreeting = /^(เธชเธงเธฑเธชเธ”เธต|เธซเธงเธฑเธ”เธ”เธต|เธ”เธตเธเธฃเธฑเธ|เธ”เธตเธเนเธฐ|เธ”เธตเธเนเธฒ|hello|hi|hey|hola|greetings)/i.test(text);
+  const isHelpPrompt = /^(เธเนเธงเธขเธเธ”เธเธฑเธเธ—เธถเธ|เธเนเธงเธขเธเธ”|เธเธ”เธเธฑเธเธ—เธถเธ|เธเธ”เธซเธเนเธญเธข|เธเนเธงเธขเธซเธเนเธญเธข|เธ—เธณเธญเธฐเนเธฃเนเธ”เนเธเนเธฒเธ|เธเธนเนเธกเธทเธญ|เนเธเนเธเธฒเธเธขเธฑเธเนเธ)/i.test(text);
 
   if (isGreeting) {
     return {
       intent: 'UNKNOWN',
-      message: 'สวัสดีครับ ยินดีต้อนรับสู่จำจด! มีอะไรให้ผมช่วยบันทึกหรือช่วยจำวันนี้ไหมครับ 😊'
+      message: 'เธชเธงเธฑเธชเธ”เธตเธเธฃเธฑเธ เธขเธดเธเธ”เธตเธ•เนเธญเธเธฃเธฑเธเธชเธนเนเธเธณเธเธ”! เธกเธตเธญเธฐเนเธฃเนเธซเนเธเธกเธเนเธงเธขเธเธฑเธเธ—เธถเธเธซเธฃเธทเธญเธเนเธงเธขเธเธณเธงเธฑเธเธเธตเนเนเธซเธกเธเธฃเธฑเธ ๐'
     };
   }
 
   if (isHelpPrompt) {
     return {
       intent: 'UNKNOWN',
-      message: 'ยินดีครับ! คุณสามารถพิมพ์สั่งจดบันทึกหรือตั้งเตือนความจำได้เลยจ้า\n\nตัวอย่างเช่น:\n📝 "นัดประชุมพรุ่งนี้ 10 โมงเช้า"\n📝 "จ่ายค่าน้ำประปา วันที่ 20/07/26 เวลา 14:00"'
+      message: 'เธขเธดเธเธ”เธตเธเธฃเธฑเธ! เธเธธเธ“เธชเธฒเธกเธฒเธฃเธ–เธเธดเธกเธเนเธชเธฑเนเธเธเธ”เธเธฑเธเธ—เธถเธเธซเธฃเธทเธญเธ•เธฑเนเธเน€เธ•เธทเธญเธเธเธงเธฒเธกเธเธณเนเธ”เนเน€เธฅเธขเธเนเธฒ\n\nเธ•เธฑเธงเธญเธขเนเธฒเธเน€เธเนเธ:\n๐“ "เธเธฑเธ”เธเธฃเธฐเธเธธเธกเธเธฃเธธเนเธเธเธตเน 10 เนเธกเธเน€เธเนเธฒ"\n๐“ "เธเนเธฒเธขเธเนเธฒเธเนเธณเธเธฃเธฐเธเธฒ เธงเธฑเธเธ—เธตเน 20/07/26 เน€เธงเธฅเธฒ 14:00"'
     };
   }
 
   // 3. Fast exact matching for ID targeted commands (No API delay, 100% accurate)
   if (matchedItem) {
-    if (/(สำเร็จ|เสร็จ|complete|finish|done|ออกรหัส|ออกไอเทม|ออก\s*pr\s*แล้ว)/i.test(text)) {
+    if (/(เธชเธณเน€เธฃเนเธ|เน€เธชเธฃเนเธ|complete|finish|done|เธญเธญเธเธฃเธซเธฑเธช|เธญเธญเธเนเธญเน€เธ—เธก|เธญเธญเธ\s*pr\s*เนเธฅเนเธง)/i.test(text)) {
       return { intent: 'COMPLETE', item_id: matchedItem.id };
     }
-    if (/(ลบ|ยกเลิก|delete|remove)/i.test(text)) {
+    if (/(เธฅเธ|เธขเธเน€เธฅเธดเธ|delete|remove)/i.test(text)) {
       return { intent: 'DELETE', item_id: matchedItem.id };
     }
-    if (/(แก้ไข|แก้|update|edit)/i.test(text)) {
+    if (/(เนเธเนเนเธ|เนเธเน|update|edit)/i.test(text)) {
       return {
         intent: 'UPDATE',
         item_id: matchedItem.id,
@@ -481,7 +481,7 @@ export async function classifyAndParseMessageWithAI(
     // If just typing short ID, treat as search
     const isJustId = text === matchedItem.id.substring(matchedItem.id.length - 3).toLowerCase() || 
                       text === '#' + matchedItem.id.substring(matchedItem.id.length - 3).toLowerCase();
-    const isSearch = text.includes('ค้นหา') || text.includes('หา') || text.includes('search') || text.includes('find') || text.includes('ดู');
+    const isSearch = text.includes('เธเนเธเธซเธฒ') || text.includes('เธซเธฒ') || text.includes('search') || text.includes('find') || text.includes('เธ”เธน');
     
     if (isJustId || isSearch) {
       return {
@@ -506,7 +506,7 @@ export async function classifyAndParseMessageWithAI(
       const body = {
         contents: [{
           parts: [{
-            text: `You are an intelligent assistant for JodJum (จำจด) - a procurement and inventory planner system.
+            text: `You are an intelligent assistant for JodJum (เธเธณเธเธ”) - a procurement and inventory planner system.
 Today's local date and time in Thailand is ${localDateTimeStr}.
 Current user mode: ${activeMode || 'none'}.
 
@@ -519,8 +519,8 @@ Your task is to determine the intent and extract relevant data in a SINGLE SHOT.
 Possible intents: 'STOCK', 'CREATE', 'SEARCH', 'UPDATE', 'DELETE', 'COMPLETE', 'UNKNOWN'.
 
 If the user's message is ambiguous, lacks critical information, or doesn't match a clear action, set intent to 'UNKNOWN' and provide a polite, friendly Thai \`message\` asking for clarification.
-Example: user says "เพิ่มกระดาษ", you clarify "ต้องการเพิ่มกระดาษกี่รีมครับ?".
-Example: user says "สวัสดี", you greet back "สวัสดีครับ มีอะไรให้ผมช่วยจดไหมครับ 😊".
+Example: user says "เน€เธเธดเนเธกเธเธฃเธฐเธ”เธฒเธฉ", you clarify "เธ•เนเธญเธเธเธฒเธฃเน€เธเธดเนเธกเธเธฃเธฐเธ”เธฒเธฉเธเธตเนเธฃเธตเธกเธเธฃเธฑเธ?".
+Example: user says "เธชเธงเธฑเธชเธ”เธต", you greet back "เธชเธงเธฑเธชเธ”เธตเธเธฃเธฑเธ เธกเธตเธญเธฐเนเธฃเนเธซเนเธเธกเธเนเธงเธขเธเธ”เนเธซเธกเธเธฃเธฑเธ ๐".
 
 Format the output strictly as a JSON object matching this structure:
 {
@@ -528,9 +528,9 @@ Format the output strictly as a JSON object matching this structure:
   "search_query": "string (for SEARCH)",
   "item_id": "string UUID of matched item from context (for UPDATE, DELETE, COMPLETE, SEARCH)",
   "create_data": {
-    "title": "Clean, short title (strip keywords like 'แจ้งเตือน', 'บันทึก', etc.)",
+    "title": "Clean, short title (strip keywords like 'เนเธเนเธเน€เธ•เธทเธญเธ', 'เธเธฑเธเธ—เธถเธ', etc.)",
     "description": "string or null",
-    "reminder_date": "ISOString with +07:00 or null (parse Thai relative times e.g. ตอนบ่ายสาม -> 15:00:00. Note Thai short year like '26' means 2026 C.E.)"
+    "reminder_date": "ISOString with +07:00 or null (parse Thai relative times e.g. เธ•เธญเธเธเนเธฒเธขเธชเธฒเธก -> 15:00:00. Note Thai short year like '26' means 2026 C.E.)"
   },
   "update_data": {
     "title": "New title if changed",
@@ -542,7 +542,7 @@ Format the output strictly as a JSON object matching this structure:
     "name": "Current item name in stock (strip action verbs)",
     "quantity": number or null,
     "unit": "string or null",
-    "category": "Laboratory" | "อุปกรณ์สำนักงาน" | null,
+    "category": "Laboratory" | "เธญเธธเธเธเธฃเธ“เนเธชเธณเธเธฑเธเธเธฒเธ" | null,
     "new_name": "string or null",
     "description": "string or null",
     "new_min_threshold": number or null,
@@ -550,27 +550,27 @@ Format the output strictly as a JSON object matching this structure:
     "confidence": number (1-100),
     "confirm_message": "string or null (Thai question to confirm if confidence < 70)"
   },
-  "message": "Friendly response for UNKNOWN intent, greetings, or clarifications. Keep it polite, Thai language, 'ครับ/ค่ะ'."
+  "message": "Friendly response for UNKNOWN intent, greetings, or clarifications. Keep it polite, Thai language, 'เธเธฃเธฑเธ/เธเนเธฐ'."
 }
 
 Few-shot examples:
-User: "นัดประชุมพรุ่งนี้บ่าย 2"
-Output: {"intent":"CREATE","create_data":{"title":"นัดประชุม","description":"บันทึกผ่าน LINE Bot: นัดประชุมพรุ่งนี้บ่าย 2","reminder_date":"2026-09-15T14:00:00+07:00"}}
+User: "เธเธฑเธ”เธเธฃเธฐเธเธธเธกเธเธฃเธธเนเธเธเธตเนเธเนเธฒเธข 2"
+Output: {"intent":"CREATE","create_data":{"title":"เธเธฑเธ”เธเธฃเธฐเธเธธเธก","description":"เธเธฑเธเธ—เธถเธเธเนเธฒเธ LINE Bot: เธเธฑเธ”เธเธฃเธฐเธเธธเธกเธเธฃเธธเนเธเธเธตเนเธเนเธฒเธข 2","reminder_date":"2026-09-15T14:00:00+07:00"}}
 
-User: "เบิกแอลกอฮอล์ 2 ขวด"
-Output: {"intent":"STOCK","stock_data":{"action":"SUBTRACT","name":"แอลกอฮอล์","quantity":2,"unit":"ขวด","confidence":95}}
+User: "เน€เธเธดเธเนเธญเธฅเธเธญเธฎเธญเธฅเน 2 เธเธงเธ”"
+Output: {"intent":"STOCK","stock_data":{"action":"SUBTRACT","name":"เนเธญเธฅเธเธญเธฎเธญเธฅเน","quantity":2,"unit":"เธเธงเธ”","confidence":95}}
 
-User: "ค้นหากระดาษ"
-Output: {"intent":"SEARCH","search_query":"กระดาษ"}
+User: "เธเนเธเธซเธฒเธเธฃเธฐเธ”เธฒเธฉ"
+Output: {"intent":"SEARCH","search_query":"เธเธฃเธฐเธ”เธฒเธฉ"}
 
-User: "เสร็จแล้ว b78"
+User: "เน€เธชเธฃเนเธเนเธฅเนเธง b78"
 Output: {"intent":"COMPLETE","item_id":"<full_uuid_of_b78>"}
 
-User: "สวัสดีจ้า"
-Output: {"intent":"UNKNOWN","message":"สวัสดีครับ ยินดีต้อนรับสู่จำจด! มีอะไรให้ผมช่วยบันทึกหรือช่วยจำวันนี้ไหมครับ 😊"}
+User: "เธชเธงเธฑเธชเธ”เธตเธเนเธฒ"
+Output: {"intent":"UNKNOWN","message":"เธชเธงเธฑเธชเธ”เธตเธเธฃเธฑเธ เธขเธดเธเธ”เธตเธ•เนเธญเธเธฃเธฑเธเธชเธนเนเธเธณเธเธ”! เธกเธตเธญเธฐเนเธฃเนเธซเนเธเธกเธเนเธงเธขเธเธฑเธเธ—เธถเธเธซเธฃเธทเธญเธเนเธงเธขเธเธณเธงเธฑเธเธเธตเนเนเธซเธกเธเธฃเธฑเธ ๐"}
 
-User: "เพิ่มของ"
-Output: {"intent":"UNKNOWN","message":"ต้องการเพิ่มวัสดุอะไร จำนวนเท่าไหร่ครับ? พิมพ์บอกได้เลย เช่น 'เพิ่มปากกา 10 ด้าม' 😊"}`
+User: "เน€เธเธดเนเธกเธเธญเธ"
+Output: {"intent":"UNKNOWN","message":"เธ•เนเธญเธเธเธฒเธฃเน€เธเธดเนเธกเธงเธฑเธชเธ”เธธเธญเธฐเนเธฃ เธเธณเธเธงเธเน€เธ—เนเธฒเนเธซเธฃเนเธเธฃเธฑเธ? เธเธดเธกเธเนเธเธญเธเนเธ”เนเน€เธฅเธข เน€เธเนเธ 'เน€เธเธดเนเธกเธเธฒเธเธเธฒ 10 เธ”เนเธฒเธก' ๐"}`
           }]
         }],
         generationConfig: {
@@ -587,24 +587,24 @@ Output: {"intent":"UNKNOWN","message":"ต้องการเพิ่มว�
       // Clean up title in create_data if exists, just in case
       if (parsed.create_data?.title) {
         let t = parsed.create_data.title;
-        t = t.replace(/^(?:ให้แจ้งเตือน|ไม่แจ้งเตือน|ช่วยแจ้งเตือน|แจ้งเตือน|ช่วยเตือน|เตือน|บันทึก|จด|เพิ่ม)\s*/i, '').trim();
-        t = t.replace(/(?:แจ้งเตือน)?วันที่\s*\d+[\/\.\-]\d+[\/\.\-]\d+(?:\s*(?:ตอน|เวลา)?\s*\d+[\.\:]\d+\s*น\.?)?$/i, '').trim();
-        t = t.replace(/(?:\s*(?:ตอน|เวลา)?\s*\d+[\.\:]\d+\s*น\.?)$/i, '').trim();
-        t = t.replace(/^[:\-ー\s\.]+/, '').trim();
-        t = t.replace(/[:\-ー\s\.]+$/, '').trim();
+        t = t.replace(/^(?:เนเธซเนเนเธเนเธเน€เธ•เธทเธญเธ|เนเธกเนเนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเนเธเนเธเน€เธ•เธทเธญเธ|เนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเน€เธ•เธทเธญเธ|เน€เธ•เธทเธญเธ|เธเธฑเธเธ—เธถเธ|เธเธ”|เน€เธเธดเนเธก)\s*/i, '').trim();
+        t = t.replace(/(?:เนเธเนเธเน€เธ•เธทเธญเธ)?เธงเธฑเธเธ—เธตเน\s*\d+[\/\.\-]\d+[\/\.\-]\d+(?:\s*(?:เธ•เธญเธ|เน€เธงเธฅเธฒ)?\s*\d+[\.\:]\d+\s*เธ\.?)?$/i, '').trim();
+        t = t.replace(/(?:\s*(?:เธ•เธญเธ|เน€เธงเธฅเธฒ)?\s*\d+[\.\:]\d+\s*เธ\.?)$/i, '').trim();
+        t = t.replace(/^[:\-ใผ\s\.]+/, '').trim();
+        t = t.replace(/[:\-ใผ\s\.]+$/, '').trim();
         parsed.create_data.title = t;
       }
 
       // Ensure item_id is not missing for actions that require it (but might not have found it in context)
       if ((parsed.intent === 'DELETE' || parsed.intent === 'COMPLETE') && !parsed.item_id) {
          // try local regex fallback finding if AI missed it
-         const query = messageText.replace(/^(ลบ|delete|ยกเลิก|เสร็จแล้ว|สำเร็จ|complete|เสร็จ|ออกรหัส|ออกไอเทม)\s*/i, '').trim();
+         const query = messageText.replace(/^(เธฅเธ|delete|เธขเธเน€เธฅเธดเธ|เน€เธชเธฃเนเธเนเธฅเนเธง|เธชเธณเน€เธฃเนเธ|complete|เน€เธชเธฃเนเธ|เธญเธญเธเธฃเธซเธฑเธช|เธญเธญเธเนเธญเน€เธ—เธก)\s*/i, '').trim();
          const matched = findClosestItem(query, existingItems);
          if (matched) parsed.item_id = matched.id;
       }
       
       if (parsed.intent === 'SEARCH' && !parsed.item_id) {
-         const query = messageText.replace(/^(ค้นหา|หา|search|find|ดู)\s*/i, '').trim();
+         const query = messageText.replace(/^(เธเนเธเธซเธฒ|เธซเธฒ|search|find|เธ”เธน)\s*/i, '').trim();
          const matched = findClosestItem(query, existingItems);
          if (matched) parsed.item_id = matched.id;
       }
@@ -635,21 +635,21 @@ function extractReminderDate(text: string): string | null {
     let hours = 9;
     let minutes = 0;
     
-    // Check for HH:mm or HH.mm time after "เวลา" or "at"
-    const timeMatch = text.match(/(?:เวลา|at)\s*(\d{1,2})[:.](\d{2})/i);
+    // Check for HH:mm or HH.mm time after "เน€เธงเธฅเธฒ" or "at"
+    const timeMatch = text.match(/(?:เน€เธงเธฅเธฒ|at)\s*(\d{1,2})[:.](\d{2})/i);
     if (timeMatch) {
       hours = parseInt(timeMatch[1]);
       minutes = parseInt(timeMatch[2]);
     } else {
-      // Check for simple Thai "โมง" or "โมงเช้า" / "บ่าย..." time representation
-      const mongMatch = text.match(/(\d{1,2})\s*โมง/i);
+      // Check for simple Thai "เนเธกเธ" or "เนเธกเธเน€เธเนเธฒ" / "เธเนเธฒเธข..." time representation
+      const mongMatch = text.match(/(\d{1,2})\s*เนเธกเธ/i);
       if (mongMatch) {
         let h = parseInt(mongMatch[1]);
-        if (text.includes('บ่าย') && h < 12) {
+        if (text.includes('เธเนเธฒเธข') && h < 12) {
           h += 12;
-        } else if (text.includes('เย็น') && h < 12) {
+        } else if (text.includes('เน€เธขเนเธ') && h < 12) {
           h += 12;
-        } else if (text.includes('ค่ำ') && h < 12) {
+        } else if (text.includes('เธเนเธณ') && h < 12) {
           h += 12;
         }
         hours = h;
@@ -673,16 +673,16 @@ export function regexFallbackParser(messageText: string, existingItems: any[]): 
   const text = messageText.toLowerCase().trim();
 
   // 0. STOCK intent in fallback
-  const isStockAction = /(?:สต็อก|สต๊อก|คลัง|จำนวน|ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|เบิก|หักยอด|ตัดยอด|แอดวัสดุ|เพิ่มสต็อก|แล็บ|lab|วัสดุ|หมวดหมู่|หมวด)/i.test(text);
+  const isStockAction = /(?:เธชเธ•เนเธญเธ|เธชเธ•เนเธญเธ|เธเธฅเธฑเธ|เธเธณเธเธงเธ|เธเธดเนเธ|เธเธฅเนเธญเธ|เธเธงเธ”|เธซเธฅเธญเธ”|เนเธเธฅเธฅเธญเธ|เธฃเธตเธก|เน€เธเธดเธ|เธซเธฑเธเธขเธญเธ”|เธ•เธฑเธ”เธขเธญเธ”|เนเธญเธ”เธงเธฑเธชเธ”เธธ|เน€เธเธดเนเธกเธชเธ•เนเธญเธ|เนเธฅเนเธ|lab|เธงเธฑเธชเธ”เธธ|เธซเธกเธงเธ”เธซเธกเธนเน|เธซเธกเธงเธ”)/i.test(text);
   if (isStockAction) {
     let action: 'ADD' | 'SUBTRACT' | 'SET' | 'DELETE' | 'CHECK' | 'EDIT_CATEGORY' = 'CHECK';
-    if (text.startsWith('เบิก') || text.startsWith('หัก') || text.startsWith('ลด') || text.includes('ตัดยอด') || text.includes('เบิกออก') || text.includes('เอาไปใช้') || text.includes('หักลบ') || text.startsWith('ลบ')) {
+    if (text.startsWith('เน€เธเธดเธ') || text.startsWith('เธซเธฑเธ') || text.startsWith('เธฅเธ”') || text.includes('เธ•เธฑเธ”เธขเธญเธ”') || text.includes('เน€เธเธดเธเธญเธญเธ') || text.includes('เน€เธญเธฒเนเธเนเธเน') || text.includes('เธซเธฑเธเธฅเธ') || text.startsWith('เธฅเธ')) {
       action = 'SUBTRACT';
-    } else if (text.startsWith('เพิ่ม') || text.startsWith('แอด') || text.includes('เติม') || text.includes('เพิ่มสต็อก') || text.includes('บวกเพิ่ม')) {
+    } else if (text.startsWith('เน€เธเธดเนเธก') || text.startsWith('เนเธญเธ”') || text.includes('เน€เธ•เธดเธก') || text.includes('เน€เธเธดเนเธกเธชเธ•เนเธญเธ') || text.includes('เธเธงเธเน€เธเธดเนเธก')) {
       action = 'ADD';
-    } else if (text.startsWith('ตั้ง') || text.includes('ปรับยอด') || text.startsWith('ใส่ยอด') || text.includes('เท่ากับ')) {
+    } else if (text.startsWith('เธ•เธฑเนเธ') || text.includes('เธเธฃเธฑเธเธขเธญเธ”') || text.startsWith('เนเธชเนเธขเธญเธ”') || text.includes('เน€เธ—เนเธฒเธเธฑเธ')) {
       action = 'SET';
-    } else if (text.includes('ย้ายหมวด') || text.includes('เปลี่ยนหมวด') || text.includes('ย้ายไป') || text.includes('หมวดหมู่') || text.includes('หมวด')) {
+    } else if (text.includes('เธขเนเธฒเธขเธซเธกเธงเธ”') || text.includes('เน€เธเธฅเธตเนเธขเธเธซเธกเธงเธ”') || text.includes('เธขเนเธฒเธขเนเธ') || text.includes('เธซเธกเธงเธ”เธซเธกเธนเน') || text.includes('เธซเธกเธงเธ”')) {
       action = 'EDIT_CATEGORY';
     }
 
@@ -691,30 +691,30 @@ export function regexFallbackParser(messageText: string, existingItems: any[]): 
     const quantity = qtyMatch ? parseInt(qtyMatch[1]) : null;
 
     // Common units
-    const unitMatch = text.match(/(ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|แท่ง|แพ็ค|แพค|แผ่น|เครื่อง|ตัว|คู่|ชุด|กิโล|ลิตร|มิลลิลิตร)/);
-    const unit = unitMatch ? unitMatch[1] : 'ชิ้น';
+    const unitMatch = text.match(/(เธเธดเนเธ|เธเธฅเนเธญเธ|เธเธงเธ”|เธซเธฅเธญเธ”|เนเธเธฅเธฅเธญเธ|เธฃเธตเธก|เธญเธฑเธ|เธกเนเธงเธ|เธ–เธธเธ|เนเธ|เนเธ—เนเธ|เนเธเนเธ|เนเธเธ|เนเธเนเธ|เน€เธเธฃเธทเนเธญเธ|เธ•เธฑเธง|เธเธนเน|เธเธธเธ”|เธเธดเนเธฅ|เธฅเธดเธ•เธฃ|เธกเธดเธฅเธฅเธดเธฅเธดเธ•เธฃ)/);
+    const unit = unitMatch ? unitMatch[1] : 'เธเธดเนเธ';
 
     // Extract priority in fallback
     let priority: 'High' | 'Medium' | 'Low' = 'Medium';
-    if (text.includes('ด่วน') || text.includes('สำคัญมาก')) {
+    if (text.includes('เธ”เนเธงเธ') || text.includes('เธชเธณเธเธฑเธเธกเธฒเธ')) {
       priority = 'High';
-    } else if (text.includes('ทั่วไป') || text.includes('ไม่ด่วน')) {
+    } else if (text.includes('เธ—เธฑเนเธงเนเธ') || text.includes('เนเธกเนเธ”เนเธงเธ')) {
       priority = 'Low';
     }
 
     // Extract min threshold in fallback
-    const thresholdMatch = text.match(/(?:เตือนเมื่อเหลือ|เกณฑ์|ขั้นต่ำ)\s*(\d+)/i);
+    const thresholdMatch = text.match(/(?:เน€เธ•เธทเธญเธเน€เธกเธทเนเธญเน€เธซเธฅเธทเธญ|เน€เธเธ“เธ‘เน|เธเธฑเนเธเธ•เนเธณ)\s*(\d+)/i);
     const min_threshold = thresholdMatch ? parseInt(thresholdMatch[1]) : 0;
 
     // Extract name by removing action, quantity, units
     let name = messageText
-      .replace(/^(?:เบิก|หัก|ลด|ตัดยอด|เบิกออก|เพิ่ม|แอด|เติม|ลบ|ตั้ง|เช็ก|ดู|สต็อก|สต๊อก|เช็ค|ปรับยอด|ปรับยอดใหม่|ปรับ|ย้าย|เปลี่ยนหมวดหมู่|เปลี่ยนหมวด|ย้ายหมวดหมู่|ย้ายหมวด)\s*/i, '')
+      .replace(/^(?:เน€เธเธดเธ|เธซเธฑเธ|เธฅเธ”|เธ•เธฑเธ”เธขเธญเธ”|เน€เธเธดเธเธญเธญเธ|เน€เธเธดเนเธก|เนเธญเธ”|เน€เธ•เธดเธก|เธฅเธ|เธ•เธฑเนเธ|เน€เธเนเธ|เธ”เธน|เธชเธ•เนเธญเธ|เธชเธ•เนเธญเธ|เน€เธเนเธ|เธเธฃเธฑเธเธขเธญเธ”|เธเธฃเธฑเธเธขเธญเธ”เนเธซเธกเน|เธเธฃเธฑเธ|เธขเนเธฒเธข|เน€เธเธฅเธตเนเธขเธเธซเธกเธงเธ”เธซเธกเธนเน|เน€เธเธฅเธตเนเธขเธเธซเธกเธงเธ”|เธขเนเธฒเธขเธซเธกเธงเธ”เธซเธกเธนเน|เธขเนเธฒเธขเธซเธกเธงเธ”)\s*/i, '')
       .replace(/\b\d+\b/g, '')
-      .replace(/(?:จำนวน|เท่ากับ|เป็น|ยอด|ชิ้น|กล่อง|ขวด|หลอด|แกลลอน|รีม|อัน|ม้วน|ถุง|ใบ|แท่ง|แพ็ค|แพค|แผ่น|เครื่อง|ตัว|คู่|ชุด|กิโล|ลิตร|มิลลิลิตร|วัน|เครดิต|ด่วน|ทั่วไป|ไม่ด่วน|สำคัญมาก|ไปหมวดหมู่|ไปหมวด|หมวดหมู่|หมวด|laboratory|office|lab|แล็บ)/gi, '')
-      .replace(/(?:ครับ|ค่ะ|จ้า|นะ|นะครับ|นะคะ|ด้วย|ด้วยครับ|ด้วยค่ะ|หน่อย|หน่อยครับ|หน่อยค่ะ)\s*$/i, '')
+      .replace(/(?:เธเธณเธเธงเธ|เน€เธ—เนเธฒเธเธฑเธ|เน€เธเนเธ|เธขเธญเธ”|เธเธดเนเธ|เธเธฅเนเธญเธ|เธเธงเธ”|เธซเธฅเธญเธ”|เนเธเธฅเธฅเธญเธ|เธฃเธตเธก|เธญเธฑเธ|เธกเนเธงเธ|เธ–เธธเธ|เนเธ|เนเธ—เนเธ|เนเธเนเธ|เนเธเธ|เนเธเนเธ|เน€เธเธฃเธทเนเธญเธ|เธ•เธฑเธง|เธเธนเน|เธเธธเธ”|เธเธดเนเธฅ|เธฅเธดเธ•เธฃ|เธกเธดเธฅเธฅเธดเธฅเธดเธ•เธฃ|เธงเธฑเธ|เน€เธเธฃเธ”เธดเธ•|เธ”เนเธงเธ|เธ—เธฑเนเธงเนเธ|เนเธกเนเธ”เนเธงเธ|เธชเธณเธเธฑเธเธกเธฒเธ|เนเธเธซเธกเธงเธ”เธซเธกเธนเน|เนเธเธซเธกเธงเธ”|เธซเธกเธงเธ”เธซเธกเธนเน|เธซเธกเธงเธ”|laboratory|office|lab|เนเธฅเนเธ)/gi, '')
+      .replace(/(?:เธเธฃเธฑเธ|เธเนเธฐ|เธเนเธฒ|เธเธฐ|เธเธฐเธเธฃเธฑเธ|เธเธฐเธเธฐ|เธ”เนเธงเธข|เธ”เนเธงเธขเธเธฃเธฑเธ|เธ”เนเธงเธขเธเนเธฐ|เธซเธเนเธญเธข|เธซเธเนเธญเธขเธเธฃเธฑเธ|เธซเธเนเธญเธขเธเนเธฐ)\s*$/i, '')
       .replace(/\s+/g, ' ')
       .trim();
-    name = name.replace(/^[:\-ー\s\.]+/, '').trim();
+    name = name.replace(/^[:\-ใผ\s\.]+/, '').trim();
 
     return {
       intent: 'STOCK',
@@ -723,7 +723,7 @@ export function regexFallbackParser(messageText: string, existingItems: any[]): 
         name: name || null,
         quantity,
         unit,
-        category: text.includes('lab') || text.includes('แล็บ') || text.includes('สารเคมี') ? 'Laboratory' : 'อุปกรณ์สำนักงาน',
+        category: text.includes('lab') || text.includes('เนเธฅเนเธ') || text.includes('เธชเธฒเธฃเน€เธเธกเธต') ? 'Laboratory' : 'เธญเธธเธเธเธฃเธ“เนเธชเธณเธเธฑเธเธเธฒเธ',
         priority,
         min_threshold
       }
@@ -731,8 +731,8 @@ export function regexFallbackParser(messageText: string, existingItems: any[]): 
   }
 
   // 1. SEARCH intent
-  if (text.startsWith('ค้นหา') || text.startsWith('หา') || text.startsWith('search') || text.startsWith('find') || text.startsWith('ดู')) {
-    const query = messageText.replace(/^(ค้นหา|หา|search|find|ดู)\s*/i, '').trim();
+  if (text.startsWith('เธเนเธเธซเธฒ') || text.startsWith('เธซเธฒ') || text.startsWith('search') || text.startsWith('find') || text.startsWith('เธ”เธน')) {
+    const query = messageText.replace(/^(เธเนเธเธซเธฒ|เธซเธฒ|search|find|เธ”เธน)\s*/i, '').trim();
     const matched = findClosestItem(query, existingItems);
     return { 
       intent: 'SEARCH', 
@@ -742,22 +742,22 @@ export function regexFallbackParser(messageText: string, existingItems: any[]): 
   }
 
   // 2. DELETE intent
-  if (text.startsWith('ลบ') || text.startsWith('delete') || text.startsWith('ยกเลิก')) {
-    const query = messageText.replace(/^(ลบ|delete|ยกเลิก)\s*/i, '').trim();
+  if (text.startsWith('เธฅเธ') || text.startsWith('delete') || text.startsWith('เธขเธเน€เธฅเธดเธ')) {
+    const query = messageText.replace(/^(เธฅเธ|delete|เธขเธเน€เธฅเธดเธ)\s*/i, '').trim();
     const matched = findClosestItem(query, existingItems);
     return { intent: 'DELETE', item_id: matched?.id || undefined };
   }
 
   // 3. COMPLETE intent
-  if (text.startsWith('เสร็จแล้ว') || text.startsWith('สำเร็จ') || text.startsWith('complete') || text.includes('เสร็จ') || text.includes('สำเร็จ')) {
-    const query = messageText.replace(/^(เสร็จแล้ว|สำเร็จ|complete|เสร็จ)\s*/i, '').trim();
+  if (text.startsWith('เน€เธชเธฃเนเธเนเธฅเนเธง') || text.startsWith('เธชเธณเน€เธฃเนเธ') || text.startsWith('complete') || text.includes('เน€เธชเธฃเนเธ') || text.includes('เธชเธณเน€เธฃเนเธ')) {
+    const query = messageText.replace(/^(เน€เธชเธฃเนเธเนเธฅเนเธง|เธชเธณเน€เธฃเนเธ|complete|เน€เธชเธฃเนเธ)\s*/i, '').trim();
     const matched = findClosestItem(query, existingItems);
     return { intent: 'COMPLETE', item_id: matched?.id || undefined };
   }
 
   // 4. UPDATE intent
-  if (text.startsWith('แก้ไข') || text.startsWith('แก้') || text.startsWith('edit') || text.startsWith('update')) {
-    const query = messageText.replace(/^(แก้ไข|แก้|edit|update)\s*/i, '').trim();
+  if (text.startsWith('เนเธเนเนเธ') || text.startsWith('เนเธเน') || text.startsWith('edit') || text.startsWith('update')) {
+    const query = messageText.replace(/^(เนเธเนเนเธ|เนเธเน|edit|update)\s*/i, '').trim();
     const matched = findClosestItem(query, existingItems);
 
     return {
@@ -771,19 +771,19 @@ export function regexFallbackParser(messageText: string, existingItems: any[]): 
   const reminder_date = extractReminderDate(messageText);
 
   let title = messageText.replace(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g, '').trim();
-  title = title.replace(/(?:แจ้งเตือน|เตือน|วันจันทร์ที่|วันอังคารที่|วันพุธที่|วันพฤหัสบดีที่|วันศุกร์ที่|วันเสาร์ที่|วันอาทิตย์ที่|วันที่|วัน)\s*$/i, '').trim();
-  title = title.replace(/^(เพิ่ม)\s*/i, '').trim();
+  title = title.replace(/(?:เนเธเนเธเน€เธ•เธทเธญเธ|เน€เธ•เธทเธญเธ|เธงเธฑเธเธเธฑเธเธ—เธฃเนเธ—เธตเน|เธงเธฑเธเธญเธฑเธเธเธฒเธฃเธ—เธตเน|เธงเธฑเธเธเธธเธเธ—เธตเน|เธงเธฑเธเธเธคเธซเธฑเธชเธเธ”เธตเธ—เธตเน|เธงเธฑเธเธจเธธเธเธฃเนเธ—เธตเน|เธงเธฑเธเน€เธชเธฒเธฃเนเธ—เธตเน|เธงเธฑเธเธญเธฒเธ—เธดเธ•เธขเนเธ—เธตเน|เธงเธฑเธเธ—เธตเน|เธงเธฑเธ)\s*$/i, '').trim();
+  title = title.replace(/^(เน€เธเธดเนเธก)\s*/i, '').trim();
   
-  // Clean up prefix reminder/action keywords from the beginning of the title (e.g. "ไม่แจ้งเตือน", "ให้แจ้งเตือน", "แจ้งเตือน")
-  title = title.replace(/^(?:ให้แจ้งเตือน|ไม่แจ้งเตือน|ช่วยแจ้งเตือน|แจ้งเตือน|ช่วยเตือน|เตือน|บันทึก|จด|เพิ่ม)\s*/i, '').trim();
-  // Strip any leading colons, dashes or spaces left over from the keyword removal (e.g. "แจ้งเตือน: ..." -> "...")
-  title = title.replace(/^[:\-ー\s\.]+/, '').trim();
+  // Clean up prefix reminder/action keywords from the beginning of the title (e.g. "เนเธกเนเนเธเนเธเน€เธ•เธทเธญเธ", "เนเธซเนเนเธเนเธเน€เธ•เธทเธญเธ", "เนเธเนเธเน€เธ•เธทเธญเธ")
+  title = title.replace(/^(?:เนเธซเนเนเธเนเธเน€เธ•เธทเธญเธ|เนเธกเนเนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเนเธเนเธเน€เธ•เธทเธญเธ|เนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเน€เธ•เธทเธญเธ|เน€เธ•เธทเธญเธ|เธเธฑเธเธ—เธถเธ|เธเธ”|เน€เธเธดเนเธก)\s*/i, '').trim();
+  // Strip any leading colons, dashes or spaces left over from the keyword removal (e.g. "เนเธเนเธเน€เธ•เธทเธญเธ: ..." -> "...")
+  title = title.replace(/^[:\-ใผ\s\.]+/, '').trim();
 
   return {
     intent: 'CREATE',
     create_data: {
       title: title || messageText,
-      description: `บันทึกผ่าน LINE Bot: ${messageText}`,
+      description: `เธเธฑเธเธ—เธถเธเธเนเธฒเธ LINE Bot: ${messageText}`,
       reminder_date
     }
   };
@@ -846,7 +846,7 @@ export async function parseItemEditWithAI(
   const body = {
     contents: [{
       parts: [{
-        text: `You are an edit parser for JodJum (จำจด).
+        text: `You are an edit parser for JodJum (เธเธณเธเธ”).
 Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
 
 The user is editing a specific item. Here is the current state of the item:
@@ -858,14 +858,14 @@ The user has sent this edit request: "${messageText}"
 
 Analyze the request to see what fields they want to change.
 Rules:
-1. If the user wants to change/set/update the reminder time (e.g., "แจ้งเตือนตอน 12:00", "แก้เวลาเป็นพรุ่งนี้ 9 โมงเช้า", "เตือนพรุ่งนี้บ่ายโมง", "แก้เวลาแจ้งเตือนใหม่", "แก้เวลาเป็น 15/07/26 เวลา 10:00", "แจ้งเตือนเวลาตอน 12:00 น."), extract/calculate the new "reminder_date" as an ISO String in Thailand timezone (+07:00).
-   - If they specify only a time (e.g. "ตอน 12:00 น.", "แก้เวลาเป็น 10:00"), keep the date of today (or tomorrow if the time has already passed today, but default to today first) or keep the current reminder's date if appropriate.
-   - If they specify a time edit but it has no date/time information at all (e.g. just "แก้เวลาแจ้งเตือนใหม่" without any time), do not change the reminder_date or the title. Leave both unchanged.
-   - If they say "ยกเลิกแจ้งเตือน" / "ไม่เตือนแล้ว" / "ลบวันแจ้งเตือน" / "ไม่แจ้งเตือนแล้ว", set "reminder_date" to null.
-2. If the user wants to change the title (e.g. "แก้ชื่อเป็น คอมพิวเตอร์ i7", "เปลี่ยนชื่อรายการเป็น ซื้ออุปกรณ์สำนักงาน", "แก้ชื่อเป็น สมุดโน้ต", or they type a clear new name like "กระดาษ A4 10 กล่อง" without referencing dates/times or credit terms), set the "title" field.
-   - CRITICAL: Never include keyword prefixes like 'แจ้งเตือน', 'ให้แจ้งเตือน', 'ไม่แจ้งเตือน', 'เตือน', 'ช่วยเตือน', 'ช่วยแจ้งเตือน', 'บันทึก', 'จด', 'เพิ่ม', 'แก้ชื่อเป็น', 'เปลี่ยนชื่อเป็น' in the title. Remove them.
-3. If they only requested to change the reminder date/time (e.g., "แจ้งเตือนเวลาตอน 12:00 น.") and did NOT request a title change, do NOT return the "title" field in your JSON output (or set it to null), so that the existing title is preserved! E.g. for "แจ้งเตือนเวลาตอน 12:00 น.", the user wants to update the reminder_date, NOT change the title to "แจ้งเตือนเวลาตอน 12:00 น.".
-4. If the request is a mix of changes (e.g., "แก้ชื่อเป็น คอมพิวเตอร์ และเตือนพรุ่งนี้ 9 โมง"), return both "title" and "reminder_date" fields.
+1. If the user wants to change/set/update the reminder time (e.g., "เนเธเนเธเน€เธ•เธทเธญเธเธ•เธญเธ 12:00", "เนเธเนเน€เธงเธฅเธฒเน€เธเนเธเธเธฃเธธเนเธเธเธตเน 9 เนเธกเธเน€เธเนเธฒ", "เน€เธ•เธทเธญเธเธเธฃเธธเนเธเธเธตเนเธเนเธฒเธขเนเธกเธ", "เนเธเนเน€เธงเธฅเธฒเนเธเนเธเน€เธ•เธทเธญเธเนเธซเธกเน", "เนเธเนเน€เธงเธฅเธฒเน€เธเนเธ 15/07/26 เน€เธงเธฅเธฒ 10:00", "เนเธเนเธเน€เธ•เธทเธญเธเน€เธงเธฅเธฒเธ•เธญเธ 12:00 เธ."), extract/calculate the new "reminder_date" as an ISO String in Thailand timezone (+07:00).
+   - If they specify only a time (e.g. "เธ•เธญเธ 12:00 เธ.", "เนเธเนเน€เธงเธฅเธฒเน€เธเนเธ 10:00"), keep the date of today (or tomorrow if the time has already passed today, but default to today first) or keep the current reminder's date if appropriate.
+   - If they specify a time edit but it has no date/time information at all (e.g. just "เนเธเนเน€เธงเธฅเธฒเนเธเนเธเน€เธ•เธทเธญเธเนเธซเธกเน" without any time), do not change the reminder_date or the title. Leave both unchanged.
+   - If they say "เธขเธเน€เธฅเธดเธเนเธเนเธเน€เธ•เธทเธญเธ" / "เนเธกเนเน€เธ•เธทเธญเธเนเธฅเนเธง" / "เธฅเธเธงเธฑเธเนเธเนเธเน€เธ•เธทเธญเธ" / "เนเธกเนเนเธเนเธเน€เธ•เธทเธญเธเนเธฅเนเธง", set "reminder_date" to null.
+2. If the user wants to change the title (e.g. "เนเธเนเธเธทเนเธญเน€เธเนเธ เธเธญเธกเธเธดเธงเน€เธ•เธญเธฃเน i7", "เน€เธเธฅเธตเนเธขเธเธเธทเนเธญเธฃเธฒเธขเธเธฒเธฃเน€เธเนเธ เธเธทเนเธญเธญเธธเธเธเธฃเธ“เนเธชเธณเธเธฑเธเธเธฒเธ", "เนเธเนเธเธทเนเธญเน€เธเนเธ เธชเธกเธธเธ”เนเธเนเธ•", or they type a clear new name like "เธเธฃเธฐเธ”เธฒเธฉ A4 10 เธเธฅเนเธญเธ" without referencing dates/times or credit terms), set the "title" field.
+   - CRITICAL: Never include keyword prefixes like 'เนเธเนเธเน€เธ•เธทเธญเธ', 'เนเธซเนเนเธเนเธเน€เธ•เธทเธญเธ', 'เนเธกเนเนเธเนเธเน€เธ•เธทเธญเธ', 'เน€เธ•เธทเธญเธ', 'เธเนเธงเธขเน€เธ•เธทเธญเธ', 'เธเนเธงเธขเนเธเนเธเน€เธ•เธทเธญเธ', 'เธเธฑเธเธ—เธถเธ', 'เธเธ”', 'เน€เธเธดเนเธก', 'เนเธเนเธเธทเนเธญเน€เธเนเธ', 'เน€เธเธฅเธตเนเธขเธเธเธทเนเธญเน€เธเนเธ' in the title. Remove them.
+3. If they only requested to change the reminder date/time (e.g., "เนเธเนเธเน€เธ•เธทเธญเธเน€เธงเธฅเธฒเธ•เธญเธ 12:00 เธ.") and did NOT request a title change, do NOT return the "title" field in your JSON output (or set it to null), so that the existing title is preserved! E.g. for "เนเธเนเธเน€เธ•เธทเธญเธเน€เธงเธฅเธฒเธ•เธญเธ 12:00 เธ.", the user wants to update the reminder_date, NOT change the title to "เนเธเนเธเน€เธ•เธทเธญเธเน€เธงเธฅเธฒเธ•เธญเธ 12:00 เธ.".
+4. If the request is a mix of changes (e.g., "เนเธเนเธเธทเนเธญเน€เธเนเธ เธเธญเธกเธเธดเธงเน€เธ•เธญเธฃเน เนเธฅเธฐเน€เธ•เธทเธญเธเธเธฃเธธเนเธเธเธตเน 9 เนเธกเธ"), return both "title" and "reminder_date" fields.
 
 Format the output strictly as JSON with the following structure (include only fields that are being updated):
 {
@@ -885,8 +885,8 @@ Format the output strictly as JSON with the following structure (include only fi
   const parsed = JSON.parse(rawText.trim());
 
   if (parsed.title) {
-    parsed.title = parsed.title.replace(/^(?:ให้แจ้งเตือน|ไม่แจ้งเตือน|ช่วยแจ้งเตือน|แจ้งเตือน|ช่วยเตือน|เตือน|บันทึก|จด|เพิ่ม|แก้ชื่อเป็น|เปลี่ยนชื่อเป็น|แก้ชื่อ|เปลี่ยนชื่อ|แก้|เปลี่ยน)\s*/i, '').trim();
-    parsed.title = parsed.title.replace(/^[:\-ー\s\.]+/, '').trim();
+    parsed.title = parsed.title.replace(/^(?:เนเธซเนเนเธเนเธเน€เธ•เธทเธญเธ|เนเธกเนเนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเนเธเนเธเน€เธ•เธทเธญเธ|เนเธเนเธเน€เธ•เธทเธญเธ|เธเนเธงเธขเน€เธ•เธทเธญเธ|เน€เธ•เธทเธญเธ|เธเธฑเธเธ—เธถเธ|เธเธ”|เน€เธเธดเนเธก|เนเธเนเธเธทเนเธญเน€เธเนเธ|เน€เธเธฅเธตเนเธขเธเธเธทเนเธญเน€เธเนเธ|เนเธเนเธเธทเนเธญ|เน€เธเธฅเธตเนเธขเธเธเธทเนเธญ|เนเธเน|เน€เธเธฅเธตเนเธขเธ)\s*/i, '').trim();
+    parsed.title = parsed.title.replace(/^[:\-ใผ\s\.]+/, '').trim();
   }
 
   return parsed;
@@ -908,14 +908,14 @@ export async function analyzeImageWithAI(
 
   let prompt = '';
   if (activeMode === 'stock') {
-    prompt = `You are a stock receipt and item parser for JodJum (จำจด).
+    prompt = `You are a stock receipt and item parser for JodJum (เธเธณเธเธ”).
 Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
 
 Analyze this image of a receipt, item package, or stock listing. Extract any stock materials/items.
 For each item, extract:
-- name: Clean, short name of the material (in Thai if Thai, e.g. 'กระดาษ A4')
+- name: Clean, short name of the material (in Thai if Thai, e.g. 'เธเธฃเธฐเธ”เธฒเธฉ A4')
 - quantity: Numeric quantity (integer or float)
-- unit: Unit (in Thai if Thai, e.g. 'ชิ้น', 'กล่อง', 'ขวด', 'อัน', 'แผ่น')
+- unit: Unit (in Thai if Thai, e.g. 'เธเธดเนเธ', 'เธเธฅเนเธญเธ', 'เธเธงเธ”', 'เธญเธฑเธ', 'เนเธเนเธ')
 
 Format the response strictly as JSON with the following structure:
 {
@@ -924,12 +924,12 @@ Format the response strictly as JSON with the following structure:
     {
       "name": "Clean name of item",
       "quantity": 10,
-      "unit": "ชิ้น"
+      "unit": "เธเธดเนเธ"
     }
   ]
 }`;
   } else {
-    prompt = `You are a reminder and task parser for JodJum (จำจด).
+    prompt = `You are a reminder and task parser for JodJum (เธเธณเธเธ”).
 Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
 
 Analyze this image of a receipt, document, or handwritten note. Extract the main task/reminder details.
@@ -938,7 +938,7 @@ Suggest a reminder title and when to remind if specified.
 Format the response strictly as JSON with the following structure:
 {
   "type": "REMINDER",
-  "title": "Clean, short, and descriptive title (in Thai, e.g. 'จ่ายค่าน้ำประปา', 'เคลียร์งบประมาณ')",
+  "title": "Clean, short, and descriptive title (in Thai, e.g. 'เธเนเธฒเธขเธเนเธฒเธเนเธณเธเธฃเธฐเธเธฒ', 'เน€เธเธฅเธตเธขเธฃเนเธเธเธเธฃเธฐเธกเธฒเธ“')",
   "description": "Short description of details extracted from the image (in Thai)",
   "reminder_date": "ISOString in Thailand timezone (+07:00) of when to remind, or null if no specific time is found (If only date is specified, default time to 09:00:00+07:00)"
 }`;
@@ -969,82 +969,82 @@ Format the response strictly as JSON with the following structure:
 }
 
 
- 
- / /   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =  
- / /   N E W   C E N T R A L   A I   R O U T E R   ( D Y N A M I C   B O A R D S )  
- / /   = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =  
-  
- e x p o r t   i n t e r f a c e   C e n t r a l A I P a r s e d O u t p u t   {  
-     i s _ c o n v e r s a t i o n :   b o o l e a n ;  
-     r e p l y _ m e s s a g e ? :   s t r i n g ;  
-     c o m m a n d ? :   {  
-         b o a r d _ i d :   s t r i n g ;  
-         a c t i o n :   ' A D D '   |   ' U P D A T E '   |   ' D E L E T E '   |   ' S E A R C H '   |   ' C O M P L E T E '   |   ' C H E C K _ S T O C K '   |   ' S U B T R A C T _ S T O C K '   |   ' A D D _ S T O C K ' ;  
-         t a r g e t _ i t e m _ n a m e ? :   s t r i n g ;  
-         f i e l d s :   {  
-             t i t l e ? :   s t r i n g ;  
-             d e s c r i p t i o n ? :   s t r i n g ;  
-             d a t e ? :   s t r i n g ;  
-             q u a n t i t y ? :   n u m b e r ;  
-             c a t e g o r y ? :   s t r i n g ;  
-             p r i o r i t y ? :   ' H i g h '   |   ' M e d i u m '   |   ' L o w ' ;  
-         }  
-     }  
- }  
-  
- e x p o r t   a s y n c   f u n c t i o n   p r o c e s s M e s s a g e W i t h C e n t r a l A I (  
-     m e s s a g e T e x t :   s t r i n g ,  
-     u s e r B o a r d s :   a n y [ ] ,  
-     a p i K e y :   s t r i n g  
- ) :   P r o m i s e < C e n t r a l A I P a r s e d O u t p u t >   {  
-     c o n s t   b o a r d s C o n t e x t   =   u s e r B o a r d s . m a p ( b   = >    
-         ` -   I D :   $ { b . i d } ,   N a m e :   ' $ { b . n a m e } ' ,   T y p e :   $ { b . t y p e } `  
-     ) . j o i n ( ' \ n ' ) ;  
-  
-     c o n s t   p r o m p t T e x t   =   ` Y o u   a r e   a   h i g h l y   i n t e l l i g e n t   c e n t r a l   r o u t e r   f o r   J o d J u m ,   a   d y n a m i c   t r a c k e r   s y s t e m .  
- T h e   u s e r   s e n t   a   m e s s a g e :   " $ { m e s s a g e T e x t } "  
-  
- T h e   u s e r   h a s   t h e   f o l l o w i n g   b o a r d s   a v a i l a b l e   t o   s t o r e   d a t a :  
- $ { b o a r d s C o n t e x t }  
-  
- I N S T R U C T I O N S :  
- 1 .   D e t e r m i n e   i f   t h e   u s e r   i s   j u s t   c h a t t i n g / g r e e t i n g ,   o r   i f   t h e y   w a n t   t o   p e r f o r m   a   d a t a b a s e   o p e r a t i o n   ( a d d ,   c h e c k ,   u p d a t e ,   d e l e t e ) .  
- 2 .   I f   i t   i s   a   c o n v e r s a t i o n   o r   u n c l e a r ,   s e t   " i s _ c o n v e r s a t i o n "   t o   t r u e ,   a n d   p r o v i d e   a   h e l p f u l ,   f r i e n d l y ,   n a t u r a l   T h a i   r e s p o n s e   i n   " r e p l y _ m e s s a g e " .   ( e . g . ,   " @
+
+// ==========================================
+// NEW CENTRAL AI ROUTER (DYNAMIC BOARDS)
+// ==========================================
+
+export interface CentralAIParsedOutput {
+  is_conversation: boolean;
+  reply_message?: string;
+  command?: {
+    board_id: string;
+    action: 'ADD' | 'UPDATE' | 'DELETE' | 'SEARCH' | 'COMPLETE' | 'CHECK_STOCK' | 'SUBTRACT_STOCK' | 'ADD_STOCK';
+    target_item_name?: string;
+    fields: {
+      title?: string;
+      description?: string;
+      date?: string;
+      quantity?: number;
+      category?: string;
+      priority?: 'High' | 'Medium' | 'Low';
+    }
+  }
+}
+
+export async function processMessageWithCentralAI(
+  messageText: string,
+  userBoards: any[],
+  apiKey: string
+): Promise<CentralAIParsedOutput> {
+  const boardsContext = userBoards.map(b => 
+    `- ID: ${b.id}, Name: '${b.name}', Type: ${b.type}`
+  ).join('\n');
+
+  const promptText = `You are a highly intelligent central router for JodJum, a dynamic tracker system.
+The user sent a message: "${messageText}"
+
+The user has the following boards available to store data:
+${boardsContext}
+
+INSTRUCTIONS:
+1. Determine if the user is just chatting/greeting, or if they want to perform a database operation (add, check, update, delete).
+2. If it is a conversation or unclear, set "is_conversation" to true, and provide a helpful, friendly, natural Thai response in "reply_message". (e.g., "@
 @@@
-@ @@� @@@�   @@@� @� @@� @@@@@� @@� @@� @� @@� @ @� @� @@@� @@� @ @@� @� @@@� @@@� " ) .   D o   n o t   a s k   t h e m   t o   s e l e c t   a   m o d e ,   j u s t   a s k   w h a t   t h e y   w a n t   t o   r e c o r d .  
- 3 .   I f   i t   i s   a   d a t a b a s e   c o m m a n d ,   s e t   " i s _ c o n v e r s a t i o n "   t o   f a l s e .  
- 4 .   D e t e r m i n e   W H I C H   b o a r d   t h e   u s e r   w a n t s   t o   i n t e r a c t   w i t h   b a s e d   o n   t h e   c o n t e x t   o f   t h e i r   m e s s a g e   a n d   t h e   b o a r d   n a m e s / t y p e s .  
- 5 .   D e t e r m i n e   t h e   A C T I O N :   ' A D D ' ,   ' U P D A T E ' ,   ' D E L E T E ' ,   ' S E A R C H ' ,   ' C O M P L E T E ' ,   ' C H E C K _ S T O C K ' ,   ' S U B T R A C T _ S T O C K ' ,   ' A D D _ S T O C K ' .  
- 6 .   E x t r a c t   r e l e v a n t   f i e l d s   i n t o   " f i e l d s " .    
-       -   F o r   D A T E _ T R A C K E R ,   t r y   t o   e x t r a c t   a   ' d a t e '   ( Y Y Y Y - M M - D D ) .  
-       -   F o r   I N V E N T O R Y ,   e x t r a c t   ' q u a n t i t y '   ( n u m b e r ) .  
-       -   F o r   a l l ,   e x t r a c t   a   c l e a r   ' t i t l e '   ( w i t h o u t   a c t i o n   w o r d s   l i k e   ' @� @� @@� ' ,   ' @� @� @@� @' ) .  
- 7 .   T h e   " t a r g e t _ i t e m _ n a m e "   s h o u l d   c o n t a i n   t h e   n a m e   o f   t h e   i t e m   t h e y   a r e   r e f e r r i n g   t o   f o r   u p d a t e s / d e l e t e s / s t o c k   c h e c k s .  
-  
- F o r m a t   o u t p u t   E X A C T L Y   a s   t h i s   J S O N   s t r u c t u r e :  
- {  
-     " i s _ c o n v e r s a t i o n " :   b o o l e a n ,  
-     " r e p l y _ m e s s a g e " :   " s t r i n g   o r   n u l l " ,  
-     " c o m m a n d " :   {  
-         " b o a r d _ i d " :   " U U I D " ,  
-         " a c t i o n " :   " A D D | U P D A T E | D E L E T E | S E A R C H | C O M P L E T E | C H E C K _ S T O C K | S U B T R A C T _ S T O C K | A D D _ S T O C K " ,  
-         " t a r g e t _ i t e m _ n a m e " :   " s t r i n g   o r   n u l l " ,  
-         " f i e l d s " :   {  
-             " t i t l e " :   " s t r i n g   o r   n u l l " ,  
-             " d e s c r i p t i o n " :   " s t r i n g   o r   n u l l " ,  
-             " d a t e " :   " Y Y Y Y - M M - D D   o r   n u l l " ,  
-             " q u a n t i t y " :   n u m b e r  
-         }  
-     }  
- } ` ;  
-  
-     c o n s t   b o d y   =   {  
-         c o n t e n t s :   [ {   p a r t s :   [ {   t e x t :   p r o m p t T e x t   } ]   } ] ,  
-         g e n e r a t i o n C o n f i g :   {   r e s p o n s e M i m e T y p e :   " a p p l i c a t i o n / j s o n "   }  
-     } ;  
-  
-     c o n s t   d a t a   =   a w a i t   f e t c h G e m i n i W i t h F a l l b a c k ( b o d y ,   a p i K e y ) ;  
-     c o n s t   r a w T e x t   =   d a t a . c a n d i d a t e s ? . [ 0 ] ? . c o n t e n t ? . p a r t s ? . [ 0 ] ? . t e x t   | |   ' { } ' ;  
-     r e t u r n   J S O N . p a r s e ( r a w T e x t . t r i m ( ) ) ;  
- }  
- 
+@ @@@@@ @@@@@@@@@@@@@@@@@@@ @@@@@@@@ @@@@@@@@@"). Do not ask them to select a mode, just ask what they want to record.
+3. If it is a database command, set "is_conversation" to false.
+4. Determine WHICH board the user wants to interact with based on the context of their message and the board names/types.
+5. Determine the ACTION: 'ADD', 'UPDATE', 'DELETE', 'SEARCH', 'COMPLETE', 'CHECK_STOCK', 'SUBTRACT_STOCK', 'ADD_STOCK'.
+6. Extract relevant fields into "fields". 
+   - For DATE_TRACKER, try to extract a 'date' (YYYY-MM-DD).
+   - For INVENTORY, extract 'quantity' (number).
+   - For all, extract a clear 'title' (without action words like '@ฌ @@@', '@ฌ @@@@').
+7. The "target_item_name" should contain the name of the item they are referring to for updates/deletes/stock checks.
+
+Format output EXACTLY as this JSON structure:
+{
+  "is_conversation": boolean,
+  "reply_message": "string or null",
+  "command": {
+    "board_id": "UUID",
+    "action": "ADD|UPDATE|DELETE|SEARCH|COMPLETE|CHECK_STOCK|SUBTRACT_STOCK|ADD_STOCK",
+    "target_item_name": "string or null",
+    "fields": {
+      "title": "string or null",
+      "description": "string or null",
+      "date": "YYYY-MM-DD or null",
+      "quantity": number
+    }
+  }
+}`;
+
+  const body = {
+    contents: [{ parts: [{ text: promptText }] }],
+    generationConfig: { responseMimeType: "application/json" }
+  };
+
+  const data = await fetchGeminiWithFallback(body, apiKey);
+  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+  return JSON.parse(rawText.trim());
+}
+

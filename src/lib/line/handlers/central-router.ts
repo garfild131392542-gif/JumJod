@@ -22,7 +22,7 @@ export async function handleCentralRouting(
 
     // Fetch categories for each board to give AI more context
     for (const b of boards) {
-      b.categories = await boardService.getBoardCategories(b.id);
+      (b as any).categories = await boardService.getBoardCategories(b.id);
     }
 
     const aiResult = await processMessageWithCentralAI(messageText, boards, apiKey);

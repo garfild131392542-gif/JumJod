@@ -250,14 +250,14 @@ export async function POST(request: Request) {
         continue;
       }
 
+      const profile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
+      if (!profile) continue;
+      
       if (event.message.type === 'text') {
         const { handleCentralRouting } = await import('@/lib/line/handlers/central-router');
         const handled = await handleCentralRouting(messageText, replyToken, lineUserId, profile, supabaseAdmin);
         if (handled) continue;
       }
-
-      const profile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
-      if (!profile) continue;
 
       const userState = await getConversationState(lineUserId, profile, supabaseAdmin);
 
