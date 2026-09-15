@@ -152,9 +152,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl font-semibold text-sm transition-all duration-200 group relative ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-200 group relative ${
                     isActive
-                      ? 'bg-violet-600/10 dark:bg-violet-600/20 text-violet-600 dark:text-violet-400 border-l-4 border-violet-500 shadow-sm'
+                      ? 'bg-violet-600/10 dark:bg-violet-600/20 text-violet-600 dark:text-violet-400'
                       : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/40 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
@@ -240,7 +240,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <span className="font-black text-sm tracking-tight text-indigo-600 dark:text-indigo-400 leading-tight">
                 จำจด • JumJod
               </span>
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-none">
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider leading-none">
                 Smart Assistant
               </span>
             </div>
@@ -414,7 +414,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
 
           {/* Bottom Sheet Drawer Box */}
-          <div className="relative w-full max-h-[85vh] bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-t-[28px] shadow-2xl overflow-hidden flex flex-col animate-slide-up z-10">
+          <div className="relative w-full max-h-[85vh] bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-t-2xl shadow-2xl overflow-hidden flex flex-col animate-slide-up z-10">
             {/* Sheet Handle */}
             <div className="pt-3 pb-2 flex items-center justify-center cursor-pointer" onClick={() => setMobileDrawerOpen(false)}>
               <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
@@ -464,7 +464,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     key={item.href}
                     href={item.href}
                     onClick={() => setMobileDrawerOpen(false)}
-                    className={`flex items-center justify-between p-3 rounded-2xl transition-all duration-200 active:scale-[0.98] ${
+                    className={`flex items-center justify-between p-3 rounded-lg transition-all duration-200 active:scale-[0.98] ${
                       isActive
                         ? 'bg-violet-600/10 dark:bg-violet-600/20 border border-violet-500/30 text-violet-600 dark:text-violet-400 font-bold'
                         : 'hover:bg-slate-100 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300'

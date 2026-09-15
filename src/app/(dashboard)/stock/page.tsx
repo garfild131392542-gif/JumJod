@@ -340,12 +340,12 @@ export default function StockPage() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
-            className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-650 dark:text-slate-350 focus:border-violet-500 outline-none transition-all"
+            className="px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 focus:border-violet-500 outline-none transition-all cursor-pointer"
           >
-            <option value="name-asc">🔤 เรียงตามชื่อ (ก-ฮ)</option>
-            <option value="priority-desc">🚨 เรียงตามลำดับความสำคัญ (ด่วนที่สุด)</option>
-            <option value="alert-first">⚠️ จัดสินค้าใกล้หมดขึ้นก่อน</option>
-            <option value="qty-asc">📦 เรียงตามยอดน้อยไปมาก</option>
+            <option value="name-asc">เรียงตามชื่อ (ก-ฮ)</option>
+            <option value="priority-desc">เรียงตามลำดับความสำคัญ (ด่วนที่สุด)</option>
+            <option value="alert-first">จัดสินค้าใกล้หมดขึ้นก่อน</option>
+            <option value="qty-asc">เรียงตามยอดน้อยไปมาก</option>
           </select>
         </div>
 
