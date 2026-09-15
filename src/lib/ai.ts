@@ -1026,8 +1026,9 @@ INSTRUCTIONS:
 6. Extract relevant fields into "fields". 
    - For DATE_TRACKER, try to extract a 'date' (YYYY-MM-DD).
    - For INVENTORY, extract 'quantity' (number).
-   - For all, extract a clear 'title' (without action words like '@ฌ @@@', '@ฌ @@@@').
+   - For all, extract a clear 'title' (without action words like 'เพิ่ม', 'บันทึก').
 7. The "target_item_name" should contain the name of the item they are referring to for updates/deletes/stock checks.
+8. CRITICAL: If you generate a "reply_message" that lists the available boards, ONLY use their human-readable Names (e.g., "ช่วยจำ", "สต็อกวัสดุ"). DO NOT include the system Types in parentheses (e.g. DO NOT output "ช่วยจำ (GENERAL_LIST)").
 
 Format output EXACTLY as this JSON structure:
 {
