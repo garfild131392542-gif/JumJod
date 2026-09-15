@@ -1,0 +1,171 @@
+import { SupabaseClient } from '@supabase/supabase-js';
+import { sendLineReply } from '@/lib/line/client';
+import { BoardService, ItemService, StockService, PrService, CalibrationService } from '@/services';
+import { processMessageWithCentralAI, getGeminiApiKey } from '@/lib/ai';
+
+export async function handleCentralRouting(
+  messageText: string,
+  replyToken: string,
+  lineUserId: string,
+  profile: any,
+  supabaseAdmin: SupabaseClient
+): Promise<boolean> {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    await sendLineReply(replyToken, '❌ ระบบ AI ยังไม่พร้อมใช้งาน (Missing API Key)');
+    return true;
+  }
+
+  try {
+    const boardService = new BoardService(supabaseAdmin);
+    const boards = await boardService.getUserBoards(profile.id);
+
+    // Fetch categories for each board to give AI more context
+    for (const b of boards) {
+      b.categories = await boardService.getBoardCategories(b.id);
+    }
+
+    const aiResult = await processMessageWithCentralAI(messageText, boards, apiKey);
+
+    // If AI decided it's just a conversation
+    if (aiResult.is_conversation) {
+      if (aiResult.reply_message) {
+        await sendLineReply(replyToken, aiResult.reply_message);
+      } else {
+        await sendLineReply(replyToken, 'สวัสดีครับ มีอะไรให้ผมช่วยจำหรือจัดการไหมครับ?');
+      }
+      return true;
+    }
+
+    // If it's a database command
+    const cmd = aiResult.command;
+    if (!cmd || !cmd.board_id) {
+      await sendLineReply(replyToken, '🤔 ขอโทษครับ ผมไม่แน่ใจว่าคุณต้องการจัดการข้อมูลในบอร์ดไหน ลองระบุชื่อบอร์ดหรือรายการให้ชัดเจนขึ้นอีกนิดนะครับ');
+      return true;
+    }
+
+    const targetBoard = boards.find((b: any) => b.id === cmd.board_id);
+    if (!targetBoard) {
+      await sendLineReply(replyToken, '❌ ไม่พบบอร์ดที่คุณต้องการ กรุณาลองใหม่อีกครั้ง');
+      return true;
+    }
+
+    // Handle INVENTORY
+    if (targetBoard.type === 'INVENTORY') {
+      if (cmd.action === 'ADD' || cmd.action === 'UPDATE' || cmd.action === 'ADD_STOCK' || cmd.action === 'SUBTRACT_STOCK' || cmd.action === 'CHECK_STOCK') {
+        const title = cmd.target_item_name || cmd.fields.title;
+        if (!title) {
+           await sendLineReply(replyToken, 'ระบุชื่อรายการวัสดุให้หน่อยครับ');
+           return true;
+        }
+
+        const { data: existingStocks } = await supabaseAdmin.from('stocks').select('*').eq('board_id', targetBoard.id).ilike('name', `%${title}%`);
+        const stock = existingStocks && existingStocks.length > 0 ? existingStocks[0] : null;
+
+        if (cmd.action === 'CHECK_STOCK') {
+          if (stock) {
+            await sendLineReply(replyToken, `📦 **${stock.name}**\nคงเหลือ: ${stock.quantity} ${stock.unit || 'ชิ้น'}`);
+          } else {
+            await sendLineReply(replyToken, `❌ ไม่พบรายการ '${title}' ในบอร์ด ${targetBoard.name}`);
+          }
+          return true;
+        }
+
+        let qtyChange = cmd.fields.quantity || 0;
+        
+        if (stock) {
+          let newQty = stock.quantity;
+          if (cmd.action === 'SUBTRACT_STOCK') newQty -= qtyChange;
+          else if (cmd.action === 'ADD_STOCK') newQty += qtyChange;
+          else if (cmd.action === 'UPDATE') newQty = qtyChange;
+          
+          await supabaseAdmin.from('stocks').update({ quantity: newQty }).eq('id', stock.id);
+          await supabaseAdmin.from('stock_transactions').insert([{ 
+            stock_id: stock.id, 
+            user_id: profile.id, 
+            type: cmd.action === 'SUBTRACT_STOCK' ? 'OUT' : 'IN', 
+            quantity: qtyChange,
+            note: 'ทำรายการผ่าน AI'
+          }]);
+          await sendLineReply(replyToken, `✅ อัปเดต ${stock.name} เรียบร้อยแล้ว!\nยอดปัจจุบัน: ${newQty} ${stock.unit || 'ชิ้น'}`);
+        } else {
+           if (cmd.action === 'SUBTRACT_STOCK') {
+              await sendLineReply(replyToken, `❌ ไม่พบรายการ '${title}' ในบอร์ดสต็อก ไม่สามารถเบิกได้ครับ`);
+              return true;
+           }
+           await supabaseAdmin.from('stocks').insert([{
+             board_id: targetBoard.id,
+             user_id: profile.id,
+             name: title,
+             quantity: qtyChange,
+             unit: 'ชิ้น',
+             min_threshold: 0
+           }]);
+           await sendLineReply(replyToken, `✅ สร้างรายการสต็อกใหม่: ${title}\nจำนวนเริ่มต้น: ${qtyChange}`);
+        }
+      }
+      return true;
+    }
+
+    // Handle KANBAN
+    if (targetBoard.type === 'KANBAN') {
+      const title = cmd.fields.title || cmd.target_item_name;
+      if (cmd.action === 'ADD') {
+        await supabaseAdmin.from('pr_requests').insert([{
+          board_id: targetBoard.id,
+          user_id: profile.id,
+          title: title || 'รายการใหม่',
+          status: 'Pending'
+        }]);
+        await sendLineReply(replyToken, `✅ เพิ่มรายการ '${title}' ลงในบอร์ด ${targetBoard.name} เรียบร้อยครับ`);
+      } else if (cmd.action === 'UPDATE' || cmd.action === 'COMPLETE') {
+         const { data: prs } = await supabaseAdmin.from('pr_requests').select('*').eq('board_id', targetBoard.id).ilike('title', `%${title}%`).limit(1);
+         if (prs && prs.length > 0) {
+            await supabaseAdmin.from('pr_requests').update({ status: cmd.action === 'COMPLETE' ? 'Completed' : 'Processing' }).eq('id', prs[0].id);
+            await sendLineReply(replyToken, `✅ อัปเดตสถานะ '${prs[0].title}' เป็น ${cmd.action === 'COMPLETE' ? 'สำเร็จ' : 'กำลังดำเนินการ'} แล้วครับ`);
+         }
+      }
+      return true;
+    }
+
+    // Handle DATE_TRACKER
+    if (targetBoard.type === 'DATE_TRACKER') {
+      const title = cmd.fields.title || cmd.target_item_name;
+      if (cmd.action === 'ADD') {
+        await supabaseAdmin.from('lab_calibrations').insert([{
+          board_id: targetBoard.id,
+          user_id: profile.id,
+          equipment_name: title || 'รายการใหม่',
+          next_due_date: cmd.fields.date || null,
+          status: 'Active'
+        }]);
+        await sendLineReply(replyToken, `✅ ตั้งเตือน '${title}' ในบอร์ด ${targetBoard.name} เรียบร้อยครับ ${cmd.fields.date ? '(วันที่ '+cmd.fields.date+')' : ''}`);
+      }
+      return true;
+    }
+
+    // Handle GENERAL_LIST
+    if (targetBoard.type === 'GENERAL_LIST') {
+      const title = cmd.fields.title || cmd.target_item_name;
+      if (cmd.action === 'ADD') {
+        await supabaseAdmin.from('items').insert([{
+          board_id: targetBoard.id,
+          user_id: profile.id,
+          title: title || 'บันทึกใหม่',
+          description: cmd.fields.description || null,
+          status: 'Pending'
+        }]);
+        await sendLineReply(replyToken, `✅ บันทึก '${title}' ลงบอร์ด ${targetBoard.name} สำเร็จ!`);
+      }
+      return true;
+    }
+
+    await sendLineReply(replyToken, `✅ รับทราบคำสั่งในบอร์ด ${targetBoard.name} แล้วครับ (ระบบกำลังพัฒนาส่วนนี้เพิ่มเติม)`);
+    return true;
+
+  } catch (error: any) {
+    console.error('Central AI Error:', error);
+    await sendLineReply(replyToken, '❌ ขออภัยครับ AI ไม่สามารถประมวลผลคำสั่งนี้ได้ ลองพิมพ์ใหม่อีกครั้งนะครับ');
+    return true;
+  }
+}

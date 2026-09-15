@@ -293,6 +293,29 @@ export default function SettingsPage() {
           </a>
         </div>
       </div>
+
+      {/* 3. Dynamic Boards Settings Card */}
+      <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xs backdrop-blur-sm space-y-4">
+        <div className="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+          <div className="w-11 h-11 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 shadow-xs">
+            <Settings className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">
+              จัดการบอร์ดและหมวดหมู่ (Board Manager)
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              ปรับแต่งบอร์ด โหมดการทำงาน และหมวดหมู่ของคุณเอง
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex">
+          <a href="/settings/boards" className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 shadow-sm active:scale-[0.98] transition-all">
+            จัดการบอร์ด
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

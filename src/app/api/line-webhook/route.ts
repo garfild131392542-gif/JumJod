@@ -251,8 +251,8 @@ export async function POST(request: Request) {
       }
 
       if (event.message.type === 'text') {
-        const requestUrl = new URL(request.url);
-        const handled = await handleTextEvent(event, supabaseAdmin, requestUrl.origin);
+        const { handleCentralRouting } = await import('@/lib/line/handlers/central-router');
+        const handled = await handleCentralRouting(messageText, replyToken, lineUserId, profile, supabaseAdmin);
         if (handled) continue;
       }
 
