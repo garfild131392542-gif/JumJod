@@ -998,6 +998,7 @@ export interface CentralAIParsedOutput {
       quantity?: number;
       category?: string;
       priority?: 'High' | 'Medium' | 'Low';
+      reminder_date?: string;
     }
   }
 }
@@ -1011,7 +1012,14 @@ export async function processMessageWithCentralAI(
     `- ID: ${b.id}, Name: '${b.name}', Type: ${b.type}`
   ).join('\n');
 
+  const nowUtc = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const localDate = new Date(nowUtc.getTime() + 7 * 60 * 60 * 1000);
+  const localDateTimeStr = `${localDate.getUTCFullYear()}-${pad(localDate.getUTCMonth() + 1)}-${pad(localDate.getUTCDate())}T${pad(localDate.getUTCHours())}:${pad(localDate.getUTCMinutes())}:${pad(localDate.getUTCSeconds())}+07:00`;
+
   const promptText = `You are a highly intelligent central router for JodJum, a dynamic tracker system.
+Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
+
 The user sent a message: "${messageText}"
 
 The user has the following boards available to store data:
@@ -1026,7 +1034,8 @@ INSTRUCTIONS:
 6. Extract relevant fields into "fields". 
    - For DATE_TRACKER, try to extract a 'date' (YYYY-MM-DD).
    - For INVENTORY, extract 'quantity' (number).
-   - For all, extract a clear 'title' (without action words like 'เพิ่ม', 'บันทึก').
+   - For GENERAL_LIST, if the user specifies a date/time to be reminded (e.g. "แจ้งเตือนวันที่ 18/9/26 เวลา 8.00น."), extract 'reminder_date' as an ISOString with +07:00 offset. If no time is specified, default to 09:00:00+07:00.
+   - For all, extract a clear 'title' (without action words like 'เพิ่ม', 'บันทึก', 'แจ้งเตือน').
 7. The "target_item_name" should contain the name of the item they are referring to for updates/deletes/stock checks.
 8. CRITICAL: If you generate a "reply_message" that lists the available boards, ONLY use their human-readable Names (e.g., "ช่วยจำ", "สต็อกวัสดุ"). DO NOT include the system Types in parentheses (e.g. DO NOT output "ช่วยจำ (GENERAL_LIST)").
 
@@ -1042,7 +1051,8 @@ Format output EXACTLY as this JSON structure:
       "title": "string or null",
       "description": "string or null",
       "date": "YYYY-MM-DD or null",
-      "quantity": number
+      "quantity": number,
+      "reminder_date": "ISOString or null"
     }
   }
 }`;

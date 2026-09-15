@@ -234,9 +234,17 @@ export async function handleCentralRouting(
           user_id: profile.id,
           title: title || 'บันทึกใหม่',
           description: cmd.fields.description || null,
-          status: 'Pending'
+          status: 'Pending',
+          reminder_date: cmd.fields.reminder_date || null
         }]);
-        await sendLineReply(replyToken, `✅ บันทึก '${title}' ลงบอร์ด ${targetBoard.name} สำเร็จ!`);
+
+        if (cmd.fields.reminder_date) {
+          const d = new Date(cmd.fields.reminder_date);
+          const formattedDate = d.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' });
+          await sendLineReply(replyToken, `✅ บันทึก '${title}' ลงบอร์ด ${targetBoard.name} สำเร็จ!\n(ตั้งแจ้งเตือนเวลา: ${formattedDate})`);
+        } else {
+          await sendLineReply(replyToken, `✅ บันทึก '${title}' ลงบอร์ด ${targetBoard.name} สำเร็จ!`);
+        }
       }
       return true;
     }
