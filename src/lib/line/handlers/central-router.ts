@@ -193,9 +193,15 @@ export async function handleCentralRouting(
       if (cmd.action === 'LIST_ALL') {
          const { data: allItems } = await supabaseAdmin.from('items').select('*').eq('board_id', targetBoard.id).order('created_at', { ascending: false });
          if (!allItems || allItems.length === 0) {
-              await sendLineReply(replyToken, `📝 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
-           } else {
-              const { createCarouselFlex } = await import('@/lib/line/flex-templates');
+            const { createEmptySummaryFlex } = await import('@/lib/line/flex-templates');
+            const dateStr = new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' });
+            await sendLineReply(replyToken, {
+              type: 'flex',
+              altText: 'สรุปรายการวันนี้',
+              contents: createEmptySummaryFlex(profile.display_name || 'ผู้ใช้งาน', dateStr)
+            });
+         } else {
+            const { createCarouselFlex } = await import('@/lib/line/flex-templates');
               await sendLineReply(replyToken, [{
                 type: 'flex',
                 altText: '📝 รายการบันทึกทั้งหมด',

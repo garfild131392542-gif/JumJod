@@ -646,8 +646,13 @@ export async function handlePostbackEvent(
 
     const itemsList = await ItemService.getItemsByUserId(supabaseAdmin, userProfile.id, statusParam === 'completed', 10);
     if (!itemsList || itemsList.length === 0) {
-      const statusName = statusParam === 'completed' ? 'ที่สำเร็จแล้ว' : 'ที่ยังไม่สำเร็จ';
-      await sendLineReply(replyToken, `📋 ไม่พบรายการ${statusName}ในขณะนี้`);
+      const { createEmptySummaryFlex } = await import('@/lib/line/flex-templates');
+      const dateStr = new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' });
+      await sendLineReply(replyToken, {
+        type: 'flex',
+        altText: 'สรุปรายการวันนี้',
+        contents: createEmptySummaryFlex(userProfile.display_name || 'ผู้ใช้งาน', dateStr)
+      });
       return;
     }
 
