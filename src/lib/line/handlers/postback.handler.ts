@@ -1082,6 +1082,7 @@ export async function handlePostbackEvent(
     const { createStockFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
 
     if (mode === 'stock') {
+      // Fetch limit+1 to detect if there's a next page
       const { data } = await supabaseAdmin.from('stocks').select('*').eq('user_id', userProfile.id).order('name').range(offset, offset + limit);
       const list = data || [];
       hasNextPage = list.length > limit;

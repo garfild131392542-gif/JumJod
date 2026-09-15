@@ -102,6 +102,15 @@ export async function handleTextEvent(
     return true;
   }
 
+  // --- Stock list shortcut — ดูรายการสต็อก/วัสดุ แม้ไม่ได้อยู่ในโหมด ---
+  const isStockListRequest = /^(ดู|เช็ก|เช็ค|แสดง|รายการ|ขอดู)?\s*(สต็อก|สต๊อก|วัสดุ|คลัง|inventory|stock)(ทั้งหมด|ของฉัน|ของผม|ใน(สต็อก|คลัง))?$|^รายการ(ทั้งหมด)?(ใน)?(สต็อก|สต๊อก|วัสดุ|คลัง|inventory|stock)/i.test(cleanMessageText);
+  if (isStockListRequest) {
+    // Auto-switch to stock mode and show all stocks
+    await setUserModeState(profile, lineUserId, 'stock', supabaseAdmin);
+    const handled = await StockModeController.handleMessage('รายการ', profile, replyToken, lineUserId, supabaseAdmin);
+    if (handled) return true;
+  }
+
   // --- PR / Purchase Request mode ---
   const prModeKeywords = [
     'โหมดpr', 'โหมด pr', 'ติดตามpr', 'ติดตาม pr',
