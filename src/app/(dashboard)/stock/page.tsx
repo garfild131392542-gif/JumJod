@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { StockItem } from '@/lib/types';
-import { Plus, Search, Edit2, Trash2, AlertCircle, Package, Minus, ArrowUpDown, AlertTriangle, History } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, AlertCircle, Package, Minus, ArrowUpDown, AlertTriangle, History, X } from 'lucide-react';
 import StockModal from '@/components/dashboard/stock-modal';
 import StockHistoryModal from '@/components/dashboard/stock-history-modal';
 
@@ -15,11 +15,46 @@ export default function StockPage() {
   const supabase = createClient();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterCategory, setFilterCategory] = useState<'all' | 'อุปกรณ์สำนักงาน' | 'Laboratory'>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name-asc' | 'priority-desc' | 'alert-first' | 'qty-asc'>('name-asc');
   const [modalOpen, setModalOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
+
+  const { data: inventoryBoard } = useQuery({
+    queryKey: ['inventory-board', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('boards').select('id').eq('user_id', user!.id).eq('type', 'INVENTORY').single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
+  const { data: categories = [], refetch: refetchCategories } = useQuery({
+    queryKey: ['categories', inventoryBoard?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('categories').select('*').eq('board_id', inventoryBoard!.id).order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!inventoryBoard?.id,
+  });
+
+  const handleAddCategory = async () => {
+    if (!inventoryBoard?.id) return;
+    const name = prompt('ชื่อหมวดหมู่ใหม่ (เช่น เครื่องเขียน, วัสดุทำความสะอาด):');
+    if (!name) return;
+    await supabase.from('categories').insert([{ name, board_id: inventoryBoard.id, color: 'indigo' }]);
+    refetchCategories();
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    if (!confirm('คุณต้องการลบหมวดหมู่นี้ใช่หรือไม่? (วัสดุที่อยู่ในหมวดหมู่นี้จะไม่ถูกลบไปด้วย แต่คุณสามารถเปลี่ยนหมวดหมู่ได้)')) return;
+    await supabase.from('categories').delete().eq('id', id);
+    if (filterCategory !== 'all') setFilterCategory('all');
+    refetchCategories();
+  };
 
   // Fetch stocks using TanStack Query
   const { data: stocks = [], isLoading, error } = useQuery<StockItem[]>({
@@ -169,8 +204,7 @@ export default function StockPage() {
         const alertItems = stocks.filter(s => s.quantity <= (s.min_threshold ?? 0) && s.quantity > 0);
         const emptyItems = stocks.filter(s => s.quantity === 0);
         const normalItems = stocks.filter(s => s.quantity > (s.min_threshold ?? 0));
-        const labCount = stocks.filter(s => s.category === 'Laboratory').length;
-        const officeCount = stocks.filter(s => s.category === 'อุปกรณ์สำนักงาน').length;
+
         const topAlert = [...stocks].filter(s => s.quantity <= (s.min_threshold ?? 0)).sort((a, b) => a.quantity - b.quantity).slice(0, 4);
 
         return (
@@ -203,38 +237,32 @@ export default function StockPage() {
 
             {/* Category Breakdown + Alert List */}
             <div className="flex flex-col gap-3">
-              {/* Category breakdown */}
+              {/* Category breakdown (Dynamic) */}
               <div className="bg-white dark:bg-slate-900/55 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 flex flex-col gap-2 shadow-sm">
                 <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">หมวดหมู่</p>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold">🔬 Laboratory</span>
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-200">{labCount}</span>
+                {categories.length > 0 ? categories.map((cat: any) => {
+                  const count = stocks.filter(s => s.category === cat.name).length;
+                  return (
+                    <div key={cat.id} className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <span className="text-xs text-slate-700 dark:text-slate-300 font-bold">{cat.name}</span>
+                          <span className="text-xs font-black text-slate-700 dark:text-slate-200">{count}</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-indigo-500 transition-all duration-500"
+                            style={{ width: `${totalCount ? (count / totalCount) * 100 : 0}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                        style={{ width: `${totalCount ? (labCount / totalCount) * 100 : 0}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-xs text-violet-700 dark:text-violet-400 font-bold">💼 สำนักงาน</span>
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-200">{officeCount}</span>
-                    </div>
-                    <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-indigo-500 transition-all duration-500"
-                        style={{ width: `${totalCount ? (officeCount / totalCount) * 100 : 0}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
+                  );
+                }) : (
+                  <p className="text-xs text-slate-400">ยังไม่มีหมวดหมู่</p>
+                )}
               </div>
+
 
               {/* Alert items */}
               {topAlert.length > 0 && (
@@ -262,10 +290,10 @@ export default function StockPage() {
       <div className="flex flex-col xl:flex-row xl:items-center gap-4 p-4 bg-white dark:bg-slate-900/45 border border-slate-200 dark:border-slate-800/80 rounded-2xl backdrop-blur-sm shadow-sm">
         
         {/* Category switcher */}
-        <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0 self-start xl:self-auto">
+        <div className="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shrink-0 self-start xl:self-auto overflow-x-auto max-w-full">
           <button
             onClick={() => setFilterCategory('all')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
               filterCategory === 'all'
                 ? 'bg-white dark:bg-slate-900 text-violet-650 dark:text-violet-400 shadow-sm'
                 : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
@@ -273,25 +301,34 @@ export default function StockPage() {
           >
             ทั้งหมด
           </button>
+          
+          {categories.map((cat: any) => (
+            <div key={cat.id} className="relative group flex items-center">
+              <button
+                onClick={() => setFilterCategory(cat.name)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  filterCategory === cat.name
+                    ? 'bg-white dark:bg-slate-900 text-violet-650 dark:text-violet-400 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                }`}
+              >
+                {cat.name}
+              </button>
+              <button 
+                onClick={() => handleDeleteCategory(cat.id)}
+                className="absolute right-1 top-1 bottom-1 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors cursor-pointer"
+                title="ลบหมวดหมู่"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+
           <button
-            onClick={() => setFilterCategory('อุปกรณ์สำนักงาน')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              filterCategory === 'อุปกรณ์สำนักงาน'
-                ? 'bg-white dark:bg-slate-900 text-violet-650 dark:text-violet-400 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-            }`}
+            onClick={handleAddCategory}
+            className="px-3 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-indigo-500 border border-dashed border-slate-300 hover:border-indigo-400 hover:bg-indigo-50 transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap ml-2"
           >
-            อุปกรณ์สำนักงาน
-          </button>
-          <button
-            onClick={() => setFilterCategory('Laboratory')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              filterCategory === 'Laboratory'
-                ? 'bg-white dark:bg-slate-900 text-violet-650 dark:text-violet-400 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-            }`}
-          >
-            Laboratory
+            <Plus className="w-3 h-3" /> เพิ่ม
           </button>
         </div>
 

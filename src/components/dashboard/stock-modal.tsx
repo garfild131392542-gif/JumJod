@@ -11,9 +11,10 @@ interface StockModalProps {
   onClose: () => void;
   userId: string;
   stockToEdit?: StockItem | null;
+  categories?: any[];
 }
 
-export default function StockModal({ isOpen, onClose, userId, stockToEdit }: StockModalProps) {
+export default function StockModal({ isOpen, onClose, userId, stockToEdit, categories = [] }: StockModalProps) {
   const queryClient = useQueryClient();
   const supabase = createClient();
 
@@ -21,7 +22,7 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit }: Sto
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState(0);
   const [unit, setUnit] = useState('ชิ้น');
-  const [category, setCategory] = useState<'อุปกรณ์สำนักงาน' | 'Laboratory'>('อุปกรณ์สำนักงาน');
+  const [category, setCategory] = useState<string>('');
   const [minThreshold, setMinThreshold] = useState(0);
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
 
@@ -36,7 +37,7 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit }: Sto
         setDescription(stockToEdit.description || '');
         setQuantity(stockToEdit.quantity);
         setUnit(stockToEdit.unit);
-        setCategory(stockToEdit.category as any);
+        setCategory(stockToEdit.category || '');
         setMinThreshold(stockToEdit.min_threshold ?? 0);
         setPriority(stockToEdit.priority || 'Medium');
       } else {
@@ -44,7 +45,7 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit }: Sto
         setDescription('');
         setQuantity(0);
         setUnit('ชิ้น');
-        setCategory('อุปกรณ์สำนักงาน');
+        setCategory(categories.length > 0 ? categories[0].name : '');
         setMinThreshold(0);
         setPriority('Medium');
       }
@@ -174,11 +175,13 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit }: Sto
             </label>
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value as any)}
+              onChange={(e) => setCategory(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-slate-950/65 border border-slate-200 dark:border-slate-850 focus:border-violet-500 dark:focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-sm text-slate-855 dark:text-slate-200"
             >
-              <option value="อุปกรณ์สำนักงาน">💼 อุปกรณ์สำนักงาน (Office Supplies)</option>
-              <option value="Laboratory">🔬 งาน Laboratory (Lab Supplies)</option>
+              <option value="" disabled>-- เลือกหมวดหมู่ --</option>
+              {categories.map((cat: any) => (
+                <option key={cat.id} value={cat.name}>{cat.name}</option>
+              ))}
             </select>
           </div>
 
