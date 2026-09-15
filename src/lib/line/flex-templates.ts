@@ -2188,14 +2188,14 @@ export function createCarouselFlex(items: any[], boardType: string, boardName: s
             type: 'button',
             style: 'secondary',
             height: 'sm',
-            action: { type: 'message', label: 'แก้ไข', text: `แก้ไข ${title}` }
+            action: { type: 'postback', label: 'แก้ไข', data: `action=edit_item&boardType=${boardType}&itemId=${item.id}&title=${title}` }
           },
           {
             type: 'button',
             style: 'primary',
             color: '#ef4444',
             height: 'sm',
-            action: { type: 'message', label: 'ลบ', text: `ลบ ${title}` }
+            action: { type: 'postback', label: 'ลบ', data: `action=delete_item&boardType=${boardType}&itemId=${item.id}&title=${title}` }
           }
         ]
       }
