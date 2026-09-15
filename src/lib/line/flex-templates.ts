@@ -2156,7 +2156,7 @@ export function createPrStatusMenuFlex(prItem: any) {
 export function createNextPageBubble(postbackData: string) {
   return {
     type: 'bubble',
-    size: 'micro',
+    size: 'mega',
     body: {
       type: 'box',
       layout: 'vertical',
