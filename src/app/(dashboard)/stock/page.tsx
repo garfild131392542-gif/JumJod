@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { StockItem } from '@/lib/types';
-import { Plus, Search, Edit2, Trash2, AlertCircle, Package, Minus, ArrowUpDown, AlertTriangle, History, X } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, AlertCircle, Package, Minus, ArrowUpDown, AlertTriangle, History, X, ChevronDown } from 'lucide-react';
 import StockModal from '@/components/dashboard/stock-modal';
 import StockHistoryModal from '@/components/dashboard/stock-history-modal';
 
@@ -20,6 +20,15 @@ export default function StockPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
+  const [openCategoryDropdown, setOpenCategoryDropdown] = useState<string | null>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!openCategoryDropdown) return;
+    const handler = () => setOpenCategoryDropdown(null);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [openCategoryDropdown]);
 
   const { data: inventoryBoard } = useQuery({
     queryKey: ['inventory-board', user?.id],
@@ -404,22 +413,35 @@ export default function StockPage() {
                 {/* Top Header */}
                 <div>
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-400 bg-indigo-500/10 border border-indigo-500/20">
-                        📂 {stock.category || 'ไม่มีหมวดหมู่'}
-                      </span>
-                      {categories.length > 1 && (
-                        <select
-                          value={stock.category}
-                          onChange={(e) => handleMoveCategory(stock, e.target.value)}
-                          className="text-[9px] font-bold border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-0.5 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-pointer hover:border-violet-400 transition-colors outline-none"
-                          title="ย้ายหมวดหมู่"
+                    <div className="flex items-center gap-1.5">
+                      {/* Custom category dropdown */}
+                      <div className="relative">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setOpenCategoryDropdown(openCategoryDropdown === stock.id ? null : stock.id); }}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition-colors cursor-pointer"
                         >
-                          {categories.map((cat: any) => (
-                            <option key={cat.id} value={cat.name}>{cat.name}</option>
-                          ))}
-                        </select>
-                      )}
+                          📂 {stock.category || 'ไม่มีหมวดหมู่'}
+                          {categories.length > 1 && <ChevronDown className="w-2.5 h-2.5 ml-0.5 opacity-60" />}
+                        </button>
+                        {/* Dropdown panel */}
+                        {openCategoryDropdown === stock.id && categories.length > 1 && (
+                          <div className="absolute left-0 top-full mt-1 z-30 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg py-1 min-w-[130px]">
+                            {categories.map((cat: any) => (
+                              <button
+                                key={cat.id}
+                                onClick={() => { handleMoveCategory(stock, cat.name); setOpenCategoryDropdown(null); }}
+                                className={`w-full text-left px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer ${
+                                  stock.category === cat.name
+                                    ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30'
+                                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                                }`}
+                              >
+                                {stock.category === cat.name && '✓ '}{cat.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                   </div>
