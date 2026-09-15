@@ -318,10 +318,14 @@ export default function StockPage() {
               </button>
               <button 
                 onClick={() => handleDeleteCategory(cat.id)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400 rounded transition-colors cursor-pointer opacity-0 group-hover/tab:opacity-100"
+                className={`absolute right-1 top-1/2 -translate-y-1/2 p-1.5 rounded transition-all cursor-pointer ${
+                  filterCategory === cat.name 
+                    ? 'opacity-100 text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30' 
+                    : 'opacity-0 group-hover/tab:opacity-100 text-slate-300 hover:text-red-500 dark:text-slate-600'
+                }`}
                 title="ลบหมวดหมู่"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
