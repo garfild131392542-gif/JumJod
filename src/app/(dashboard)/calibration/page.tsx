@@ -39,9 +39,7 @@ export default function CalibrationPage() {
     queryKey: ['lab-calibrations'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('lab_calibrations')
-        .select('*')
-        .order('next_cal_date', { ascending: true });
+        .from('lab_calibrations').select('*').order('next_cal_date', { ascending: true }).limit(50);
 
       if (error) throw error;
       return data || [];

@@ -2,15 +2,21 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { momentLocalizer, Event as CalendarEvent } from 'react-big-calendar';
+import { dayjsLocalizer, Event as CalendarEvent } from 'react-big-calendar';
 import dynamic from 'next/dynamic';
 
 const BigCalendar = dynamic(
   () => import('react-big-calendar').then((mod) => mod.Calendar),
   { ssr: false }
 );
-import moment from 'moment';
-import 'moment/locale/th';
+import dayjs from 'dayjs';
+import 'dayjs/locale/th';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+dayjs.extend(localizedFormat);
+dayjs.extend(isSameOrBefore);
+dayjs.locale('th');
+
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -25,19 +31,19 @@ import {
 import Image from 'next/image';
 
 // Configure moment to use Thai locale
-moment.locale('th');
+
 
 // Configure localizer for React Big Calendar
-const localizer = momentLocalizer(moment);
+const localizer = dayjsLocalizer(dayjs);
 
 const calendarFormats = {
   dateFormat: 'D',
-  dayFormat: (date: Date) => moment(date).format('ddd'),
-  weekdayFormat: (date: Date) => moment(date).format('ddd'),
-  monthHeaderFormat: (date: Date) => moment(date).format('MMMM YYYY'),
-  dayHeaderFormat: (date: Date) => moment(date).format('dddd D MMMM YYYY'),
+  dayFormat: (date: Date) => dayjs(date).format('ddd'),
+  weekdayFormat: (date: Date) => dayjs(date).format('ddd'),
+  monthHeaderFormat: (date: Date) => dayjs(date).format('MMMM YYYY'),
+  dayHeaderFormat: (date: Date) => dayjs(date).format('dddd D MMMM YYYY'),
   dayRangeHeaderFormat: ({ start, end }: { start: Date; end: Date }) =>
-    `${moment(start).format('D MMMM')} - ${moment(end).format('D MMMM YYYY')}`,
+    `${dayjs(start).format('D MMMM')} - ${dayjs(end).format('D MMMM YYYY')}`,
 };
 
 interface CustomEvent extends CalendarEvent {
@@ -277,7 +283,7 @@ export default function CalendarPage() {
   const handleSelectSlot = (slotInfo: { start: Date; end: Date; action?: string }) => {
     const dayDate = slotInfo.start;
     const dayEvts = events.filter((e) =>
-      moment(e.start).isSame(dayDate, 'day')
+      dayjs(e.start).isSame(dayDate, 'day')
     );
     setSelectedDay({
       date: dayDate,
@@ -349,7 +355,7 @@ export default function CalendarPage() {
                 const customEvt = event as CustomEvent;
                 const dayDate = (customEvt.start as Date) || new Date();
                 const dayEvts = events.filter((e) =>
-                  moment(e.start).isSame(dayDate, 'day')
+                  dayjs(e.start).isSame(dayDate, 'day')
                 );
                 setSelectedDay({
                   date: dayDate,
@@ -407,7 +413,7 @@ export default function CalendarPage() {
                     รายการประจำวัน
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">
-                    {moment(selectedDay.date).format('ddddที่ D MMMM YYYY')}
+                    {dayjs(selectedDay.date).format('ddddที่ D MMMM YYYY')}
                   </p>
                 </div>
               </div>
@@ -436,7 +442,7 @@ export default function CalendarPage() {
                     ไม่มีรายการบันทึกในวันนี้
                   </p>
                   <p className="text-xs text-slate-400">
-                    วันที่ {moment(selectedDay.date).format('D MMMM YYYY')} ยังไม่มีการแจ้งเตือน
+                    วันที่ {dayjs(selectedDay.date).format('D MMMM YYYY')} ยังไม่มีการแจ้งเตือน
                   </p>
                 </div>
               ) : (
@@ -463,7 +469,7 @@ export default function CalendarPage() {
                             </span>
                             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
                               <Clock className="w-3 h-3" />
-                              {moment(evt.start).format('HH:mm น.')}
+                              {dayjs(evt.start).format('HH:mm น.')}
                             </span>
                           </div>
 
@@ -578,7 +584,7 @@ export default function CalendarPage() {
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider">วันแจ้งเตือนการจัดการ</h4>
                       <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5 font-semibold">
-                        {moment(selectedEvent.start).format('DD MMMM YYYY, HH:mm น.')}
+                        {dayjs(selectedEvent.start).format('DD MMMM YYYY, HH:mm น.')}
                       </p>
                     </div>
                   </div>
@@ -588,7 +594,7 @@ export default function CalendarPage() {
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider">วันแจ้งเตือน (ดำเนินการสำเร็จแล้ว)</h4>
                       <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-semibold">
-                        {moment(selectedEvent.start).format('DD MMMM YYYY, HH:mm น.')}
+                        {dayjs(selectedEvent.start).format('DD MMMM YYYY, HH:mm น.')}
                       </p>
                     </div>
                   </div>

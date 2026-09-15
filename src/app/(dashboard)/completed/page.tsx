@@ -11,7 +11,13 @@ import {
   Clock, AlertCircle, RefreshCw, X, Trash2
 } from 'lucide-react';
 import Image from 'next/image';
-import moment from 'moment';
+import dayjs from 'dayjs';
+import 'dayjs/locale/th';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+dayjs.extend(localizedFormat);
+dayjs.extend(isSameOrBefore);
+dayjs.locale('th');
 
 export default function CompletedItemsPage() {
   const { user } = useAuth();
@@ -39,9 +45,7 @@ export default function CompletedItemsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('items')
-        .select('*')
-        .eq('status', 'Issuing Item')
-        .order('updated_at', { ascending: false });
+        .select('*').eq('status', 'Issuing Item').order('updated_at', { ascending: false }).limit(50);
 
       if (error) throw error;
       return data || [];
@@ -231,7 +235,7 @@ export default function CompletedItemsPage() {
                         {item.reminder_date ? (
                           <span className="flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400">
                             <Clock className="w-3.5 h-3.5 shrink-0" />
-                            <span>{moment(item.reminder_date).format('DD/MM/YYYY HH:mm')}</span>
+                            <span>{dayjs(item.reminder_date).format('DD/MM/YYYY HH:mm')}</span>
                           </span>
                         ) : (
                           <span className="text-slate-450 italic">ไม่ระบุ</span>
@@ -256,7 +260,7 @@ export default function CompletedItemsPage() {
 
                       {/* Date completed column */}
                       <td className="py-4 px-4 text-center text-slate-500 dark:text-slate-400">
-                        {moment(item.updated_at).format('DD/MM/YYYY')}
+                        {dayjs(item.updated_at).format('DD/MM/YYYY')}
                       </td>
 
                       {/* Delete action column */}

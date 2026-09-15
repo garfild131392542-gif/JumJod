@@ -45,9 +45,7 @@ export default function PrTrackerPage() {
     queryKey: ['pr-requests'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('pr_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .from('pr_requests').select('*').order('created_at', { ascending: false }).limit(50);
 
       if (error) throw error;
       return data || [];

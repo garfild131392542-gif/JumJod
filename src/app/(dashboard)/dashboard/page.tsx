@@ -126,8 +126,7 @@ export default function DashboardPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('items')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*').in('status', ['Pending', 'Purchasing']).order('created_at', { ascending: false }).limit(50);
 
       if (error) throw error;
       return data || [];
