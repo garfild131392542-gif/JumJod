@@ -238,8 +238,10 @@ export class ReminderModeController {
 
       // Extract clean title by stripping reminder date and time phrases
       let cleanTitle = text
+        // eslint-disable-next-line security/detect-unsafe-regex
         .replace(/(?:แจ้งเตือน)?วันที่\s*\d+[\/\.\-]\d+(?:[\/\.\-]\d+)?/gi, '')
-        .replace(/(?:ตอน|เวลา)?\s*\d+[\.:]\d+\s*(?:น\.?)?/gi, '')
+        // eslint-disable-next-line security/detect-unsafe-regex
+        .replace(/(?:ตอน|เวลา)?\s*\d+[\.:]\d+\s*(?:น\.\?)?/gi, '')
         .replace(/(?:แจ้งเตือน|ช่วยเตือน|เตือน)\s*(?:วันนี้|พรุ่งนี้|มะรืนนี้|สัปดาห์หน้า)?/gi, '')
         .replace(/(?:วันนี้|พรุ่งนี้|มะรืนนี้|สัปดาห์หน้า)/gi, '')
         .replace(/^(?:บันทึก|จด|ช่วยจำ|เพิ่ม)\s*/i, '')

@@ -1019,8 +1019,8 @@ ${boardsContext}
 
 INSTRUCTIONS:
 1. Determine if the user is just chatting/greeting, or if they want to perform a database operation (add, check, update, delete).
-2. If it is a conversation or unclear, set "is_conversation" to true, and provide a helpful, friendly, natural Thai response in "reply_message". (e.g., "รับทราบครับ มีอะไรให้ผมช่วยบันทึกหรือเช็คสต็อกบอกได้เลยนะครับ"). Do not ask them to select a mode, just ask what they want to record.
-3. If it is a database command, set "is_conversation" to false.
+2. STRICT INTENT FILTER: If the user is just greeting, OR saying they WANT to do something (e.g., "อยากบันทึก PR", "บันทึก PR หน่อย", "เพิ่มข้อมูลให้หน่อย") but has NOT provided the actual item name or details yet, you MUST set "is_conversation" to true. Do NOT guess the title. Reply naturally asking for the item name or details (e.g. "ยินดีครับ คุณต้องการบันทึก PR ชื่อว่าอะไรครับ?").
+3. Only set "is_conversation" to false if the user explicitly provided enough data (like a clear item name) to perform an action.
 4. Determine WHICH board the user wants to interact with based on the context of their message and the board names/types.
 5. Determine the ACTION: 'ADD', 'UPDATE', 'DELETE', 'SEARCH', 'COMPLETE', 'CHECK_STOCK', 'SUBTRACT_STOCK', 'ADD_STOCK', 'LIST_ALL'.
 6. Extract relevant fields into "fields". 

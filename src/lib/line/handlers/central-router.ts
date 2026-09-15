@@ -29,7 +29,22 @@ export async function handleCentralRouting(
 
     // If AI decided it's just a conversation
     if (aiResult.is_conversation) {
-      return false;
+      const { createModeSelectionFlex } = await import('@/lib/line/flex-templates');
+      const messages = [];
+      if (aiResult.reply_message) {
+        messages.push(aiResult.reply_message);
+      } else {
+        messages.push('สวัสดีครับ มีอะไรให้ผมช่วยจำหรือจัดการไหมครับ?');
+      }
+      
+      messages.push({
+        type: 'flex',
+        altText: '🤖 กรุณาเลือกโหมดการทำงาน',
+        contents: createModeSelectionFlex()
+      });
+      
+      await sendLineReply(replyToken, messages);
+      return true;
     }
 
     // If it's a database command

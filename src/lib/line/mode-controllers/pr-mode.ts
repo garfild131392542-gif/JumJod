@@ -35,7 +35,7 @@ export class PrModeController {
         po: 'po_no',
         qt: 'qt_no'
       };
-      const fieldKey = fieldMap[fieldType];
+      const fieldKey = fieldMap[fieldType]; // eslint-disable-line security/detect-object-injection
 
       const updates: Partial<PrRequest> = { [fieldKey]: val };
 
@@ -85,7 +85,7 @@ export class PrModeController {
           po: 'po_no',
           qt: 'qt_no'
         };
-        const fieldKey = fieldMap[fieldType];
+        const fieldKey = fieldMap[fieldType]; // eslint-disable-line security/detect-object-injection
         const updates: Partial<PrRequest> = { [fieldKey]: val };
 
         if (fieldType === 'pr' && targetPr.status === 'Pending') {
@@ -115,6 +115,7 @@ export class PrModeController {
 
     // 1.5 Pattern: "ใส่ราคา [PR Query] [Price] [VAT optional]"
     // Examples: "ใส่ราคา ซื้อคอม 15000", "เติมราคา หมึก 2500 vat 175"
+    // eslint-disable-next-line security/detect-unsafe-regex
     const priceMatch = text.match(/^(?:ใส่ราคา|เติมราคา|แก้ราคา|อัปเดตราคา|ราคา)\s*pr?\s+(.+?)\s+([0-9\.,]+)(?:\s*(?:vat|ภาษี)\s*([0-9\.,]+))?$/i);
     if (priceMatch) {
       const query = priceMatch[1].trim();

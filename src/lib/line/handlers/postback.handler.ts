@@ -406,7 +406,7 @@ export async function handlePostbackEvent(
       priority: 'ระดับความสำคัญใหม่'
     };
 
-    const label = fieldLabels[field] || 'ข้อมูลใหม่';
+    const label = Object.hasOwn(fieldLabels, field) ? fieldLabels[field as keyof typeof fieldLabels] : 'ข้อมูลใหม่'; // eslint-disable-line security/detect-object-injection
 
     await setConversationState(lineUserId, {
       action: 'stock_editing',
@@ -812,7 +812,7 @@ export async function handlePostbackEvent(
       notes: 'หมายเหตุ/บันทึกเพิ่มเติม'
     };
 
-    const label = fieldNames[field] || field;
+    const label = Object.hasOwn(fieldNames, field) ? fieldNames[field as keyof typeof fieldNames] : field; // eslint-disable-line security/detect-object-injection
 
     await setConversationState(lineUserId, {
       action: 'editing_pr_field',

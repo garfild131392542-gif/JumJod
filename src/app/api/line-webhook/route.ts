@@ -117,7 +117,8 @@ export async function POST(request: Request) {
       }
       
       const lineGroupId = null;
-      const messageText = event.type === 'message' && event.message.type === 'text' ? event.message.text.trim() : '';
+      let messageText = event.type === 'message' && event.message.type === 'text' ? event.message.text.trim() : '';
+      if (messageText.length > 500) messageText = messageText.substring(0, 500);
       const markAsReadToken = event.markAsReadToken;
 
       if (!replyToken || !lineUserId) continue;
