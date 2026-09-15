@@ -54,8 +54,11 @@ export async function handleCentralRouting(
         if (!allStocks || allStocks.length === 0) {
              await sendLineReply(replyToken, '📦 บอร์ด ' + targetBoard.name + ' ยังไม่มีรายการสินค้าครับ');
           } else {
-             const { createStockFlexBubble } = await import('@/lib/line/flex-templates');
-             const bubbles = allStocks.slice(0, 10).map(item => createStockFlexBubble(item, 'view', null));
+             const { createStockFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
+             const bubbles: any[] = allStocks.slice(0, 10).map(item => createStockFlexBubble(item, 'view', null));
+             if (allStocks.length > 10) {
+                 bubbles.push(createNextPageBubble(`action=view_board_page&boardId=${targetBoard.id}&page=2`));
+             }
              await sendLineReply(replyToken, [{
                type: 'flex',
                altText: '📦 รายการสต็อกทั้งหมด',
@@ -131,8 +134,11 @@ export async function handleCentralRouting(
          if (!allPrs || allPrs.length === 0) {
               await sendLineReply(replyToken, `📋 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
            } else {
-              const { createPrFlexBubble } = await import('@/lib/line/flex-templates');
-              const bubbles = allPrs.slice(0, 10).map(item => createPrFlexBubble(item, ''));
+              const { createPrFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
+              const bubbles: any[] = allPrs.slice(0, 10).map(item => createPrFlexBubble(item, ''));
+              if (allPrs.length > 10) {
+                 bubbles.push(createNextPageBubble(`action=view_board_page&boardId=${targetBoard.id}&page=2`));
+              }
               await sendLineReply(replyToken, [{
                 type: 'flex',
                 altText: '📋 รายการ PR ทั้งหมด',
@@ -167,8 +173,11 @@ export async function handleCentralRouting(
          if (!allDates || allDates.length === 0) {
               await sendLineReply(replyToken, `📅 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
            } else {
-              const { createCalibrationFlexBubble } = await import('@/lib/line/flex-templates');
-              const bubbles = allDates.slice(0, 10).map(item => createCalibrationFlexBubble(item, ''));
+              const { createCalibrationFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
+              const bubbles: any[] = allDates.slice(0, 10).map(item => createCalibrationFlexBubble(item, ''));
+              if (allDates.length > 10) {
+                 bubbles.push(createNextPageBubble(`action=view_board_page&boardId=${targetBoard.id}&page=2`));
+              }
               await sendLineReply(replyToken, [{
                 type: 'flex',
                 altText: '📅 รายการแจ้งเตือนทั้งหมด',
@@ -198,18 +207,15 @@ export async function handleCentralRouting(
          if (!allItems || allItems.length === 0) {
               await sendLineReply(replyToken, `📝 บอร์ด ${targetBoard.name} ยังไม่มีรายการครับ`);
            } else {
-              const { createItemFlexBubble } = await import('@/lib/line/flex-templates');
-              const requestUrlOrigin = ''; // Use empty or fetch from env if needed, usually passed down or not strictly required for this view.
-              // Actually, central router receives requestUrlOrigin from line-webhook, let's just pass an empty string or the app URL.
-              // Wait, let's pass a default or empty string. createItemFlexBubble doesn't strictly break if appUrl is empty.
-              const bubbles = allItems.slice(0, 10).map(item => createItemFlexBubble(item, ''));
+              const { createItemFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
+              const bubbles: any[] = allItems.slice(0, 10).map(item => createItemFlexBubble(item, ''));
+              if (allItems.length > 10) {
+                 bubbles.push(createNextPageBubble(`action=view_board_page&boardId=${targetBoard.id}&page=2`));
+              }
               await sendLineReply(replyToken, [{
                 type: 'flex',
                 altText: '📝 รายการบันทึกทั้งหมด',
-                contents: {
-                  type: 'carousel',
-                  contents: bubbles
-                }
+                contents: { type: 'carousel', contents: bubbles }
               }]);
            }
            return true;

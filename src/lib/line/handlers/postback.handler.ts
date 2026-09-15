@@ -644,14 +644,37 @@ export async function handlePostbackEvent(
       return;
     }
 
-    const itemsList = await ItemService.getItemsByUserId(supabaseAdmin, userProfile.id, statusParam === 'completed', 10);
-    if (!itemsList || itemsList.length === 0) {
+    const page = parseInt(params.get('page') || '1', 10);
+    const limit = 10;
+    const offset = (page - 1) * limit;
+
+    let query = supabaseAdmin.from('items').select('*').eq('user_id', userProfile.id);
+    if (statusParam === 'completed') {
+      query = query.eq('status', 'Issuing Item');
+    } else {
+      query = query.neq('status', 'Issuing Item');
+    }
+
+    const { data: fetchList } = await query.order('updated_at', { ascending: false }).range(offset, offset + limit);
+    const itemsList = fetchList || [];
+
+    if (itemsList.length === 0 && page === 1) {
       const statusName = statusParam === 'completed' ? 'ที่สำเร็จแล้ว' : 'ที่ยังไม่สำเร็จ';
       await sendLineReply(replyToken, `📋 ไม่พบรายการ${statusName}ในขณะนี้`);
       return;
+    } else if (itemsList.length === 0) {
+      await sendLineReply(replyToken, `📋 ไม่มีรายการเพิ่มเติมแล้วครับ`);
+      return;
     }
 
-    const bubbles = itemsList.map((item: any) => createItemFlexBubble(item, requestUrlOrigin));
+    const hasNextPage = itemsList.length > limit;
+    const itemsToDisplay = itemsList.slice(0, limit);
+    const { createItemFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
+
+    const bubbles = itemsToDisplay.map((item: any) => createItemFlexBubble(item, requestUrlOrigin));
+    if (hasNextPage) {
+      bubbles.push(createNextPageBubble(`action=view_items&status=${statusParam}&page=${page + 1}`));
+    }
     await sendLineReply(replyToken, {
       type: 'flex',
       altText: `📋 รายการบันทึกช่วยจำ (${statusParam === 'completed' ? 'สำเร็จแล้ว' : 'ที่ยังไม่สำเร็จ'})`,
@@ -994,6 +1017,58 @@ export async function handlePostbackEvent(
         ]
       }
     });
+  } else if (action === 'view_board_page') {
+    const boardId = params.get('boardId');
+    const page = parseInt(params.get('page') || '1', 10);
+    if (!boardId) return;
+
+    const limit = 10;
+    const offset = (page - 1) * limit;
+
+    const { data: boardData } = await supabaseAdmin.from('boards').select('type').eq('id', boardId).single();
+    if (!boardData) return;
+
+    let items = [];
+    let hasNextPage = false;
+    const { createStockFlexBubble, createPrFlexBubble, createCalibrationFlexBubble, createItemFlexBubble, createNextPageBubble } = await import('@/lib/line/flex-templates');
+    let bubbles: any[] = [];
+
+    if (boardData.type === 'INVENTORY') {
+      const { data } = await supabaseAdmin.from('stocks').select('*').eq('board_id', boardId).order('name').range(offset, offset + limit);
+      const list = data || [];
+      hasNextPage = list.length > limit;
+      bubbles = list.slice(0, limit).map(i => createStockFlexBubble(i, 'view', null));
+    } else if (boardData.type === 'KANBAN') {
+      const { data } = await supabaseAdmin.from('pr_requests').select('*').eq('board_id', boardId).order('created_at', { ascending: false }).range(offset, offset + limit);
+      const list = data || [];
+      hasNextPage = list.length > limit;
+      bubbles = list.slice(0, limit).map(i => createPrFlexBubble(i, requestUrlOrigin));
+    } else if (boardData.type === 'DATE_TRACKER') {
+      const { data } = await supabaseAdmin.from('lab_calibrations').select('*').eq('board_id', boardId).order('next_due_date', { ascending: true }).range(offset, offset + limit);
+      const list = data || [];
+      hasNextPage = list.length > limit;
+      bubbles = list.slice(0, limit).map(i => createCalibrationFlexBubble(i, requestUrlOrigin));
+    } else {
+      const { data } = await supabaseAdmin.from('items').select('*').eq('board_id', boardId).order('created_at', { ascending: false }).range(offset, offset + limit);
+      const list = data || [];
+      hasNextPage = list.length > limit;
+      bubbles = list.slice(0, limit).map(i => createItemFlexBubble(i, requestUrlOrigin));
+    }
+
+    if (bubbles.length === 0) {
+      await sendLineReply(replyToken, `📋 ไม่มีรายการในหน้านี้ครับ`);
+      return;
+    }
+
+    if (hasNextPage) {
+      bubbles.push(createNextPageBubble(`action=view_board_page&boardId=${boardId}&page=${page + 1}`));
+    }
+
+    await sendLineReply(replyToken, [{
+      type: 'flex',
+      altText: 'รายการทั้งหมด (หน้า ' + page + ')',
+      contents: { type: 'carousel', contents: bubbles }
+    }]);
   } else {
     console.warn(`[LINE Postback] Unhandled action received: "${action}" with data:`, event.postback?.data);
     await sendLineReply(replyToken, '⚠️ ขออภัยครับ ระบบไม่พบการดำเนินการนี้ กรุณาลองใหม่อีกครั้งหรือพิมพ์ "โหมด" เพื่อเลือกเมนูใหม่ครับ');

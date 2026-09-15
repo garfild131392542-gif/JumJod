@@ -2153,4 +2153,30 @@ export function createPrStatusMenuFlex(prItem: any) {
   };
 }
 
-
+export function createNextPageBubble(postbackData: string) {
+  return {
+    type: 'bubble',
+    size: 'micro',
+    body: {
+      type: 'box',
+      layout: 'vertical',
+      paddingAll: '10px',
+      justifyContent: 'center',
+      alignItems: 'center',
+      contents: [
+        {
+          type: 'text',
+          text: '▶️ หน้าถัดไป',
+          weight: 'bold',
+          size: 'md',
+          color: '#0ea5e9'
+        }
+      ],
+      action: {
+        type: 'postback',
+        label: 'หน้าถัดไป',
+        data: postbackData
+      }
+    }
+  };
+}
