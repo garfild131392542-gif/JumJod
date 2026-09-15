@@ -136,7 +136,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-750 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
               title="ย่อ/ขยายเมนู"
             >
               <Menu className="w-4 h-4" />
@@ -251,7 +251,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
-              className="w-8 h-8 rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 active:scale-90 transition-transform cursor-pointer"
+              className="w-11 h-11 rounded-xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 active:scale-90 transition-transform cursor-pointer"
               title="สลับโหมดสี"
             >
               {theme === 'light' ? (
@@ -265,7 +265,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="relative">
               <button
                 onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-                className="flex items-center p-0.5 rounded-full border border-violet-500/40 active:scale-90 transition-transform cursor-pointer"
+                className="flex items-center justify-center w-11 h-11 rounded-full border border-violet-500/40 active:scale-90 transition-transform cursor-pointer"
                 title="บัญชีผู้ใช้"
               >
               {userAvatar ? (
@@ -290,7 +290,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     className="fixed inset-0 z-40"
                     onClick={() => setProfileMenuOpen(false)}
                   />
-                  <div className="absolute right-0 top-full mt-2 w-[280px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl z-50 overflow-hidden transform origin-top-right transition-all">
+                  <div className="absolute right-0 top-full mt-2 w-[280px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden transform origin-top-right transition-all">
                     {/* User Info Header */}
                     <div className="px-5 py-6 flex flex-col items-center justify-center text-center border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30 relative">
                       {userAvatar ? (
@@ -354,7 +354,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 relative group active:scale-95 ${
+                className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl transition-all duration-200 relative group active:scale-95 ${
                   isActive
                     ? 'text-violet-600 dark:text-violet-400 font-bold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -370,7 +370,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 }`}>
                   <Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : ''}`} />
                 </div>
-                <span className="text-[10px] mt-0.5 tracking-tight font-semibold truncate max-w-full">
+                <span className="text-[11px] mt-0.5 tracking-tight font-semibold truncate max-w-full">
                   {item.name}
                 </span>
               </Link>
@@ -380,7 +380,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* 5th Tab: "เมนูอื่นๆ" (More / Drawer Trigger) */}
           <button
             onClick={() => setMobileDrawerOpen(true)}
-            className={`flex flex-col items-center justify-center py-1 px-1 rounded-2xl transition-all duration-200 relative active:scale-95 cursor-pointer ${
+            className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl transition-all duration-200 relative active:scale-95 cursor-pointer ${
               isMoreActive || mobileDrawerOpen
                 ? 'text-violet-600 dark:text-violet-400 font-bold'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -395,7 +395,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }`}>
               <Menu className="w-5 h-5" />
             </div>
-            <span className="text-[10px] mt-0.5 tracking-tight font-semibold truncate max-w-full">
+            <span className="text-[11px] mt-0.5 tracking-tight font-semibold truncate max-w-full">
               เมนูอื่นๆ
             </span>
           </button>

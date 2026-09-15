@@ -139,14 +139,14 @@ export default function SettingsPage() {
 
         <button
           onClick={signOut}
-          className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer shrink-0 border border-slate-200/80 dark:border-slate-800"
+          className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer shrink-0 border border-slate-200/80 dark:border-slate-800"
         >
           ออกจากระบบ
         </button>
       </div>
 
       {/* 2. LINE Integration Card */}
-      <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xs backdrop-blur-sm space-y-4">
+      <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-2xl bg-[#06C755]/10 border border-[#06C755]/20 flex items-center justify-center text-[#06C755] shrink-0 shadow-xs">
@@ -190,7 +190,7 @@ export default function SettingsPage() {
               <div className="text-xs">
                 <span className="text-slate-500 dark:text-slate-400 block sm:inline">LINE User ID: </span>
                 <code className="font-mono text-slate-800 dark:text-slate-200 font-bold bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
-                  {profile.line_user_id.slice(0, 14)}...
+                  {profile.line_user_id}
                 </code>
               </div>
             </div>
@@ -209,7 +209,7 @@ export default function SettingsPage() {
           <div className="space-y-3.5 pt-1">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <div className="p-3 bg-slate-50 dark:bg-slate-950/40 border border-slate-200/60 dark:border-slate-800/60 rounded-xl flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-violet-600/10 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-black shrink-0">
+                <span className="w-6 h-6 rounded-full bg-violet-600/10 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-black shrink-0">
                   1
                 </span>
                 <p className="text-xs text-slate-600 dark:text-slate-300">
@@ -217,7 +217,7 @@ export default function SettingsPage() {
                 </p>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-950/40 border border-slate-200/60 dark:border-slate-800/60 rounded-xl flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-violet-600/10 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-black shrink-0">
+                <span className="w-6 h-6 rounded-full bg-violet-600/10 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-black shrink-0">
                   2
                 </span>
                 <p className="text-xs text-slate-600 dark:text-slate-300">
@@ -225,7 +225,7 @@ export default function SettingsPage() {
                 </p>
               </div>
               <div className="p-3 bg-slate-50 dark:bg-slate-950/40 border border-slate-200/60 dark:border-slate-800/60 rounded-xl flex items-start gap-2.5">
-                <span className="w-5 h-5 rounded-full bg-violet-600/10 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-black shrink-0">
+                <span className="w-6 h-6 rounded-full bg-violet-600/10 text-violet-600 dark:text-violet-400 flex items-center justify-center text-xs font-black shrink-0">
                   3
                 </span>
                 <p className="text-xs text-slate-600 dark:text-slate-300">

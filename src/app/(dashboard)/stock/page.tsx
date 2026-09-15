@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { StockItem } from '@/lib/types';
-import { Plus, Search, Edit2, Trash2, AlertCircle, Package, Minus, ArrowUpDown, AlertTriangle, History, X, ChevronDown } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, AlertCircle, Package, Minus, ArrowUpDown, AlertTriangle, History, X, ChevronDown, CheckCircle2, XCircle } from 'lucide-react';
 import StockModal from '@/components/dashboard/stock-modal';
 import StockHistoryModal from '@/components/dashboard/stock-history-modal';
 
@@ -217,25 +217,22 @@ export default function StockPage() {
             {/* Stat Cards - 1 Row 4 Columns */}
             <div className="xl:col-span-2 grid grid-cols-4 gap-2 sm:gap-3">
               {[
-                { label: 'วัสดุทั้งหมด', value: totalCount, icon: '📦', color: 'bg-indigo-600', textColor: 'text-white', subColor: 'text-indigo-100' },
-                { label: 'ปกติ', value: normalItems.length, icon: '✅', color: 'bg-emerald-600', textColor: 'text-white', subColor: 'text-emerald-100' },
-                { label: 'ใกล้หมด', value: alertItems.length, icon: '⚠️', color: 'bg-amber-500', textColor: 'text-white', subColor: 'text-amber-100' },
-                { label: 'หมดแล้ว', value: emptyItems.length, icon: '❌', color: 'bg-rose-500', textColor: 'text-white', subColor: 'text-rose-100' },
+                { label: 'วัสดุทั้งหมด', value: totalCount, IconEl: Package, cardBg: 'bg-white dark:bg-slate-900/60 border border-indigo-200/60 dark:border-indigo-800/40', iconColor: 'text-indigo-500', valueColor: 'text-indigo-700 dark:text-indigo-300', subColor: 'text-indigo-500/80 dark:text-indigo-400' },
+                { label: 'ปกติ', value: normalItems.length, IconEl: CheckCircle2, cardBg: 'bg-white dark:bg-slate-900/60 border border-emerald-200/60 dark:border-emerald-800/40', iconColor: 'text-emerald-500', valueColor: 'text-emerald-700 dark:text-emerald-300', subColor: 'text-emerald-500/80 dark:text-emerald-400' },
+                { label: 'ใกล้หมด', value: alertItems.length, IconEl: AlertTriangle, cardBg: 'bg-white dark:bg-slate-900/60 border border-amber-200/60 dark:border-amber-800/40', iconColor: 'text-amber-500', valueColor: 'text-amber-700 dark:text-amber-300', subColor: 'text-amber-500/80 dark:text-amber-400' },
+                { label: 'หมดแล้ว', value: emptyItems.length, IconEl: XCircle, cardBg: 'bg-white dark:bg-slate-900/60 border border-rose-200/60 dark:border-rose-800/40', iconColor: 'text-rose-500', valueColor: 'text-rose-700 dark:text-rose-300', subColor: 'text-rose-500/80 dark:text-rose-400' },
               ].map((stat, i) => (
                 <div
                   key={i}
-                  className={`relative overflow-hidden rounded-xl sm:rounded-2xl ${stat.color} p-2 sm:p-3.5 shadow-sm flex flex-col items-center sm:items-start text-center sm:text-left gap-0.5 sm:gap-1`}
+                  className={`relative overflow-hidden rounded-xl sm:rounded-2xl ${stat.cardBg} p-2 sm:p-3.5 shadow-sm flex flex-col items-start gap-1`}
                 >
-                  <div className="flex items-center justify-between w-full">
-                    <span className="text-sm sm:text-xl leading-none">{stat.icon}</span>
-                  </div>
-                  <span className={`text-base sm:text-2xl font-black ${stat.textColor} tracking-tight leading-tight mt-0.5`}>
+                  <stat.IconEl className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.iconColor}`} />
+                  <span className={`text-base sm:text-2xl font-black ${stat.valueColor} tracking-tight leading-tight tabular-nums`}>
                     {stat.value}
                   </span>
                   <span className={`text-[10px] sm:text-xs font-semibold ${stat.subColor} truncate w-full`}>
                     {stat.label}
                   </span>
-                  <div className="absolute -bottom-2 -right-2 w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-white/10 pointer-events-none" />
                 </div>
               ))}
             </div>
@@ -382,11 +379,16 @@ export default function StockPage() {
           <Package className="w-10 h-10 text-slate-400 dark:text-slate-650" />
           <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300">ไม่มีรายการวัสดุในคลัง</h3>
           <p className="text-xs text-slate-400 dark:text-slate-500 max-w-sm">
-            {searchQuery ? 'ไม่พบวัสดุที่ตรงกับคำค้นหาของคุณ ลองใช้คำค้นอื่น' : 'ยังไม่มีวัสดุชิ้นใดในคลัง กดปุ่มเพิ่มวัสดุเพื่อสร้างรายการอ้างอิงใหม่'}
+            {searchQuery ? 'ไม่พบวัสดุที่ตรงกับคำค้นหาของคุณ ลองใช้คำค้นอื่น' : 'เริ่มต้นสร้างรายการวัสดุรายการแรกของคุณได้เลย'}
           </p>
+          {!searchQuery && (
+            <button onClick={handleAddStock} className="flex items-center gap-1.5 h-11 px-5 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm active:scale-95 transition-all cursor-pointer">
+              <Plus className="w-4 h-4" /> เพิ่มวัสดุรายการแรก
+            </button>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pr-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pr-1">
           {sortedStocks.map((stock) => {
             const isAlert = stock.quantity <= (stock.min_threshold ?? 0);
             
@@ -395,16 +397,16 @@ export default function StockPage() {
             let priorityLabel = 'ทั่วไป (Low)';
             if (stock.priority === 'High') {
               priorityBadgeColor = 'text-red-700 bg-red-500/10 border-red-500/20 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/20';
-              priorityLabel = 'ด่วนมาก (High) 🔴';
+              priorityLabel = 'ด่วนมาก (High)';
             } else if (stock.priority === 'Medium') {
               priorityBadgeColor = 'text-amber-700 bg-amber-500/10 border-amber-500/20 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20';
-              priorityLabel = 'ปานกลาง (Medium) 🟡';
+              priorityLabel = 'ปานกลาง (Medium)';
             }
 
             return (
               <div
                 key={stock.id}
-                className={`group relative backdrop-blur-sm bg-white dark:bg-slate-900/55 border rounded-2xl p-5 shadow-sm hover:shadow-md dark:shadow-none hover:border-slate-300 dark:hover:border-slate-700/80 transition-all duration-200 flex flex-col justify-between gap-4 ${
+                className={`group relative bg-white dark:bg-slate-900/60 border rounded-2xl p-5 shadow-sm hover:shadow-md dark:shadow-none hover:border-slate-300 dark:hover:border-slate-700/80 transition-all duration-200 flex flex-col justify-between gap-4 ${
                   isAlert 
                     ? 'border-red-300 bg-red-50/20 dark:border-red-950/40 dark:bg-red-950/5' 
                     : 'border-slate-200 dark:border-slate-800/80'
@@ -460,7 +462,7 @@ export default function StockPage() {
                       {stock.description}
                     </p>
                   ) : (
-                    <p className="text-slate-400 dark:text-slate-650 text-xs mt-1.5 italic">ไม่มีรายละเอียดวัสดุ</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs mt-1.5 italic">ไม่มีรายละเอียดวัสดุ</p>
                   )}
 
                   {/* Threshold & Alarm indicator */}
@@ -469,7 +471,7 @@ export default function StockPage() {
                       เกณฑ์ควรสั่งซื้อเพิ่ม: {stock.min_threshold ?? 0} {stock.unit}
                     </span>
                     {isAlert && (
-                      <span className="flex items-center gap-1 text-[10px] font-black text-red-650 dark:text-red-400 bg-red-500/15 px-2 py-0.5 rounded-full select-none animate-pulse">
+                      <span className="flex items-center gap-1 text-[10px] font-black text-red-600 dark:text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-md select-none">
                         <AlertTriangle className="w-3 h-3 shrink-0" />
                         <span>ควรสั่งซื้อเพิ่ม!</span>
                       </span>
@@ -484,14 +486,14 @@ export default function StockPage() {
                     <button
                       onClick={() => handleAdjustQuantity(stock, -1)}
                       disabled={stock.quantity <= 0 || adjustQuantityMutation.isPending}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-500 dark:text-slate-400 disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+                      className="w-11 h-11 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
                     >
                       <Minus className="w-3.5 h-3.5" />
                     </button>
                     
                     <div className="text-center min-w-16">
-                      <span className={`text-lg font-black transition-colors ${
-                        isAlert ? 'text-red-605 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'
+                      <span className={`text-lg font-black transition-colors tabular-nums ${
+                        isAlert ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'
                       }`}>{stock.quantity}</span>
                       <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block leading-none">{stock.unit}</span>
                     </div>
@@ -499,7 +501,7 @@ export default function StockPage() {
                     <button
                       onClick={() => handleAdjustQuantity(stock, 1)}
                       disabled={adjustQuantityMutation.isPending}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-500 dark:text-slate-400 disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
+                      className="w-11 h-11 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                     </button>
@@ -509,14 +511,14 @@ export default function StockPage() {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleEditStock(stock)}
-                      className="p-2 rounded-lg bg-slate-55 dark:bg-slate-850 hover:bg-violet-100 dark:hover:bg-violet-650/20 text-slate-500 dark:text-slate-400 hover:text-violet-650 dark:hover:text-violet-400 transition-all cursor-pointer"
+                      className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 transition-all cursor-pointer"
                       title="แก้ไขข้อมูลวัสดุ"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDeleteStock(stock.id)}
-                      className="p-2 rounded-lg bg-slate-55 dark:bg-slate-850 hover:bg-red-100 dark:hover:bg-red-650/20 text-slate-500 dark:text-slate-400 hover:text-red-650 dark:hover:text-red-400 transition-all cursor-pointer"
+                      className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all cursor-pointer"
                       title="ลบวัสดุออกจากคลัง"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

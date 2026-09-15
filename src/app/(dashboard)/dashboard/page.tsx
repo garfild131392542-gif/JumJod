@@ -8,7 +8,7 @@ import { Item, ItemStatus, Profile } from '@/lib/types';
 import ItemModal from '@/components/dashboard/item-modal';
 import {
   Plus, Search, Edit2, Trash2, Calendar,
-  Image as ImageIcon, FileText, Clock, AlertCircle, CheckCircle2
+  Image as ImageIcon, FileText, Clock, AlertCircle, CheckCircle2, ClipboardList
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -350,7 +350,7 @@ export default function DashboardPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400">{(error as any)?.message || 'โปรดตรวจสอบสิทธิ์เชื่อมต่อหรือรีเฟรชหน้าเว็บ'}</p>
         </div>
       ) : (
-        <div className="w-full flex flex-col rounded-2xl min-h-[60vh] p-4 bg-slate-100/40 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800/50">
+        <div className="w-full flex flex-col rounded-2xl p-4 bg-slate-100/40 dark:bg-slate-900/20 border border-slate-200 dark:border-slate-800/50">
           {/* Title */}
           <div className="mb-4 pb-3 border-b border-slate-200 dark:border-slate-800/50 flex items-center justify-between">
             <div>
@@ -366,14 +366,21 @@ export default function DashboardPage() {
           {/* Cards Grid */}
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 content-start">
             {filteredItems.length === 0 ? (
-              <div className="col-span-full h-32 border border-dashed border-slate-300 dark:border-slate-800 rounded-xl flex items-center justify-center text-center p-4">
-                <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">ไม่มีรายการจดบันทึกในขณะนี้</span>
+              <div className="col-span-full border border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center text-center p-8 gap-3 min-h-[160px]">
+                <ClipboardList className="w-9 h-9 text-slate-300 dark:text-slate-600" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">ยังไม่มีรายการบันทึก</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">สร้างรายการแรกเพื่อเริ่มต้นใช้งาน</p>
+                </div>
+                <button onClick={handleAddItem} className="flex items-center gap-1.5 h-11 px-4 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm active:scale-95 transition-all cursor-pointer">
+                  <Plus className="w-4 h-4" /> สร้างรายการแรก
+                </button>
               </div>
             ) : (
               filteredItems.map((item) => (
                 <div
                   key={item.id}
-                  className="group relative backdrop-blur-sm bg-white dark:bg-slate-900/55 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 shadow-sm hover:shadow-md dark:shadow-none hover:border-slate-400 dark:hover:border-slate-700/80 transition-all duration-200 flex flex-col justify-between gap-3"
+                  className="group relative bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 shadow-sm hover:shadow-md dark:shadow-none hover:border-slate-300 dark:hover:border-slate-700/80 transition-all duration-200 flex flex-col justify-between gap-3"
                 >
                   {/* File Attachment Preview */}
                   {item.image_url && (
@@ -388,7 +395,7 @@ export default function DashboardPage() {
                         />
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-55 dark:bg-slate-950/40 mb-2 shrink-0">
+                      <div className="flex items-center gap-2.5 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 mb-2 shrink-0">
                         <FileText className="w-6 h-6 text-violet-500 shrink-0" />
                         <div className="min-w-0">
                           <p className="text-[9px] text-slate-500 uppercase font-extrabold leading-none">เอกสารแนบ</p>
@@ -416,7 +423,7 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     {item.description && (
-                      <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 line-clamp-2 leading-relaxed">
+                      <p className="text-slate-600 dark:text-slate-300 text-xs mt-1 line-clamp-2 leading-relaxed">
                         {item.description}
                       </p>
                     )}
@@ -435,7 +442,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => handleCompleteItem(item)}
-                        className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-950/40 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-90 transition-all cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                        className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-950/40 text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 active:scale-90 transition-all cursor-pointer flex items-center gap-1 text-[11px] font-bold"
                         title="ทำเครื่องหมายว่าสำเร็จ"
                       >
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -443,14 +450,14 @@ export default function DashboardPage() {
                       </button>
                       <button
                         onClick={() => handleEditItem(item)}
-                        className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 hover:bg-violet-100 dark:hover:bg-violet-950/40 text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-300 active:scale-90 transition-all cursor-pointer"
+                        className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60 hover:bg-violet-100 dark:hover:bg-violet-950/40 text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-300 active:scale-90 transition-all cursor-pointer"
                         title="แก้ไขรายการ"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteItem(item.id)}
-                        className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/60 hover:bg-red-100 dark:hover:bg-red-950/40 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 active:scale-90 transition-all cursor-pointer"
+                        className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/60 hover:bg-red-100 dark:hover:bg-red-950/40 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 active:scale-90 transition-all cursor-pointer"
                         title="ลบรายการ"
                       >
                         <Trash2 className="w-4 h-4" />
