@@ -1038,6 +1038,7 @@ INSTRUCTIONS:
    - For all, extract a clear 'title' (without action words like 'เพิ่ม', 'บันทึก', 'แจ้งเตือน').
 7. The "target_item_name" should contain the name of the item they are referring to for updates/deletes/stock checks.
 8. CRITICAL: If you generate a "reply_message" that lists the available boards, ONLY use their human-readable Names (e.g., "ช่วยจำ", "สต็อกวัสดุ"). DO NOT include the system Types in parentheses (e.g. DO NOT output "ช่วยจำ (GENERAL_LIST)").
+9. CRITICAL JSON FORMATTING: In "reply_message", DO NOT use raw unescaped newlines. You MUST use "\\n" for line breaks to ensure valid JSON output.
 
 Format output EXACTLY as this JSON structure:
 {
