@@ -54,7 +54,11 @@ export async function handleTextEvent(
   }
 
   // 3. General mode menu command
-  if (cleanMessageText === 'โหมด' || cleanMessageText === 'เมนูโหมด' || cleanMessageText === 'เลือกโหมด') {
+  const modeMenuKeywords = [
+    'โหมด', 'เมนูโหมด', 'เลือกโหมด', 'เมนู', 'หน้าหลัก', 'หน้าแรก', 'menu', 'home',
+    'เริ่มต้น', 'เริ่มใหม่', 'เลือกระบบ', 'ระบบ'
+  ];
+  if (modeMenuKeywords.includes(cleanMessageText)) {
     memoryStateCache.delete(lineUserId);
     await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     const flexMenu = createModeSelectionFlex();
@@ -67,7 +71,15 @@ export async function handleTextEvent(
   }
 
   // 4. Mode switching commands
-  if (cleanMessageText === 'โหมดบันทึก' || cleanMessageText === 'โหมดช่วยจำ' || cleanMessageText === 'บันทึกช่วยจำ' || cleanMessageText === 'ช่วยจำ' || cleanMessageText === 'บันทึก') {
+
+  // --- ช่วยจำ / Reminder mode ---
+  const reminderModeKeywords = [
+    'โหมดบันทึก', 'โหมดช่วยจำ', 'บันทึกช่วยจำ', 'ช่วยจำ', 'บันทึก',
+    'reminder', 'โหมด reminder', 'โหมดreminder',
+    'แจ้งเตือน', 'โหมดแจ้งเตือน', 'ตั้งเตือน', 'โหมดตั้งเตือน',
+    'note', 'โหมด note', 'โหมดnote', 'บันทึกย่อ', 'จด', 'จดบันทึก'
+  ];
+  if (reminderModeKeywords.includes(cleanMessageText)) {
     memoryStateCache.delete(lineUserId);
     await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     await setUserModeState(profile, lineUserId, 'reminder', supabaseAdmin);
@@ -75,7 +87,14 @@ export async function handleTextEvent(
     return true;
   }
 
-  if (cleanMessageText === 'โหมดสต็อก' || cleanMessageText === 'โหมดสต๊อก' || cleanMessageText === 'สต็อก' || cleanMessageText === 'สต๊อก') {
+  // --- สต็อก / Stock mode ---
+  const stockModeKeywords = [
+    'โหมดสต็อก', 'โหมดสต๊อก', 'สต็อก', 'สต๊อก',
+    'stock', 'โหมด stock', 'โหมดstock',
+    'สต็อกวัสดุ', 'โหมดสต็อกวัสดุ', 'วัสดุ', 'โหมดวัสดุ',
+    'คลัง', 'คลังสินค้า', 'โหมดคลัง', 'inventory', 'โหมด inventory', 'โหมดinventory'
+  ];
+  if (stockModeKeywords.includes(cleanMessageText)) {
     memoryStateCache.delete(lineUserId);
     await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     await setUserModeState(profile, lineUserId, 'stock', supabaseAdmin);
@@ -83,7 +102,14 @@ export async function handleTextEvent(
     return true;
   }
 
-  if (cleanMessageText === 'โหมดpr' || cleanMessageText === 'โหมด pr' || cleanMessageText === 'ติดตามpr' || cleanMessageText === 'ติดตาม pr') {
+  // --- PR / Purchase Request mode ---
+  const prModeKeywords = [
+    'โหมดpr', 'โหมด pr', 'ติดตามpr', 'ติดตาม pr',
+    'pr', 'purchase request', 'ติดตาม', 'โหมดติดตาม',
+    'kanban', 'โหมด kanban', 'โหมดkanban',
+    'คำขอซื้อ', 'โหมดคำขอซื้อ', 'ใบขอซื้อ'
+  ];
+  if (prModeKeywords.includes(cleanMessageText)) {
     memoryStateCache.delete(lineUserId);
     await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     await setUserModeState(profile, lineUserId, 'pr', supabaseAdmin);
@@ -91,7 +117,14 @@ export async function handleTextEvent(
     return true;
   }
 
-  if (cleanMessageText === 'โหมดcal' || cleanMessageText === 'โหมด cal' || cleanMessageText === 'โหมด calibrate' || cleanMessageText === 'calibrate' || cleanMessageText === 'แคล' || cleanMessageText === 'เครื่องมือ') {
+  // --- Calibration mode ---
+  const calibrationModeKeywords = [
+    'โหมดcal', 'โหมด cal', 'โหมด calibrate', 'calibrate', 'แคล', 'เครื่องมือ',
+    'cal', 'calibration', 'โหมด calibration', 'โหมดcalibration',
+    'สอบเทียบ', 'โหมดสอบเทียบ', 'ตรวจสอบเครื่องมือ',
+    'lab', 'โหมด lab', 'โหมดlab'
+  ];
+  if (calibrationModeKeywords.includes(cleanMessageText)) {
     memoryStateCache.delete(lineUserId);
     await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     await setUserModeState(profile, lineUserId, 'calibration', supabaseAdmin);
@@ -99,7 +132,12 @@ export async function handleTextEvent(
     return true;
   }
 
-  if (cleanMessageText === 'ออกโหมด' || cleanMessageText === 'ยกเลิกโหมด' || cleanMessageText === 'รีเซ็ตโหมด') {
+  // --- Exit / Reset mode (explicit — always fire regardless of state) ---
+  // These keywords are unambiguous: user clearly wants to exit the current mode entirely.
+  const exitModeExplicitKeywords = [
+    'ออกโหมด', 'ยกเลิกโหมด', 'รีเซ็ตโหมด', 'กลับหน้าหลัก', 'exit mode', 'reset mode'
+  ];
+  if (exitModeExplicitKeywords.includes(cleanMessageText)) {
     memoryStateCache.delete(lineUserId);
     await clearConversationState(lineUserId, supabaseAdmin, profile.id);
     await setUserModeState(profile, lineUserId, null, supabaseAdmin);
@@ -112,6 +150,23 @@ export async function handleTextEvent(
   const userState = await getConversationState(lineUserId, profile, supabaseAdmin);
   if (userState) {
     return false;
+  }
+
+  // --- Exit / Reset mode (ambiguous — only fire when no active conversation state) ---
+  // These keywords overlap with mode-level cancel commands (e.g. reminder uses ยกเลิก/cancel/ออก to cancel
+  // the current step). Only intercept here when the user has no pending sub-state, so mode controllers get
+  // first dibs during a multi-step flow.
+  const exitModeAmbiguousKeywords = [
+    'ออก', 'exit', 'back', 'กลับ',
+    'ยกเลิก', 'cancel',
+    'clear', 'เคลียร์', 'รีเซ็ต', 'reset'
+  ];
+  if (exitModeAmbiguousKeywords.includes(cleanMessageText)) {
+    memoryStateCache.delete(lineUserId);
+    await clearConversationState(lineUserId, supabaseAdmin, profile.id);
+    await setUserModeState(profile, lineUserId, null, supabaseAdmin);
+    await sendLineReply(replyToken, '🔄 ออกจากโหมดพิเศษ เรียบร้อยแล้วครับ! กลับสู่โหมดเริ่มต้นอัตโนมัติ');
+    return true;
   }
 
   // Fetch active mode
