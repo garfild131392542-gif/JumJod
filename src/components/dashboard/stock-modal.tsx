@@ -20,10 +20,10 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit, categ
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [quantity, setQuantity] = useState(0);
+  const [quantity, setQuantity] = useState<number | ''>(0);
   const [unit, setUnit] = useState('ชิ้น');
   const [category, setCategory] = useState<string>('');
-  const [minThreshold, setMinThreshold] = useState(0);
+  const [minThreshold, setMinThreshold] = useState<number | ''>(0);
   const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
 
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit, categ
       if (stockToEdit) {
         setName(stockToEdit.name);
         setDescription(stockToEdit.description || '');
-        setQuantity(stockToEdit.quantity);
+        setQuantity(stockToEdit.quantity ?? 0);
         setUnit(stockToEdit.unit);
         setCategory(stockToEdit.category || '');
         setMinThreshold(stockToEdit.min_threshold ?? 0);
@@ -58,14 +58,17 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit, categ
       setSubmitting(true);
       setError(null);
 
+      const numQuantity = quantity === '' ? 0 : Number(quantity);
+      const numMinThreshold = minThreshold === '' ? 0 : Number(minThreshold);
+
       const payload = {
         user_id: userId,
         name: name.trim(),
         description: description.trim() || null,
-        quantity,
+        quantity: numQuantity,
         unit: unit.trim(),
         category,
-        min_threshold: minThreshold,
+        min_threshold: numMinThreshold,
         priority,
         updated_at: new Date().toISOString(),
       };
@@ -103,11 +106,14 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit, categ
       setError('กรุณากรอกชื่อวัสดุ');
       return;
     }
-    if (quantity < 0) {
+    const numQuantity = quantity === '' ? 0 : Number(quantity);
+    const numMinThreshold = minThreshold === '' ? 0 : Number(minThreshold);
+
+    if (numQuantity < 0) {
       setError('จำนวนวัสดุห้ามต่ำกว่า 0');
       return;
     }
-    if (minThreshold < 0) {
+    if (numMinThreshold < 0) {
       setError('เกณฑ์เตือนสั่งเพิ่มห้ามต่ำกว่า 0');
       return;
     }
@@ -195,9 +201,17 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit, categ
                 type="number"
                 min="0"
                 value={quantity}
-                onChange={(e) => setQuantity(Math.max(0, parseInt(e.target.value) || 0))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setQuantity('');
+                  } else {
+                    const parsed = parseInt(val, 10);
+                    setQuantity(isNaN(parsed) ? '' : Math.max(0, parsed));
+                  }
+                }}
+                placeholder="0"
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-55/40 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-850 focus:border-violet-500 dark:focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-sm text-slate-800 dark:text-slate-200"
-                required
               />
             </div>
             <div>
@@ -225,9 +239,17 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit, categ
                 type="number"
                 min="0"
                 value={minThreshold}
-                onChange={(e) => setMinThreshold(Math.max(0, parseInt(e.target.value) || 0))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setMinThreshold('');
+                  } else {
+                    const parsed = parseInt(val, 10);
+                    setMinThreshold(isNaN(parsed) ? '' : Math.max(0, parsed));
+                  }
+                }}
+                placeholder="0"
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-55/40 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-850 focus:border-violet-500 dark:focus:border-violet-500 focus:ring-1 focus:ring-violet-500 outline-none transition-all text-sm text-slate-800 dark:text-slate-200"
-                required
               />
             </div>
             <div>
