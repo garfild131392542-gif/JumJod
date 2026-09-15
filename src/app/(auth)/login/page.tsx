@@ -1,18 +1,50 @@
 'use client';
 
 import { useAuth } from '@/components/providers/auth-provider';
-import { useState, Suspense } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { useState, Suspense, useEffect } from 'react';
+import { AlertCircle, Download } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: 'accepted' | 'dismissed';
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
 
 function LoginContent() {
   const { signInWithGoogle, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   
   const searchParams = useSearchParams();
   const authErrorCode = searchParams.get('error');
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const handleLogin = async () => {
     try {
@@ -79,6 +111,16 @@ function LoginContent() {
               )}
               <span>Continue with Google</span>
             </button>
+
+            {deferredPrompt && (
+              <button
+                onClick={handleInstallClick}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-all duration-200 active:scale-[0.98] cursor-pointer"
+              >
+                <Download className="w-5 h-5" />
+                <span>ติดตั้งแอปลงเครื่อง</span>
+              </button>
+            )}
 
             <div className="pt-3 border-t border-slate-800/80 text-center space-y-1">
               <p className="text-[11px] text-slate-500">
