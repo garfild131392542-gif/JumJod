@@ -254,23 +254,16 @@ export async function POST(request: Request) {
       const profile = await ProfileService.getProfileByLineId(supabaseAdmin, lineUserId);
       if (!profile) continue;
       
+      // Step 1: Keyword handler — mode switching & quick commands (BEFORE AI)
       if (event.message.type === 'text') {
-        const { handleCentralRouting } = await import('@/lib/line/handlers/central-router');
-        const handled = await handleCentralRouting(messageText, replyToken, lineUserId, profile, supabaseAdmin);
-        if (handled) continue;
+        const { handleTextEvent } = await import('@/lib/line/handlers/text.handler');
+        const handledByText = await handleTextEvent(event, supabaseAdmin, new URL(request.url).origin);
+        if (handledByText) continue;
       }
 
       const userState = await getConversationState(lineUserId, profile, supabaseAdmin);
 
-      // Allow central routing only if user is NOT in a conversation state
-      if (!userState && event.message.type === 'text') {
-        const { handleCentralRouting } = await import('@/lib/line/handlers/central-router');
-        const handled = await handleCentralRouting(messageText, replyToken, lineUserId, profile, supabaseAdmin);
-        if (handled) continue;
-      }
-
-
-      // Global cancellation for any active conversation state
+      // Step 2: Global cancellation for any active conversation state
       if (userState) {
         const cancelKeywords = /^(ยกเลิก|cancel|ออก|ไม่|หยุด|ปิด|back|กลับ|ยกเลิกการทำรายการ)$/i;
         if (cancelKeywords.test(messageText.trim())) {
@@ -855,8 +848,13 @@ export async function POST(request: Request) {
         continue;
       }
       
-      // If no mode is active, block and prompt to choose mode
+      // Step 3: No active mode — route through Central AI for natural language commands
       if (!activeMode) {
+        const { handleCentralRouting } = await import('@/lib/line/handlers/central-router');
+        const handled = await handleCentralRouting(messageText, replyToken, lineUserId, profile, supabaseAdmin);
+        if (handled) continue;
+
+        // Fallback: show mode selection menu if AI also can't handle it
         const modeFlex = createModeSelectionFlex();
         await sendLineReply(replyToken, {
           type: 'flex',

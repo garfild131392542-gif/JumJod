@@ -27,18 +27,10 @@ export async function handleCentralRouting(
 
     const aiResult = await processMessageWithCentralAI(messageText, boards, apiKey);
 
-    // If AI decided it's just a conversation
+    // If AI decided it's just a conversation — reply with plain text only
     if (aiResult.is_conversation) {
-      const { createModeSelectionFlex } = await import('@/lib/line/flex-templates');
       const reply = aiResult.reply_message || 'สวัสดีครับ มีอะไรให้ผมช่วยจำหรือจัดการไหมครับ?';
-      
-      const flexMessage = {
-        type: 'flex',
-        altText: reply,
-        contents: createModeSelectionFlex('🤖 ' + reply, 'หรือเลือกโหมดการทำงานด่วนด้านล่างนี้ได้เลยครับ:')
-      };
-      
-      await sendLineReply(replyToken, [flexMessage]);
+      await sendLineReply(replyToken, reply);
       return true;
     }
 

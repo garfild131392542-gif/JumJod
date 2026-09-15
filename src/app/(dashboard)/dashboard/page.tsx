@@ -417,9 +417,6 @@ export default function DashboardPage() {
                       <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 group-hover:text-violet-600 dark:group-hover:text-violet-300 transition-colors line-clamp-1 flex-1">
                         {item.title}
                       </h4>
-                      <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-[9px] font-extrabold text-slate-500 select-all shrink-0">
-                        #{item.id.substring(item.id.length - 3)}
-                      </span>
                     </div>
                     {item.description && (
                       <p className="text-slate-600 dark:text-slate-300 text-xs mt-1 line-clamp-2 leading-relaxed">

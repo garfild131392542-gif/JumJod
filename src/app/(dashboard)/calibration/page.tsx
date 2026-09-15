@@ -285,9 +285,6 @@ export default function CalibrationPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     {getStatusBadge(status)}
-                    <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                      #LAB-{item.id.substring(item.id.length - 4)}
-                    </span>
                   </div>
 
                   <div className="flex items-start gap-2 pt-1">

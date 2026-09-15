@@ -298,7 +298,6 @@ export default function PrTrackerPage() {
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {sortedPrs.map((item) => {
-            const shortId = item.id.substring(item.id.length - 4);
             return (
               <div
                 key={item.id}
@@ -308,9 +307,6 @@ export default function PrTrackerPage() {
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
                     {getStatusBadge(item.status)}
-                    <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                      #{shortId}
-                    </span>
                     <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       <span>{formatDate(item.created_at)}</span>
