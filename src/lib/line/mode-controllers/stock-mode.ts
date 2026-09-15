@@ -26,7 +26,12 @@ export class StockModeController {
         return true;
       }
 
-      const bubbles = stocks.slice(0, 10).map(stock => createStockFlexBubble(stock, 'CHECK', null));
+      const { createNextPageBubble } = await import('@/lib/line/flex-templates');
+      const bubbles: any[] = stocks.slice(0, 10).map(stock => createStockFlexBubble(stock, 'CHECK', null));
+      if (stocks.length > 10) {
+        bubbles.push(createNextPageBubble(`action=view_items_mode&mode=stock&page=2`));
+      }
+      
       await sendLineReply(replyToken, {
         type: 'flex',
         altText: '📦 รายการสต็อกวัสดุทั้งหมดของคุณ',

@@ -30,14 +30,30 @@ export async function handleCentralRouting(
     // If AI decided it's just a conversation — reply with plain text only
     if (aiResult.is_conversation) {
       const reply = aiResult.reply_message || 'สวัสดีครับ มีอะไรให้ผมช่วยจำหรือจัดการไหมครับ?';
-      await sendLineReply(replyToken, reply);
+      const { createModeSelectionFlex } = await import('@/lib/line/flex-templates');
+      await sendLineReply(replyToken, [
+        reply,
+        {
+          type: 'flex',
+          altText: '🤖 กรุณาเลือกโหมดการทำงาน',
+          contents: createModeSelectionFlex()
+        }
+      ]);
       return true;
     }
 
     // If it's a database command
     const cmd = aiResult.command;
     if (!cmd || !cmd.board_id) {
-      await sendLineReply(replyToken, '🤔 ขอโทษครับ ผมไม่แน่ใจว่าคุณต้องการจัดการข้อมูลในบอร์ดไหน ลองระบุชื่อบอร์ดหรือรายการให้ชัดเจนขึ้นอีกนิดนะครับ');
+      const { createModeSelectionFlex } = await import('@/lib/line/flex-templates');
+      await sendLineReply(replyToken, [
+        '🤔 ขอโทษครับ ผมไม่แน่ใจว่าคุณต้องการจัดการข้อมูลในบอร์ดไหน ลองระบุชื่อบอร์ดหรือรายการให้ชัดเจนขึ้นอีกนิดนะครับ',
+        {
+          type: 'flex',
+          altText: '🤖 กรุณาเลือกโหมดการทำงาน',
+          contents: createModeSelectionFlex()
+        }
+      ]);
       return true;
     }
 
