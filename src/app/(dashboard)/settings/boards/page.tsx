@@ -1,4 +1,4 @@
-﻿
+
 'use client';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -46,6 +46,48 @@ export default function BoardsSettingsPage() {
     }
   };
 
+  const handleCreateBoard = async () => {
+    const name = prompt('ตั้งชื่อบอร์ดใหม่:');
+    if (!name) return;
+    const type = prompt('เลือกประเภทบอร์ด (1=ทั่วไป, 2=สต็อก, 3=PR, 4=Calibrate):', '1');
+    let boardType = 'GENERAL_LIST';
+    if (type === '2') boardType = 'INVENTORY';
+    if (type === '3') boardType = 'KANBAN';
+    if (type === '4') boardType = 'DATE_TRACKER';
+    
+    const icon = prompt('ใส่อีโมจิสำหรับบอร์ด:', '📌') || '📌';
+    
+    setLoading(true);
+    await supabase.from('boards').insert([{ name, type: boardType, icon, user_id: user?.id }]);
+    loadBoards();
+  };
+
+  const handleEditBoard = async (board: any) => {
+    const name = prompt('แก้ไขชื่อบอร์ด:', board.name);
+    if (!name || name === board.name) return;
+    
+    setLoading(true);
+    await supabase.from('boards').update({ name }).eq('id', board.id);
+    loadBoards();
+  };
+
+  const handleDeleteBoard = async (id: string) => {
+    if (!confirm('คุณต้องการลบบอร์ดนี้ใช่หรือไม่? (ข้อมูลทั้งหมดในบอร์ดนี้จะถูกลบไปด้วย)')) return;
+    
+    setLoading(true);
+    await supabase.from('boards').delete().eq('id', id);
+    loadBoards();
+  };
+
+  const handleAddCategory = async (boardId: string) => {
+    const name = prompt('ชื่อหมวดหมู่ใหม่:');
+    if (!name) return;
+    
+    setLoading(true);
+    await supabase.from('categories').insert([{ name, board_id: boardId }]);
+    loadBoards();
+  };
+
   return (
     <div className='max-w-4xl mx-auto pb-12'>
       <div className='flex items-center justify-between mb-6'>
@@ -54,7 +96,10 @@ export default function BoardsSettingsPage() {
           <h1 className='text-2xl font-bold text-slate-900 dark:text-white'>จัดการบอร์ด (Board Manager)</h1>
           <p className='text-sm text-slate-500'>ออกแบบและปรับแต่งหัวข้อบันทึกของคุณได้อย่างอิสระ</p>
         </div>
-        <button className='px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 transition-all'>
+        <button 
+          onClick={handleCreateBoard}
+          className='px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-sm flex items-center gap-2 transition-all cursor-pointer'
+        >
           <Plus className='w-4 h-4' /> สร้างบอร์ดใหม่
         </button>
       </div>
@@ -88,10 +133,16 @@ export default function BoardsSettingsPage() {
                   </div>
                 </div>
                 <div className='flex items-center gap-2'>
-                  <button className='p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors'>
+                  <button 
+                    onClick={() => handleEditBoard(board)}
+                    className='p-2 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer'
+                  >
                     <Edit2 className='w-4 h-4' />
                   </button>
-                  <button className='p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors'>
+                  <button 
+                    onClick={() => handleDeleteBoard(board.id)}
+                    className='p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer'
+                  >
                     <Trash2 className='w-4 h-4' />
                   </button>
                 </div>
@@ -114,7 +165,10 @@ export default function BoardsSettingsPage() {
                   ) : (
                     <span className='text-xs text-slate-400'>ยังไม่มีหมวดหมู่ย่อย</span>
                   )}
-                  <button className='px-3 py-1 rounded-full text-xs font-bold border border-dashed border-slate-300 text-slate-500 hover:bg-slate-50 transition-colors'>
+                  <button 
+                    onClick={() => handleAddCategory(board.id)}
+                    className='px-3 py-1 rounded-full text-xs font-bold border border-dashed border-slate-300 text-slate-500 hover:bg-slate-50 transition-colors cursor-pointer'
+                  >
                     + เพิ่มหมวดหมู่
                   </button>
                 </div>
