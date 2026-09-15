@@ -18,6 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { theme, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   if (loading) {
     return (
@@ -260,16 +261,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </button>
 
-            {/* User Avatar Button (Sign Out) */}
-            <button
-              onClick={() => {
-                if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
-                  signOut();
-                }
-              }}
-              className="flex items-center p-0.5 rounded-full border border-violet-500/40 active:scale-90 transition-transform cursor-pointer"
-              title="ออกจากระบบ"
-            >
+            {/* User Avatar Button (Profile Popover) */}
+            <div className="relative">
+              <button
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="flex items-center p-0.5 rounded-full border border-violet-500/40 active:scale-90 transition-transform cursor-pointer"
+                title="บัญชีผู้ใช้"
+              >
               {userAvatar ? (
                 <Image
                   src={userAvatar}
@@ -283,8 +281,52 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   {userName.charAt(0).toUpperCase()}
                 </div>
               )}
-            </button>
-          </div>
+              </button>
+
+              {/* Profile Popover Menu */}
+              {profileMenuOpen && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40"
+                    onClick={() => setProfileMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-2 w-[280px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-xl z-50 overflow-hidden transform origin-top-right transition-all">
+                    {/* User Info Header */}
+                    <div className="px-5 py-6 flex flex-col items-center justify-center text-center border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30 relative">
+                      {userAvatar ? (
+                        <Image
+                          src={userAvatar}
+                          alt={userName}
+                          width={64}
+                          height={64}
+                          className="rounded-full mb-3 shadow-sm border-2 border-white dark:border-slate-800"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full mb-3 bg-violet-600 text-white flex items-center justify-center text-2xl font-bold border-2 border-white dark:border-slate-800 shadow-sm">
+                          {userName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <h4 className="text-base font-bold text-slate-900 dark:text-slate-100">{userName}</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{userEmail}</p>
+                    </div>
+                    
+                    {/* Actions */}
+                    <div className="p-3">
+                      <button
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          signOut();
+                        }}
+                        className="w-full flex items-center justify-center gap-2 p-3.5 rounded-2xl text-sm font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>ออกจากระบบ (Sign Out)</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
         </div>
       </header>
 
@@ -447,7 +489,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             {/* Drawer Footer Actions */}
-            <div className="p-4 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 pb-safe space-y-2">
+            <div className="p-4 pt-4 pb-12 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 space-y-2">
               <button
                 onClick={() => {
                   setMobileDrawerOpen(false);
