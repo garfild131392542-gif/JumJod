@@ -71,7 +71,7 @@ export async function handleCentralRouting(
           }
           return true;
         }
-      if (cmd.action === 'ADD' || cmd.action === 'UPDATE' || cmd.action === 'ADD_STOCK' || cmd.action === 'SUBTRACT_STOCK' || cmd.action === 'CHECK_STOCK') {
+      if (['ADD', 'UPDATE', 'ADD_STOCK', 'SUBTRACT_STOCK', 'CHECK_STOCK', 'DELETE'].includes(cmd.action)) {
         const title = cmd.target_item_name || cmd.fields.title;
         if (!title) {
            await sendLineReply(replyToken, 'ระบุชื่อรายการวัสดุให้หน่อยครับ');
@@ -148,15 +148,7 @@ export async function handleCentralRouting(
            return true;
         }
       const title = cmd.fields.title || cmd.target_item_name;
-      if (cmd.action === 'DELETE') {
-         const { data: items } = await supabaseAdmin.from('lab_calibrations').select('*').eq('board_id', targetBoard.id).ilike('equipment_name', `%${title}%`).limit(1);
-         if (items && items.length > 0) {
-            await supabaseAdmin.from('lab_calibrations').delete().eq('id', items[0].id);
-            await sendLineReply(replyToken, `🗑️ ลบรายการ '${items[0].equipment_name}' เรียบร้อยแล้วครับ`);
-         } else {
-            await sendLineReply(replyToken, `❌ ไม่พบรายการ '${title}' ครับ`);
-         }
-      } else if (cmd.action === 'ADD') {
+      if (cmd.action === 'ADD') {
         await supabaseAdmin.from('pr_requests').insert([{
           board_id: targetBoard.id,
           user_id: profile.id,
@@ -164,14 +156,6 @@ export async function handleCentralRouting(
           status: 'Pending'
         }]);
         await sendLineReply(replyToken, `✅ เพิ่มรายการ '${title}' ลงในบอร์ด ${targetBoard.name} เรียบร้อยครับ`);
-      } else if (cmd.action === 'DELETE') {
-         const { data: prs } = await supabaseAdmin.from('pr_requests').select('*').eq('board_id', targetBoard.id).ilike('title', `%${title}%`).limit(1);
-         if (prs && prs.length > 0) {
-            await supabaseAdmin.from('pr_requests').delete().eq('id', prs[0].id);
-            await sendLineReply(replyToken, `🗑️ ลบรายการ '${prs[0].title}' เรียบร้อยแล้วครับ`);
-         } else {
-            await sendLineReply(replyToken, `❌ ไม่พบรายการ '${title}' ครับ`);
-         }
       } else if (cmd.action === 'UPDATE' || cmd.action === 'COMPLETE') {
          const { data: prs } = await supabaseAdmin.from('pr_requests').select('*').eq('board_id', targetBoard.id).ilike('title', `%${title}%`).limit(1);
          if (prs && prs.length > 0) {
