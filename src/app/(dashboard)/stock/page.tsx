@@ -126,17 +126,13 @@ export default function StockPage() {
     adjustQuantityMutation.mutate({ id: stock.id, newQuantity: newQty });
   };
 
-  const handleToggleCategory = (stock: StockItem) => {
-    const newCategory = stock.category === 'Laboratory' ? 'อุปกรณ์สำนักงาน' : 'Laboratory';
-    supabase
+  const handleMoveCategory = async (stock: StockItem, newCategory: string) => {
+    if (newCategory === stock.category) return;
+    await supabase
       .from('stocks')
       .update({ category: newCategory, updated_at: new Date().toISOString() })
-      .eq('id', stock.id)
-      .then(({ error }) => {
-        if (!error) {
-          queryClient.invalidateQueries({ queryKey: ['stocks'] });
-        }
-      });
+      .eq('id', stock.id);
+    queryClient.invalidateQueries({ queryKey: ['stocks'] });
   };
 
   // Filter items
@@ -303,10 +299,10 @@ export default function StockPage() {
           </button>
           
           {categories.map((cat: any) => (
-            <div key={cat.id} className="relative group flex items-center">
+            <div key={cat.id} className="relative group/tab flex items-center">
               <button
                 onClick={() => setFilterCategory(cat.name)}
-                className={`px-4 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                className={`pl-3 pr-7 py-2 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                   filterCategory === cat.name
                     ? 'bg-white dark:bg-slate-900 text-violet-650 dark:text-violet-400 shadow-sm'
                     : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
@@ -316,7 +312,7 @@ export default function StockPage() {
               </button>
               <button 
                 onClick={() => handleDeleteCategory(cat.id)}
-                className="absolute right-1 top-1 bottom-1 p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors cursor-pointer"
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400 rounded transition-colors cursor-pointer opacity-0 group-hover/tab:opacity-100"
                 title="ลบหมวดหมู่"
               >
                 <X className="w-3 h-3" />
@@ -409,20 +405,21 @@ export default function StockPage() {
                 <div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide ${
-                        stock.category === 'Laboratory' 
-                          ? 'text-emerald-700 dark:text-emerald-450 bg-emerald-500/10 border border-emerald-500/20' 
-                          : 'text-violet-750 dark:text-violet-400 bg-violet-500/10 border border-violet-500/20'
-                      }`}>
-                        {stock.category === 'Laboratory' ? '🔬 Laboratory' : '💼 อุปกรณ์สำนักงาน'}
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-400 bg-indigo-500/10 border border-indigo-500/20">
+                        📂 {stock.category || 'ไม่มีหมวดหมู่'}
                       </span>
-                      <button
-                        onClick={() => handleToggleCategory(stock)}
-                        className="px-2 py-0.5 border border-slate-200 dark:border-slate-800 rounded-lg text-[9px] font-bold text-slate-500 dark:text-slate-400 hover:text-violet-650 hover:bg-slate-100 dark:hover:bg-slate-850 cursor-pointer transition-colors"
-                        title="ย้ายหมวดหมู่"
-                      >
-                        🔁 {stock.category === 'Laboratory' ? 'ย้ายไป สำนักงาน' : 'ย้ายไป Lab'}
-                      </button>
+                      {categories.length > 1 && (
+                        <select
+                          value={stock.category}
+                          onChange={(e) => handleMoveCategory(stock, e.target.value)}
+                          className="text-[9px] font-bold border border-slate-200 dark:border-slate-700 rounded-lg px-1.5 py-0.5 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 cursor-pointer hover:border-violet-400 transition-colors outline-none"
+                          title="ย้ายหมวดหมู่"
+                        >
+                          {categories.map((cat: any) => (
+                            <option key={cat.id} value={cat.name}>{cat.name}</option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                     <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 font-mono text-[9px] font-extrabold text-slate-400 dark:text-slate-550 select-all shrink-0">
                       #stk-{stock.id.substring(stock.id.length - 3)}
@@ -519,6 +516,7 @@ export default function StockPage() {
           onClose={() => setModalOpen(false)}
           userId={user.id}
           stockToEdit={selectedStock}
+          categories={categories}
         />
       )}
 

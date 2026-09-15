@@ -51,7 +51,7 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit, categ
       }
       setError(null);
     }
-  }, [isOpen, stockToEdit]);
+  }, [isOpen, stockToEdit, categories]);
 
   const mutation = useMutation({
     mutationFn: async () => {
