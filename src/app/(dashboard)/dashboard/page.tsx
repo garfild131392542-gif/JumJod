@@ -207,6 +207,19 @@ export default function DashboardPage() {
   };
 
   const handleAddItem = () => {
+    // Check monthly limit for free users
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const itemsThisMonth = items.filter((item) => {
+      const itemDate = new Date(item.created_at);
+      return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
+    });
+
+    if (itemsThisMonth.length >= 10) {
+      alert('คุณใช้งานถึงขีดจำกัดการตั้งแจ้งเตือน 10 ครั้งต่อเดือนแล้ว สำหรับบัญชีผู้ใช้ทั่วไป (ระบบสมัครสมาชิกกำลังจะมาเร็วๆ นี้)');
+      return;
+    }
+
     setSelectedItem(null);
     setModalOpen(true);
   };
@@ -258,7 +271,7 @@ export default function DashboardPage() {
       </div>
 
       {/* LINE Connection Banner */}
-      {profile && (
+      {profile && !profile.line_user_id && (
         <div className="backdrop-blur-sm bg-white dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">

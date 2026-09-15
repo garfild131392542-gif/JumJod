@@ -344,7 +344,7 @@ export default function StockPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[calc(100vh-270px)] overflow-y-auto pr-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pr-1">
           {sortedStocks.map((stock) => {
             const isAlert = stock.quantity <= (stock.min_threshold ?? 0);
             

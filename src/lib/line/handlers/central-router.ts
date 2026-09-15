@@ -148,6 +148,21 @@ export async function handleCentralRouting(
     if (targetBoard.type === 'GENERAL_LIST') {
       const title = cmd.fields.title || cmd.target_item_name;
       if (cmd.action === 'ADD') {
+        const firstDayOfMonth = new Date();
+        firstDayOfMonth.setDate(1);
+        firstDayOfMonth.setHours(0,0,0,0);
+        
+        const { count } = await supabaseAdmin
+          .from('items')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', profile.id)
+          .gte('created_at', firstDayOfMonth.toISOString());
+          
+        if (count !== null && count >= 10) {
+          await sendLineReply(replyToken, `❌ คุณใช้งานถึงขีดจำกัดการตั้งแจ้งเตือน 10 ครั้งต่อเดือนแล้ว สำหรับบัญชีผู้ใช้ทั่วไปครับ (ระบบสมัครสมาชิกกำลังจะมาเร็วๆ นี้)`);
+          return true;
+        }
+
         await supabaseAdmin.from('items').insert([{
           board_id: targetBoard.id,
           user_id: profile.id,

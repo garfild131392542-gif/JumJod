@@ -260,11 +260,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               )}
             </button>
 
-            {/* User Avatar Button (Opens Drawer) */}
+            {/* User Avatar Button (Sign Out) */}
             <button
-              onClick={() => setMobileDrawerOpen(true)}
+              onClick={() => {
+                if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+                  signOut();
+                }
+              }}
               className="flex items-center p-0.5 rounded-full border border-violet-500/40 active:scale-90 transition-transform cursor-pointer"
-              title="เมนูโปรไฟล์"
+              title="ออกจากระบบ"
             >
               {userAvatar ? (
                 <Image
