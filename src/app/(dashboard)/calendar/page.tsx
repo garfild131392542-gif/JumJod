@@ -21,12 +21,13 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { useTheme } from '@/components/providers/theme-provider';
-import { Item } from '@/lib/types';
+import { Item, ItemStatus } from '@/lib/types';
 import ItemModal from '@/components/dashboard/item-modal';
 import { 
   X, Calendar as CalendarIcon, Clock, 
   FileText, Image as ImageIcon, AlertCircle, Trash2,
-  Maximize2, Minimize2, RotateCw, Plus
+  Maximize2, Minimize2, RotateCw, Plus,
+  Check, CheckCircle2, Circle, Edit2, ListFilter, CalendarCheck, CheckSquare
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -199,6 +200,13 @@ export default function CalendarPage() {
     enabled: !!user?.id,
   });
 
+  // Item Modal state for create/edit
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [itemToEdit, setItemToEdit] = useState<Item | null>(null);
+
+  // Notes & Checklist filter state
+  const [notesFilter, setNotesFilter] = useState<'all' | 'pending' | 'completed' | 'today'>('all');
+
   // Delete Mutation
   const deleteMutation = useMutation({
     mutationFn: async (itemId: string) => {
@@ -217,6 +225,27 @@ export default function CalendarPage() {
     },
     onError: (err: any) => {
       alert('เกิดข้อผิดพลาดในการลบรายการ: ' + (err?.message || ''));
+    }
+  });
+
+  // Toggle Status Mutation (Pending <-> Issuing Item)
+  const toggleStatusMutation = useMutation({
+    mutationFn: async ({ itemId, currentStatus }: { itemId: string; currentStatus: ItemStatus }) => {
+      const nextStatus: ItemStatus = currentStatus === 'Issuing Item' ? 'Pending' : 'Issuing Item';
+      const { error } = await supabase
+        .from('items')
+        .update({
+          status: nextStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', itemId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+    },
+    onError: (err: any) => {
+      alert('เกิดข้อผิดพลาดในการเปลี่ยนสถานะ: ' + (err?.message || ''));
     }
   });
 
@@ -291,6 +320,50 @@ export default function CalendarPage() {
     });
   };
 
+  // Day Cell Highlight Getter for Today
+  const dayPropGetter = (date: Date) => {
+    const isToday = dayjs(date).isSame(dayjs(), 'day');
+    if (isToday) {
+      return {
+        className: 'rbc-today-cell-highlight',
+        style: {
+          backgroundColor: theme === 'dark' ? 'rgba(99, 102, 241, 0.12)' : 'rgba(99, 102, 241, 0.07)',
+        }
+      };
+    }
+    return {};
+  };
+
+  // Filtered and sorted items for Notes Checklist
+  const pendingCount = items.filter(i => i.status !== 'Issuing Item').length;
+  const completedCount = items.filter(i => i.status === 'Issuing Item').length;
+  const todayCount = items.filter(i => i.reminder_date && dayjs(i.reminder_date).isSame(dayjs(), 'day')).length;
+
+  const filteredNotes = items
+    .filter((item) => {
+      const isCompleted = item.status === 'Issuing Item';
+      if (notesFilter === 'pending') return !isCompleted;
+      if (notesFilter === 'completed') return isCompleted;
+      if (notesFilter === 'today') {
+        if (!item.reminder_date) return false;
+        return dayjs(item.reminder_date).isSame(dayjs(), 'day');
+      }
+      return true; // 'all'
+    })
+    .sort((a, b) => {
+      // Pending first
+      if (a.status !== b.status) {
+        return a.status === 'Pending' ? -1 : 1;
+      }
+      // Then by reminder_date
+      if (a.reminder_date && b.reminder_date) {
+        return new Date(a.reminder_date).getTime() - new Date(b.reminder_date).getTime();
+      }
+      if (a.reminder_date) return -1;
+      if (b.reminder_date) return 1;
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    });
+
   return (
     <div className="space-y-4 flex flex-col min-h-0 relative">
       {/* Header Panel */}
@@ -334,7 +407,7 @@ export default function CalendarPage() {
           <div className={`transition-all ${
             isFullscreen 
               ? 'fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 overflow-hidden flex flex-col h-full' 
-              : 'p-2 sm:p-4 md:p-6 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm overflow-hidden flex flex-col h-[calc(100dvh-230px)] min-h-[480px]'
+              : 'p-2 sm:p-4 md:p-6 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm overflow-hidden flex flex-col h-[540px] sm:h-[600px] lg:h-[640px]'
           }`}>
             <BigCalendar
               localizer={localizer}
@@ -351,6 +424,7 @@ export default function CalendarPage() {
               endAccessor={(event: any) => event.end as Date}
               style={{ height: '100%', width: '100%' }}
               eventPropGetter={eventStyleGetter as any}
+              dayPropGetter={dayPropGetter as any}
               onSelectEvent={(event) => {
                 const customEvt = event as CustomEvent;
                 const dayDate = (customEvt.start as Date) || new Date();
@@ -383,6 +457,228 @@ export default function CalendarPage() {
           </div>
         )}
       </div>
+
+      {/* ======================================================== */}
+      {/* NOTES & REMINDERS CHECKLIST SECTION                      */}
+      {/* ======================================================== */}
+      {!isFullscreen && (
+        <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-xs p-4 sm:p-6 backdrop-blur-sm space-y-4">
+          {/* Header Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800/80">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                <CheckSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <span>รายการบันทึกและกำหนดเตือน</span>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    {items.length}
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  คลิกที่กล่องเพื่อติ๊กทำรายการสำเร็จ หรือคลิกแก้ไขข้อมูลได้ทันที
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Add Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setItemToEdit(null);
+                setIsItemModalOpen(true);
+              }}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-xs hover:shadow-indigo-500/25 transition-all cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>เพิ่มบันทึกช่วยจำ</span>
+            </button>
+          </div>
+
+          {/* Filter Pills & Summary */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              {(
+                [
+                  { id: 'all', label: 'ทั้งหมด', count: items.length },
+                  { id: 'pending', label: '🔔 รอจัดการ', count: pendingCount },
+                  { id: 'today', label: '📅 เตือนวันนี้', count: todayCount },
+                  { id: 'completed', label: '✅ สำเร็จแล้ว', count: completedCount },
+                ] as const
+              ).map((tab) => {
+                const active = notesFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setNotesFilter(tab.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                      active
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-750'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
+                      active ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              แสดง {filteredNotes.length} จาก {items.length} รายการ
+            </div>
+          </div>
+
+          {/* Checklist Items List */}
+          <div className="space-y-2.5 pt-1">
+            {filteredNotes.length === 0 ? (
+              <div className="py-10 flex flex-col items-center justify-center text-center p-4 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-slate-400 gap-2">
+                <CalendarCheck className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                  {notesFilter === 'pending'
+                    ? 'ยอดเยี่ยม! ไม่มีรายการที่ค้างอยู่'
+                    : notesFilter === 'today'
+                    ? 'ไม่มีรายการแจ้งเตือนสำหรับวันนี้'
+                    : notesFilter === 'completed'
+                    ? 'ยังไม่มีรายการที่ทำสำเร็จ'
+                    : 'ยังไม่มีรายการบันทึกช่วยจำ'}
+                </p>
+                <p className="text-xs text-slate-400">
+                  สามารถกดปุ่ม "เพิ่มบันทึกช่วยจำ" เพื่อสร้างรายการแรกได้เลย
+                </p>
+              </div>
+            ) : (
+              filteredNotes.map((item) => {
+                const isDone = item.status === 'Issuing Item';
+                const hasReminder = !!item.reminder_date;
+                const isDueToday = hasReminder && dayjs(item.reminder_date).isSame(dayjs(), 'day');
+                const isOverdue = hasReminder && !isDone && dayjs(item.reminder_date).isBefore(dayjs(), 'minute');
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`group p-3 sm:p-4 rounded-xl border transition-all flex items-start gap-3 ${
+                      isDone
+                        ? 'bg-slate-50/70 dark:bg-slate-900/30 border-slate-200/80 dark:border-slate-800/50 opacity-80'
+                        : isDueToday
+                        ? 'bg-indigo-50/30 dark:bg-indigo-950/15 border-indigo-200 dark:border-indigo-800/40 shadow-xs'
+                        : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
+                    }`}
+                  >
+                    {/* Interactive Checkbox */}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        toggleStatusMutation.mutate({
+                          itemId: item.id,
+                          currentStatus: item.status,
+                        })
+                      }
+                      disabled={toggleStatusMutation.isPending}
+                      className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                        isDone
+                          ? 'bg-emerald-500 border-2 border-emerald-500 text-white shadow-xs'
+                          : 'border-2 border-slate-300 dark:border-slate-600 hover:border-indigo-500 dark:hover:border-indigo-400 bg-white dark:bg-slate-950'
+                      }`}
+                      title={isDone ? 'คลิกเพื่อเปลี่ยนเป็นยังไม่เสร็จ' : 'คลิกเพื่อติ๊กเสร็จสิ้น'}
+                    >
+                      {isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                    </button>
+
+                    {/* Content */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                        {/* Status Badge */}
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            isDone
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                          }`}
+                        >
+                          {isDone ? '✅ สำเร็จแล้ว' : '🔔 รอจัดการ'}
+                        </span>
+
+                        {/* Reminder Badge */}
+                        {hasReminder && (
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums ${
+                              isOverdue
+                                ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400'
+                                : isDueToday
+                                ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 font-extrabold'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                            }`}
+                          >
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>
+                              {isDueToday
+                                ? `วันนี้ ${dayjs(item.reminder_date).format('HH:mm น.')}`
+                                : dayjs(item.reminder_date).format('D MMM YYYY, HH:mm น.')}
+                            </span>
+                            {isOverdue && <span className="font-extrabold">(เลยกำหนด)</span>}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <p
+                        className={`text-sm leading-snug transition-all ${
+                          isDone
+                            ? 'line-through text-slate-400 dark:text-slate-500 font-normal'
+                            : 'text-slate-800 dark:text-slate-100 font-bold'
+                        }`}
+                      >
+                        {item.title}
+                      </p>
+
+                      {/* Description */}
+                      {item.description && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1 whitespace-pre-wrap">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setItemToEdit(item);
+                          setIsItemModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
+                        title="แก้ไขรายการ"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`คุณต้องการลบรายการ "${item.title}" ใช่หรือไม่?`)) {
+                            deleteMutation.mutate(item.id);
+                          }
+                        }}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                        title="ลบรายการ"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* DAY EVENTS LIST MODAL / BOTTOM SHEET                      */}
@@ -680,6 +976,19 @@ export default function CalendarPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Item Modal for Create/Edit */}
+      {user && (
+        <ItemModal
+          isOpen={isItemModalOpen}
+          onClose={() => {
+            setIsItemModalOpen(false);
+            setItemToEdit(null);
+          }}
+          userId={user.id}
+          itemToEdit={itemToEdit}
+        />
       )}
     </div>
   );
