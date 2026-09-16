@@ -89,6 +89,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       icon: ClipboardList,
     },
     {
+      name: 'ปฏิทิน',
+      href: '/calendar',
+      icon: Calendar,
+    },
+    {
       name: 'PR/PO',
       href: '/pr-tracker',
       icon: FileText,
@@ -97,11 +102,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       name: 'สต็อก',
       href: '/stock',
       icon: Package,
-    },
-    {
-      name: 'ปฏิทิน',
-      href: '/calendar',
-      icon: Calendar,
     },
   ];
 
