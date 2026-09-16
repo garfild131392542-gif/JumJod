@@ -204,8 +204,9 @@ export default function CalendarPage() {
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<Item | null>(null);
 
-  // Notes & Checklist filter state
-  const [notesFilter, setNotesFilter] = useState<'all' | 'pending' | 'completed' | 'today'>('all');
+  // Notes & Checklist filter & scope state
+  const [notesFilter, setNotesFilter] = useState<'pending' | 'today' | 'completed' | 'all'>('pending');
+  const [monthScope, setMonthScope] = useState<'month' | 'all'>('month');
 
   // Delete Mutation
   const deleteMutation = useMutation({
@@ -268,6 +269,20 @@ export default function CalendarPage() {
         end: remEndDate,
         allDay: false,
         type: isCompleted ? 'completed' : 'reminder',
+        item,
+      });
+    } else if (isCompleted && (item.updated_at || item.created_at)) {
+      // 2. Map Completed Date for notes without reminder_date
+      const compDate = new Date(item.updated_at || item.created_at);
+      const compEndDate = new Date(compDate.getTime() + 60 * 60 * 1000);
+
+      events.push({
+        id: `${item.id}-completed`,
+        title: item.title,
+        start: compDate,
+        end: compEndDate,
+        allDay: false,
+        type: 'completed',
         item,
       });
     }
@@ -334,12 +349,47 @@ export default function CalendarPage() {
     return {};
   };
 
-  // Filtered and sorted items for Notes Checklist
-  const pendingCount = items.filter(i => i.status !== 'Issuing Item').length;
-  const completedCount = items.filter(i => i.status === 'Issuing Item').length;
-  const todayCount = items.filter(i => i.reminder_date && dayjs(i.reminder_date).isSame(dayjs(), 'day')).length;
+  // Helper to check if an item belongs to the selected calendar month
+  const isItemInSelectedMonth = (item: Item, selectedDate: Date) => {
+    const isCurrentRealMonth = dayjs(selectedDate).isSame(dayjs(), 'month') && dayjs(selectedDate).isSame(dayjs(), 'year');
 
-  const filteredNotes = items
+    // 1. If item has reminder_date, strictly match month & year
+    if (item.reminder_date) {
+      return dayjs(item.reminder_date).isSame(selectedDate, 'month') &&
+             dayjs(item.reminder_date).isSame(selectedDate, 'year');
+    }
+
+    // 2. If item has NO reminder_date:
+    const isCompleted = item.status === 'Issuing Item';
+    if (isCompleted) {
+      // Completed items show in the month they were completed (updated_at)
+      const compDate = item.updated_at || item.created_at;
+      return dayjs(compDate).isSame(selectedDate, 'month') &&
+             dayjs(compDate).isSame(selectedDate, 'year');
+    } else {
+      // Pending notes without reminder:
+      // Show if created in this month, OR if viewing current real-time month (so uncompleted tasks don't vanish)
+      if (dayjs(item.created_at).isSame(selectedDate, 'month') && dayjs(item.created_at).isSame(selectedDate, 'year')) {
+        return true;
+      }
+      if (isCurrentRealMonth) {
+        return true;
+      }
+      return false;
+    }
+  };
+
+  // Scoped items: either filtered by current calendar month or all items
+  const scopedItems = monthScope === 'month'
+    ? items.filter((item) => isItemInSelectedMonth(item, currentDate))
+    : items;
+
+  // Filtered and sorted items for Notes Checklist
+  const pendingCount = scopedItems.filter(i => i.status !== 'Issuing Item').length;
+  const completedCount = scopedItems.filter(i => i.status === 'Issuing Item').length;
+  const todayCount = scopedItems.filter(i => i.reminder_date && dayjs(i.reminder_date).isSame(dayjs(), 'day')).length;
+
+  const filteredNotes = scopedItems
     .filter((item) => {
       const isCompleted = item.status === 'Issuing Item';
       if (notesFilter === 'pending') return !isCompleted;
@@ -352,16 +402,21 @@ export default function CalendarPage() {
     })
     .sort((a, b) => {
       // Pending first
-      if (a.status !== b.status) {
-        return a.status === 'Pending' ? -1 : 1;
+      const isDoneA = a.status === 'Issuing Item';
+      const isDoneB = b.status === 'Issuing Item';
+      if (isDoneA !== isDoneB) {
+        return isDoneA ? 1 : -1;
       }
-      // Then by reminder_date
-      if (a.reminder_date && b.reminder_date) {
-        return new Date(a.reminder_date).getTime() - new Date(b.reminder_date).getTime();
+      // If both pending: earlier reminder/created first (urgent first)
+      if (!isDoneA) {
+        const dateA = a.reminder_date || a.created_at || '';
+        const dateB = b.reminder_date || b.created_at || '';
+        return new Date(dateA).getTime() - new Date(dateB).getTime();
       }
-      if (a.reminder_date) return -1;
-      if (b.reminder_date) return 1;
-      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      // If both completed: most recently completed first
+      const compA = a.updated_at || a.reminder_date || a.created_at || '';
+      const compB = b.updated_at || b.reminder_date || b.created_at || '';
+      return new Date(compB).getTime() - new Date(compA).getTime();
     });
 
   return (
@@ -470,30 +525,65 @@ export default function CalendarPage() {
                 <CheckSquare className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                  <span>รายการบันทึกและกำหนดเตือน</span>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                    {items.length}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
+                    รายการบันทึกและกำหนดเตือน
+                  </h3>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60">
+                    {monthScope === 'month' ? dayjs(currentDate).format('MMMM YYYY') : 'ทุกเดือน'}
                   </span>
-                </h3>
+                </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  คลิกที่กล่องเพื่อติ๊กทำรายการสำเร็จ หรือคลิกแก้ไขข้อมูลได้ทันที
+                  {monthScope === 'month'
+                    ? `แสดงเฉพาะรายการประจำเดือน ${dayjs(currentDate).format('MMMM YYYY')} (เปลี่ยนตามปฏิทิน)`
+                    : 'แสดงรายการทั้งหมดทุกเดือน'}
                 </p>
               </div>
             </div>
 
-            {/* Quick Add Button */}
-            <button
-              type="button"
-              onClick={() => {
-                setItemToEdit(null);
-                setIsItemModalOpen(true);
-              }}
-              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-xs hover:shadow-indigo-500/25 transition-all cursor-pointer shrink-0"
-            >
-              <Plus className="w-4 h-4" />
-              <span>เพิ่มบันทึกช่วยจำ</span>
-            </button>
+            <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+              {/* Scope Selector: Month vs All */}
+              <div className="flex items-center p-0.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setMonthScope('month')}
+                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    monthScope === 'month'
+                      ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                  title="แสดงเฉพาะเดือนที่เปิดอยู่บนปฏิทิน"
+                >
+                  เดือนนี้
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMonthScope('all')}
+                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                    monthScope === 'all'
+                      ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                  title="แสดงรายการทั้งหมดทุกเดือน"
+                >
+                  ทุกเดือน
+                </button>
+              </div>
+
+              {/* Quick Add Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setItemToEdit(null);
+                  setIsItemModalOpen(true);
+                }}
+                className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-xs hover:shadow-indigo-500/25 transition-all cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">เพิ่มบันทึกช่วยจำ</span>
+                <span className="sm:hidden">เพิ่ม</span>
+              </button>
+            </div>
           </div>
 
           {/* Filter Pills & Summary */}
@@ -501,10 +591,10 @@ export default function CalendarPage() {
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
               {(
                 [
-                  { id: 'all', label: 'ทั้งหมด', count: items.length },
                   { id: 'pending', label: '🔔 รอจัดการ', count: pendingCount },
                   { id: 'today', label: '📅 เตือนวันนี้', count: todayCount },
                   { id: 'completed', label: '✅ สำเร็จแล้ว', count: completedCount },
+                  { id: 'all', label: 'ทั้งหมด', count: scopedItems.length },
                 ] as const
               ).map((tab) => {
                 const active = notesFilter === tab.id;
@@ -531,7 +621,7 @@ export default function CalendarPage() {
             </div>
 
             <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              แสดง {filteredNotes.length} จาก {items.length} รายการ
+              แสดง {filteredNotes.length} จาก {scopedItems.length} รายการ
             </div>
           </div>
 
@@ -542,12 +632,12 @@ export default function CalendarPage() {
                 <CalendarCheck className="w-8 h-8 text-slate-400 dark:text-slate-500" />
                 <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
                   {notesFilter === 'pending'
-                    ? 'ยอดเยี่ยม! ไม่มีรายการที่ค้างอยู่'
+                    ? (monthScope === 'month' ? 'ยอดเยี่ยม! ไม่มีรายการที่ค้างอยู่ในเดือนนี้' : 'ยอดเยี่ยม! ไม่มีรายการที่ค้างอยู่')
                     : notesFilter === 'today'
                     ? 'ไม่มีรายการแจ้งเตือนสำหรับวันนี้'
                     : notesFilter === 'completed'
-                    ? 'ยังไม่มีรายการที่ทำสำเร็จ'
-                    : 'ยังไม่มีรายการบันทึกช่วยจำ'}
+                    ? (monthScope === 'month' ? 'ยังไม่มีรายการที่ทำสำเร็จในเดือนนี้' : 'ยังไม่มีรายการที่ทำสำเร็จ')
+                    : (monthScope === 'month' ? `ไม่มีรายการบันทึกในเดือน ${dayjs(currentDate).format('MMMM YYYY')}` : 'ยังไม่มีรายการบันทึกช่วยจำ')}
                 </p>
                 <p className="text-xs text-slate-400">
                   สามารถกดปุ่ม "เพิ่มบันทึกช่วยจำ" เพื่อสร้างรายการแรกได้เลย
@@ -605,8 +695,8 @@ export default function CalendarPage() {
                           {isDone ? '✅ สำเร็จแล้ว' : '🔔 รอจัดการ'}
                         </span>
 
-                        {/* Reminder Badge */}
-                        {hasReminder && (
+                        {/* Reminder / Completion Badge */}
+                        {hasReminder ? (
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums ${
                               isOverdue
@@ -624,7 +714,12 @@ export default function CalendarPage() {
                             </span>
                             {isOverdue && <span className="font-extrabold">(เลยกำหนด)</span>}
                           </span>
-                        )}
+                        ) : isDone && item.updated_at ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                            <CheckCircle2 className="w-2.5 h-2.5" />
+                            <span>สำเร็จเมื่อ {dayjs(item.updated_at).format('D MMM YYYY, HH:mm น.')}</span>
+                          </span>
+                        ) : null}
                       </div>
 
                       {/* Title */}
@@ -888,7 +983,9 @@ export default function CalendarPage() {
                   <div className="flex items-center gap-3 p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400">
                     <Clock className="w-5 h-5 shrink-0" />
                     <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider">วันแจ้งเตือน (ดำเนินการสำเร็จแล้ว)</h4>
+                      <h4 className="text-xs font-bold uppercase tracking-wider">
+                        {selectedEvent.item.reminder_date ? 'วันแจ้งเตือน (ดำเนินการสำเร็จแล้ว)' : 'วันที่ทำรายการสำเร็จ'}
+                      </h4>
                       <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-semibold">
                         {dayjs(selectedEvent.start).format('DD MMMM YYYY, HH:mm น.')}
                       </p>
