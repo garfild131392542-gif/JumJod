@@ -78,9 +78,11 @@ export function getGeminiApiKey(): string | undefined {
 }
 
 const GEMINI_CANDIDATE_MODELS = [
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-2.5-flash',
   'gemini-3.5-flash-lite',
   'gemini-3.6-flash',
-  'gemini-2.5-flash',
   'gemini-3.7-flash'
 ];
 
@@ -1017,55 +1019,163 @@ export async function processMessageWithCentralAI(
   const localDate = new Date(nowUtc.getTime() + 7 * 60 * 60 * 1000);
   const localDateTimeStr = `${localDate.getUTCFullYear()}-${pad(localDate.getUTCMonth() + 1)}-${pad(localDate.getUTCDate())}T${pad(localDate.getUTCHours())}:${pad(localDate.getUTCMinutes())}:${pad(localDate.getUTCSeconds())}+07:00`;
 
-  const promptText = `You are a highly intelligent central router for JodJum, a dynamic tracker system.
-Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
-
-The user sent a message: "${messageText}"
-
-The user has the following boards available to store data:
-${boardsContext}
-
-INSTRUCTIONS:
-1. Determine if the user is just chatting/greeting, or if they want to perform a database operation (add, check, update, delete).
-2. STRICT INTENT FILTER: If the user is just greeting, OR saying they WANT to do something (e.g., "อยากบันทึก PR", "บันทึก PR หน่อย", "เพิ่มข้อมูลให้หน่อย") but has NOT provided the actual item name or details yet, you MUST set "is_conversation" to true. Do NOT guess the title. Reply naturally asking for the item name or details (e.g. "ยินดีครับ คุณต้องการบันทึก PR ชื่อว่าอะไรครับ?").
-3. Only set "is_conversation" to false if the user explicitly provided enough data (like a clear item name) to perform an action.
-4. Determine WHICH board the user wants to interact with based on the context of their message and the board names/types.
-5. Determine the ACTION: 'ADD', 'UPDATE', 'DELETE', 'SEARCH', 'COMPLETE', 'CHECK_STOCK', 'SUBTRACT_STOCK', 'ADD_STOCK', 'LIST_ALL'.
-6. Extract relevant fields into "fields". 
-   - For DATE_TRACKER, try to extract a 'date' (YYYY-MM-DD).
-   - For INVENTORY, extract 'quantity' (number).
-   - For GENERAL_LIST, if the user specifies a date/time to be reminded (e.g. "แจ้งเตือนวันที่ 18/9/26 เวลา 8.00น."), extract 'reminder_date' as an ISOString with +07:00 offset. If no time is specified, default to 09:00:00+07:00.
-   - For all, extract a clear 'title' (without action words like 'เพิ่ม', 'บันทึก', 'แจ้งเตือน').
-7. The "target_item_name" should contain the name of the item they are referring to for updates/deletes/stock checks.
-8. CRITICAL: If you generate a "reply_message" that lists the available boards, ONLY use their human-readable Names (e.g., "ช่วยจำ", "สต็อกวัสดุ"). DO NOT include the system Types in parentheses (e.g. DO NOT output "ช่วยจำ (GENERAL_LIST)").
-9. CRITICAL JSON FORMATTING: In "reply_message", DO NOT use raw unescaped newlines. You MUST use "\\n" for line breaks to ensure valid JSON output.
-
-Format output EXACTLY as this JSON structure:
-{
-  "is_conversation": boolean,
-  "reply_message": "string or null",
-  "command": {
-    "board_id": "UUID",
-    "action": "ADD|UPDATE|DELETE|SEARCH|COMPLETE|CHECK_STOCK|SUBTRACT_STOCK|ADD_STOCK|LIST_ALL",
-    "target_item_name": "string or null",
-    "fields": {
-      "title": "string or null",
-      "description": "string or null",
-      "date": "YYYY-MM-DD or null",
-      "quantity": number,
-      "reminder_date": "ISOString or null"
+  const tools = [
+    {
+      functionDeclarations: [
+        {
+          name: "execute_board_command",
+          description: "Execute a database action or query on one of the user's boards (Inventory, PR Tracker, Date Tracker, or General List). Call this ONLY when the user explicitly provides enough context or details to act on a board.",
+          parameters: {
+            type: "OBJECT",
+            properties: {
+              board_id: {
+                type: "STRING",
+                description: "The exact UUID of the target board from the available boards list.",
+              },
+              action: {
+                type: "STRING",
+                enum: [
+                  "ADD",
+                  "UPDATE",
+                  "DELETE",
+                  "SEARCH",
+                  "COMPLETE",
+                  "CHECK_STOCK",
+                  "SUBTRACT_STOCK",
+                  "ADD_STOCK",
+                  "LIST_ALL"
+                ],
+                description: "The database action to perform.",
+              },
+              target_item_name: {
+                type: "STRING",
+                description: "The name of the target item/stock for stock check, stock adjustment, edit, or delete.",
+              },
+              fields: {
+                type: "OBJECT",
+                properties: {
+                  title: {
+                    type: "STRING",
+                    description: "Title of the item, memo, task, or PR (clean title without action prefixes like 'เพิ่ม', 'บันทึก', 'แจ้งเตือน').",
+                  },
+                  description: {
+                    type: "STRING",
+                    description: "Additional description, notes, or details.",
+                  },
+                  date: {
+                    type: "STRING",
+                    description: "Target date in YYYY-MM-DD format (for calibration or date tracking).",
+                  },
+                  quantity: {
+                    type: "NUMBER",
+                    description: "Quantity or amount of stock.",
+                  },
+                  category: {
+                    type: "STRING",
+                    description: "Category of the item if mentioned.",
+                  },
+                  priority: {
+                    type: "STRING",
+                    enum: ["High", "Medium", "Low"],
+                    description: "Priority level of the item.",
+                  },
+                  reminder_date: {
+                    type: "STRING",
+                    description: "ISO-8601 date string with +07:00 offset for reminders (e.g. 2026-09-17T09:00:00+07:00). Default time to 09:00:00+07:00 if no time was specified.",
+                  }
+                }
+              }
+            },
+            required: ["board_id", "action"]
+          }
+        }
+      ]
     }
-  }
-}`;
+  ];
 
   const body = {
-    contents: [{ parts: [{ text: promptText }] }],
-    generationConfig: { responseMimeType: "application/json" }
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: `Today's local date and time in Thailand (ICT, UTC+7) is ${localDateTimeStr}.
+
+The user sent this message:
+"${messageText}"
+
+The user has the following boards available:
+${boardsContext}`
+          }
+        ]
+      }
+    ],
+    systemInstruction: {
+      parts: [
+        {
+          text: `You are the intelligent central AI assistant for JodJum (จำจด), a dynamic procurement and inventory tracker system.
+CRITICAL RULES:
+1. STRICT INTENT FILTER: If the user is just greeting ("สวัสดี", "hello"), asking general questions, or expressing a vague desire without specific details (e.g. "อยากบันทึก", "เพิ่มข้อมูลหน่อย", "ช่วยจำหน่อย"), DO NOT call execute_board_command. Reply naturally in friendly, polite Thai asking what they want to record or do.
+2. If the user provides a specific item name or instruction to add, update, delete, check, or adjust items/stocks on a board, call the function "execute_board_command" with the corresponding board_id, action, and extracted fields.
+3. If the user wants to see all items in a board (e.g. "ดูสต็อกทั้งหมด", "รายการในสต็อก", "ขอดูรายการทั้งหมด"), set action to "LIST_ALL" on that board.
+4. When talking to the user conversationally, NEVER mention technical types like (GENERAL_LIST) or raw UUIDs. Use human-friendly board names like "ช่วยจำ", "สต็อกวัสดุ".`
+        }
+      ],
+    },
+    tools: tools,
+    toolConfig: {
+      functionCallingConfig: {
+        mode: "AUTO"
+      }
+    }
   };
 
-  const data = await fetchGeminiWithFallback(body, apiKey);
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-  return safeJsonParse(rawText);
+  try {
+    const data = await fetchGeminiWithFallback(body, apiKey);
+    const candidate = data.candidates?.[0];
+    const parts = candidate?.content?.parts || [];
+
+    // Check for Function Call
+    const functionCallPart = parts.find((p: any) => p.functionCall);
+    if (functionCallPart && functionCallPart.functionCall) {
+      const call = functionCallPart.functionCall;
+      if (call.name === "execute_board_command" && call.args) {
+        const args = call.args;
+        return {
+          is_conversation: false,
+          command: {
+            board_id: args.board_id,
+            action: args.action,
+            target_item_name: args.target_item_name || args.fields?.title || undefined,
+            fields: {
+              title: args.fields?.title || args.target_item_name || undefined,
+              description: args.fields?.description || undefined,
+              date: args.fields?.date || undefined,
+              quantity: typeof args.fields?.quantity === 'number' ? args.fields.quantity : (args.fields?.quantity ? Number(args.fields.quantity) : 0),
+              category: args.fields?.category || undefined,
+              priority: args.fields?.priority || undefined,
+              reminder_date: args.fields?.reminder_date || undefined
+            }
+          }
+        };
+      }
+    }
+
+    // Conversational text response
+    const textPart = parts.find((p: any) => p.text);
+    const replyMessage = textPart?.text?.trim() || 'สวัสดีครับ มีอะไรให้ผมช่วยจำหรือจัดการไหมครับ?';
+
+    return {
+      is_conversation: true,
+      reply_message: replyMessage
+    };
+  } catch (error: any) {
+    console.error('[processMessageWithCentralAI] Function calling error, falling back gracefully:', error);
+    return {
+      is_conversation: true,
+      reply_message: 'สวัสดีครับ มีอะไรให้ผมช่วยจัดการไหมครับ? พิมพ์บอกได้เลยครับ เช่น "เบิก แอลกอฮอล์ 5" หรือ "เตือนนัดประชุมพรุ่งนี้"'
+    };
+  }
 }
 
 
