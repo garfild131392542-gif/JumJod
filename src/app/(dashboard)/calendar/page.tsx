@@ -206,7 +206,7 @@ export default function CalendarPage() {
   const [itemToEdit, setItemToEdit] = useState<Item | null>(null);
 
   // Notes & Checklist filter & scope state
-  const [notesFilter, setNotesFilter] = useState<'all' | 'pending' | 'today' | 'completed'>('all');
+  const [notesFilter, setNotesFilter] = useState<'pending' | 'today' | 'completed'>('pending');
   const [monthScope, setMonthScope] = useState<'month' | 'all'>('month');
 
   // Delete Mutation
@@ -592,7 +592,6 @@ export default function CalendarPage() {
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
               {(
                 [
-                  { id: 'all', label: 'ทั้งหมด', count: scopedItems.length },
                   { id: 'pending', label: '🔔 รอจัดการ', count: pendingCount },
                   { id: 'today', label: '📅 เตือนวันนี้', count: todayCount },
                   { id: 'completed', label: '✅ สำเร็จแล้ว', count: completedCount },
@@ -636,9 +635,7 @@ export default function CalendarPage() {
                     ? (monthScope === 'month' ? 'ยอดเยี่ยม! ไม่มีรายการที่ค้างอยู่ในเดือนนี้' : 'ยอดเยี่ยม! ไม่มีรายการที่ค้างอยู่')
                     : notesFilter === 'today'
                     ? 'ไม่มีรายการแจ้งเตือนสำหรับวันนี้'
-                    : notesFilter === 'completed'
-                    ? (monthScope === 'month' ? 'ยังไม่มีรายการที่ทำสำเร็จในเดือนนี้' : 'ยังไม่มีรายการที่ทำสำเร็จ')
-                    : (monthScope === 'month' ? `ไม่มีรายการบันทึกในเดือน ${dayjs(currentDate).format('MMMM YYYY')}` : 'ยังไม่มีรายการบันทึกช่วยจำ')}
+                    : (monthScope === 'month' ? 'ยังไม่มีรายการที่ทำสำเร็จในเดือนนี้' : 'ยังไม่มีรายการที่ทำสำเร็จ')}
                 </p>
                 <p className="text-xs text-slate-400">
                   สามารถกดปุ่ม "เพิ่มบันทึกช่วยจำ" เพื่อสร้างรายการแรกได้เลย
