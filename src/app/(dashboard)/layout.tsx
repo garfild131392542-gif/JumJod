@@ -38,6 +38,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       description: 'บันทึกช่วยจำและแจ้งเตือน'
     },
     {
+      name: 'ปฏิทินเตือนความจำ',
+      shortName: 'ปฏิทิน',
+      href: '/calendar',
+      icon: Calendar,
+      description: 'ตารางวันแจ้งเตือนกิจกรรม'
+    },
+    {
       name: 'ติดตาม PR',
       shortName: 'PR/PO',
       href: '/pr-tracker',
@@ -50,13 +57,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       href: '/stock',
       icon: Package,
       description: 'ตรวจเช็ค เบิก-เติม สต็อก'
-    },
-    {
-      name: 'ปฏิทินเตือนความจำ',
-      shortName: 'ปฏิทิน',
-      href: '/calendar',
-      icon: Calendar,
-      description: 'ตารางวันแจ้งเตือนกิจกรรม'
     },
     {
       name: 'Calibrate เครื่องมือ',
