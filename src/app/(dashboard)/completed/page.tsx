@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Item } from '@/lib/types';
@@ -39,13 +39,18 @@ export default function CompletedItemsPage() {
     }
   }, []);
 
+  const queryClient = useQueryClient();
+
   // Fetch Completed Items (status === 'Issuing Item') using TanStack Query
   const { data: items = [], isLoading, error, refetch } = useQuery<Item[]>({
-    queryKey: ['completed-items'],
+    queryKey: ['items', 'completed'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('items')
-        .select('*').eq('status', 'Issuing Item').order('updated_at', { ascending: false }).limit(50);
+        .select('*')
+        .eq('status', 'Issuing Item')
+        .order('updated_at', { ascending: false })
+        .limit(50);
 
       if (error) throw error;
       return data || [];
@@ -71,6 +76,7 @@ export default function CompletedItemsPage() {
           console.error(e);
         }
       }
+      queryClient.invalidateQueries({ queryKey: ['items'] });
       refetch();
     },
     onError: (err: any) => {
@@ -112,6 +118,7 @@ export default function CompletedItemsPage() {
         }
       }
 
+      queryClient.invalidateQueries({ queryKey: ['items'] });
       refetch();
     }
   };

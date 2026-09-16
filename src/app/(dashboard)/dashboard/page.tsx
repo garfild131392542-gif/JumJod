@@ -122,11 +122,14 @@ export default function DashboardPage() {
 
   // Fetch Items using React Query
   const { data: items = [], isLoading, error } = useQuery<Item[]>({
-    queryKey: ['items'],
+    queryKey: ['items', 'dashboard'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('items')
-        .select('*').in('status', ['Pending', 'Purchasing']).order('created_at', { ascending: false }).limit(50);
+        .select('*')
+        .in('status', ['Pending', 'Purchasing'])
+        .order('created_at', { ascending: false })
+        .limit(50);
 
       if (error) throw error;
       return data || [];

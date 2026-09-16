@@ -188,11 +188,12 @@ export default function CalendarPage() {
 
   // Fetch items using TanStack Query
   const { data: items = [], isLoading, error } = useQuery<Item[]>({
-    queryKey: ['items'],
+    queryKey: ['items', 'calendar'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('items')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
@@ -205,7 +206,7 @@ export default function CalendarPage() {
   const [itemToEdit, setItemToEdit] = useState<Item | null>(null);
 
   // Notes & Checklist filter & scope state
-  const [notesFilter, setNotesFilter] = useState<'pending' | 'today' | 'completed' | 'all'>('pending');
+  const [notesFilter, setNotesFilter] = useState<'all' | 'pending' | 'today' | 'completed'>('all');
   const [monthScope, setMonthScope] = useState<'month' | 'all'>('month');
 
   // Delete Mutation
@@ -591,10 +592,10 @@ export default function CalendarPage() {
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
               {(
                 [
+                  { id: 'all', label: 'ทั้งหมด', count: scopedItems.length },
                   { id: 'pending', label: '🔔 รอจัดการ', count: pendingCount },
                   { id: 'today', label: '📅 เตือนวันนี้', count: todayCount },
                   { id: 'completed', label: '✅ สำเร็จแล้ว', count: completedCount },
-                  { id: 'all', label: 'ทั้งหมด', count: scopedItems.length },
                 ] as const
               ).map((tab) => {
                 const active = notesFilter === tab.id;
