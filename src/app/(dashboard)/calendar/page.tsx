@@ -234,12 +234,21 @@ export default function CalendarPage() {
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ itemId, currentStatus }: { itemId: string; currentStatus: ItemStatus }) => {
       const nextStatus: ItemStatus = currentStatus === 'Issuing Item' ? 'Pending' : 'Issuing Item';
+      const updates: any = {
+        status: nextStatus,
+        updated_at: new Date().toISOString(),
+      };
+      if (nextStatus === 'Issuing Item') {
+        updates.reminder_sent = true;
+      } else {
+        const item = items.find(i => i.id === itemId);
+        if (item?.reminder_date && new Date(item.reminder_date) > new Date()) {
+          updates.reminder_sent = false;
+        }
+      }
       const { error } = await supabase
         .from('items')
-        .update({
-          status: nextStatus,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updates)
         .eq('id', itemId);
       if (error) throw error;
     },

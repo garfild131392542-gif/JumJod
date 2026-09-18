@@ -28,7 +28,7 @@ describe('Flex Templates', () => {
       expect(stringified).toContain('ส่งรายงานงบดุล');
       expect(stringified).toContain('เตรียมเอกสารแนบ');
       expect(stringified).toContain('#f01'); // shortId
-      expect(stringified).toContain('📌 บันทึกช่วยจำ');
+      expect(stringified).toContain('📝 บันทึกช่วยจำ');
     });
   });
 

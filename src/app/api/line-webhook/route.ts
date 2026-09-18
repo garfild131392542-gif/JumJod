@@ -1623,6 +1623,8 @@ export async function POST(request: Request) {
               .from('items')
               .update({
                 status: 'Issuing Item',
+                reminder_sent: true,
+                due_reminder_sent: true,
                 updated_at: new Date().toISOString()
               })
               .eq('id', parsedResult.item_id)

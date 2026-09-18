@@ -77,6 +77,7 @@ export async function GET(request: Request) {
       supabaseAdmin
         .from('items')
         .select('*')
+        .neq('status', 'Issuing Item') // Completed items should never be reminded
         .lte('reminder_date', now)
         .eq('reminder_sent', false)
         .limit(100),
@@ -98,16 +99,34 @@ export async function GET(request: Request) {
     }
 
     if (items && items.length > 0) {
-      console.log(`[CRON REMINDERS] Found ${items.length} normal reminders to process.`);
-      
-      // Group items by user_id
-      const userItemsMap = new Map<string, any[]>();
-      for (const item of items) {
-        if (!userItemsMap.has(item.user_id)) {
-          userItemsMap.set(item.user_id, []);
-        }
-        userItemsMap.get(item.user_id)!.push(item);
+      // Safety guard: Exclude any item whose status is completed ('Issuing Item', 'Completed', or 'สำเร็จ')
+      const isCompleted = (item: any) => {
+        const s = (item.status || '').toLowerCase().trim();
+        return s === 'issuing item' || s === 'completed' || s === 'สำเร็จ';
+      };
+
+      const completedItems = items.filter(isCompleted);
+      if (completedItems.length > 0) {
+        const completedIds = completedItems.map(i => i.id);
+        await supabaseAdmin
+          .from('items')
+          .update({ reminder_sent: true, due_reminder_sent: true })
+          .in('id', completedIds);
       }
+
+      const validItems = items.filter(item => !isCompleted(item));
+
+      if (validItems.length > 0) {
+        console.log(`[CRON REMINDERS] Found ${validItems.length} normal reminders to process.`);
+        
+        // Group items by user_id
+        const userItemsMap = new Map<string, any[]>();
+        for (const item of validItems) {
+          if (!userItemsMap.has(item.user_id)) {
+            userItemsMap.set(item.user_id, []);
+          }
+          userItemsMap.get(item.user_id)!.push(item);
+        }
 
       const { createItemFlexBubble } = await import('../../../../lib/line/flex-templates');
 
@@ -159,6 +178,7 @@ export async function GET(request: Request) {
         }
       }
     }
+  }
 
     // ==========================================
     // 2. Group budget due date alerts by user_id
@@ -167,37 +187,55 @@ export async function GET(request: Request) {
     if (dueError) {
       console.error('Error fetching items for budget due reminders:', dueError);
     } else if (dueItems && dueItems.length > 0) {
-      console.log(`[CRON REMINDERS] Found ${dueItems.length} budget due date alerts to process.`);
-      
-      const dueUserMap = new Map<string, any[]>();
-      for (const item of dueItems) {
-        if (!dueUserMap.has(item.user_id)) {
-          dueUserMap.set(item.user_id, []);
-        }
-        dueUserMap.get(item.user_id)!.push(item);
+      const isCompleted = (item: any) => {
+        const s = (item.status || '').toLowerCase().trim();
+        return s === 'issuing item' || s === 'completed' || s === 'สำเร็จ';
+      };
+
+      const completedDueItems = dueItems.filter(isCompleted);
+      if (completedDueItems.length > 0) {
+        const completedDueIds = completedDueItems.map(i => i.id);
+        await supabaseAdmin
+          .from('items')
+          .update({ due_reminder_sent: true })
+          .in('id', completedDueIds);
       }
 
-      for (const [userId, userDueItems] of dueUserMap.entries()) {
-        const { data: profile } = await supabaseAdmin
-          .from('profiles')
-          .select('line_user_id')
-          .eq('id', userId)
-          .single();
+      const validDueItems = dueItems.filter(item => !isCompleted(item));
 
-        if (!profile || !profile.line_user_id) {
-          const itemIds = userDueItems.map(i => i.id);
-          await supabaseAdmin.from('items').update({ due_reminder_sent: true }).in('id', itemIds);
-          continue;
+      if (validDueItems.length > 0) {
+        console.log(`[CRON REMINDERS] Found ${validDueItems.length} budget due date alerts to process.`);
+        
+        const dueUserMap = new Map<string, any[]>();
+        for (const item of validDueItems) {
+          if (!dueUserMap.has(item.user_id)) {
+            dueUserMap.set(item.user_id, []);
+          }
+          dueUserMap.get(item.user_id)!.push(item);
         }
 
-        const lines = userDueItems.map(item => `• ${item.title} (กำหนด: ${item.budget_due_date})`);
-        const messageText = `🚨 **แจ้งเตือนรายการใกล้ถึงกำหนด (${userDueItems.length} รายการ)**\n\n${lines.join('\n')}\n\nกรุณาตรวจสอบและดำเนินการด้วยครับ`;
+        for (const [userId, userDueItems] of dueUserMap.entries()) {
+          const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('line_user_id')
+            .eq('id', userId)
+            .single();
 
-        const pushSuccess = await sendLinePush(profile.line_user_id, messageText);
-        if (pushSuccess) {
-          const itemIds = userDueItems.map(i => i.id);
-          await supabaseAdmin.from('items').update({ due_reminder_sent: true }).in('id', itemIds);
-          sentCount += userDueItems.length;
+          if (!profile || !profile.line_user_id) {
+            const itemIds = userDueItems.map(i => i.id);
+            await supabaseAdmin.from('items').update({ due_reminder_sent: true }).in('id', itemIds);
+            continue;
+          }
+
+          const lines = userDueItems.map(item => `• ${item.title} (กำหนด: ${item.budget_due_date})`);
+          const messageText = `🚨 **แจ้งเตือนรายการใกล้ถึงกำหนด (${userDueItems.length} รายการ)**\n\n${lines.join('\n')}\n\nกรุณาตรวจสอบและดำเนินการด้วยครับ`;
+
+          const pushSuccess = await sendLinePush(profile.line_user_id, messageText);
+          if (pushSuccess) {
+            const itemIds = userDueItems.map(i => i.id);
+            await supabaseAdmin.from('items').update({ due_reminder_sent: true }).in('id', itemIds);
+            sentCount += userDueItems.length;
+          }
         }
       }
     }

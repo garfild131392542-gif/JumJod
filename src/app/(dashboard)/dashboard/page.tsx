@@ -156,6 +156,10 @@ export default function DashboardPage() {
         updated_at: new Date().toISOString()
       };
 
+      if (nextStatus === 'Issuing Item') {
+        updates.reminder_sent = true;
+      }
+
       const currentItem = items.find(i => i.id === itemId);
 
       const { error } = await supabase

@@ -92,12 +92,19 @@ export default function CompletedItemsPage() {
 
   const toggleAudit = async (itemId: string) => {
     if (confirm('คุณต้องการนำรายการนี้กลับไปยังบอร์ดรายการใช่หรือไม่?')) {
+      const item = items.find(i => i.id === itemId);
+      const updates: any = { 
+        status: 'Pending', 
+        updated_at: new Date().toISOString() 
+      };
+
+      if (item?.reminder_date && new Date(item.reminder_date) > new Date()) {
+        updates.reminder_sent = false;
+      }
+
       const { error } = await supabase
         .from('items')
-        .update({ 
-          status: 'Pending', 
-          updated_at: new Date().toISOString() 
-        })
+        .update(updates)
         .eq('id', itemId);
 
       if (error) {

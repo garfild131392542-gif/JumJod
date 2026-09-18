@@ -69,16 +69,42 @@ describe('Cron Reminders Route (/api/cron/reminders)', () => {
     expect(json.message).toBe('Successfully processed 0 reminders.');
   });
 
-  it('should return 500 when items query fails with an error', async () => {
+  it('should filter out completed items and query with neq status Issuing Item', async () => {
+    mockItemsQuery.limit.mockResolvedValue({ data: [], error: null });
+
+    const req = new Request('http://localhost:3000/api/cron/reminders');
+    const res = await GET(req);
+
+    expect(res.status).toBe(200);
+    expect(mockItemsQuery.neq).toHaveBeenCalledWith('status', 'Issuing Item');
+  });
+
+  it('should not send reminder push notifications for items marked as completed', async () => {
+    const completedItem = {
+      id: 'item-completed-1',
+      user_id: 'user-1',
+      title: 'งานที่ทำเสร็จแล้ว',
+      status: 'Issuing Item',
+      reminder_date: '2026-09-18T08:00:00.000Z',
+      reminder_sent: false,
+    };
+
+    // Return completed item for remindersQuery and empty array for dueItemsQuery
     mockItemsQuery.limit
-      .mockResolvedValueOnce({ data: null, error: { message: 'Supabase gateway timeout' } })
+      .mockResolvedValueOnce({ data: [completedItem], error: null })
       .mockResolvedValueOnce({ data: [], error: null });
 
     const req = new Request('http://localhost:3000/api/cron/reminders');
     const res = await GET(req);
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.error).toBe('Supabase gateway timeout');
+    // 0 reminders should be sent since it's completed
+    expect(json.message).toBe('Successfully processed 0 reminders.');
+
+    // Completed item should have been marked as resolved in DB
+    expect(mockItemsQuery.update).toHaveBeenCalledWith(
+      expect.objectContaining({ reminder_sent: true, due_reminder_sent: true })
+    );
   });
 });

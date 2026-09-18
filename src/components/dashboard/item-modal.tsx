@@ -103,7 +103,7 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
 
       if (itemToEdit) {
         // Update Item - update item details while preserving existing PR metadata
-        const updateData = {
+        const updateData: any = {
           title,
           description: description || null,
           status,
@@ -111,6 +111,15 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
           reminder_date: reminderDate ? new Date(reminderDate).toISOString() : null,
           updated_at: new Date().toISOString(),
         };
+
+        if (status === 'Issuing Item') {
+          updateData.reminder_sent = true;
+        } else if (itemToEdit.status === 'Issuing Item') {
+          // Changed from completed back to Pending
+          if (updateData.reminder_date && new Date(updateData.reminder_date) > new Date()) {
+            updateData.reminder_sent = false;
+          }
+        }
 
         const { error: updateError } = await supabase
           .from('items')
