@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { dayjsLocalizer, Event as CalendarEvent } from 'react-big-calendar';
 import dynamic from 'next/dynamic';
@@ -23,11 +24,13 @@ import { useAuth } from '@/components/providers/auth-provider';
 import { useTheme } from '@/components/providers/theme-provider';
 import { Item, ItemStatus } from '@/lib/types';
 import ItemModal from '@/components/dashboard/item-modal';
-import { 
-  X, Calendar as CalendarIcon, Clock, 
+import ConfirmDialog from '@/components/common/confirm-dialog';
+import {
+  X, Calendar as CalendarIcon, Clock,
   FileText, Image as ImageIcon, AlertCircle, Trash2,
   Maximize2, Minimize2, RotateCw, Plus,
-  Check, CheckCircle2, Circle, Edit2, ListFilter, CalendarCheck, CheckSquare
+  Check, CheckCircle2, Circle, Edit2, ListFilter, CalendarCheck, CheckSquare,
+  ChevronRight
 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -64,7 +67,7 @@ interface ToolbarProps {
 
 const CustomToolbar = ({ label, onNavigate, onView, view, onToggleFullscreen, isFullscreen }: ToolbarProps) => {
   return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 mb-3 p-2.5 sm:p-3.5 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-xs backdrop-blur-sm">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 mb-3 p-2.5 sm:p-3.5 solid-glass rounded-2xl shadow-xs">
       {/* Navigation Controls */}
       <div className="flex items-center justify-between sm:justify-start gap-2">
         <div className="flex items-center gap-1">
@@ -102,11 +105,10 @@ const CustomToolbar = ({ label, onNavigate, onView, view, onToggleFullscreen, is
           <button
             type="button"
             onClick={onToggleFullscreen}
-            className={`sm:hidden p-1.5 rounded-xl border transition-transform active:scale-90 cursor-pointer ${
-              isFullscreen
-                ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/60'
-                : 'bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800/60'
-            }`}
+            className={`sm:hidden p-1.5 rounded-xl border transition-transform active:scale-90 cursor-pointer ${isFullscreen
+              ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/60'
+              : 'bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800/60'
+              }`}
             title={isFullscreen ? 'ย่อหน้าต่างกลับ' : 'ขยายเต็มจอ'}
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -134,11 +136,10 @@ const CustomToolbar = ({ label, onNavigate, onView, view, onToggleFullscreen, is
                 key={v}
                 type="button"
                 onClick={() => onView(v)}
-                className={`px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-white dark:bg-slate-900 text-violet-600 dark:text-violet-400 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
-                }`}
+                className={`px-3.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all cursor-pointer ${isActive
+                  ? 'bg-white dark:bg-slate-900 text-violet-600 dark:text-violet-400 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                  }`}
               >
                 {labelText}
               </button>
@@ -151,11 +152,10 @@ const CustomToolbar = ({ label, onNavigate, onView, view, onToggleFullscreen, is
           <button
             type="button"
             onClick={onToggleFullscreen}
-            className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-xs ${
-              isFullscreen
-                ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/60 hover:bg-red-100'
-                : 'bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800/60 hover:bg-violet-100 dark:hover:bg-violet-900/50'
-            }`}
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer shadow-xs ${isFullscreen
+              ? 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800/60 hover:bg-red-100'
+              : 'bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800/60 hover:bg-violet-100 dark:hover:bg-violet-900/50'
+              }`}
             title={isFullscreen ? 'ย่อหน้าต่างกลับ' : 'ขยายเต็มจอ'}
           >
             {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
@@ -172,7 +172,12 @@ export default function CalendarPage() {
   const { theme } = useTheme();
   const supabase = createClient();
   const queryClient = useQueryClient();
-  
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Selected event state for detail drawer
   const [selectedEvent, setSelectedEvent] = useState<CustomEvent | null>(null);
 
@@ -208,6 +213,20 @@ export default function CalendarPage() {
   // Notes & Checklist filter & scope state
   const [notesFilter, setNotesFilter] = useState<'pending' | 'today' | 'completed'>('pending');
   const [monthScope, setMonthScope] = useState<'month' | 'all'>('month');
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description?: string;
+    confirmText?: string;
+    variant?: 'danger' | 'warning' | 'primary' | 'success';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
 
   // Delete Mutation
   const deleteMutation = useMutation({
@@ -271,7 +290,7 @@ export default function CalendarPage() {
       const remDate = new Date(item.reminder_date);
       // End date 1 hour after start
       const remEndDate = new Date(remDate.getTime() + 60 * 60 * 1000);
-      
+
       events.push({
         id: `${item.id}-reminder`,
         title: item.title,
@@ -339,10 +358,14 @@ export default function CalendarPage() {
     const dayEvts = events.filter((e) =>
       dayjs(e.start).isSame(dayDate, 'day')
     );
-    setSelectedDay({
-      date: dayDate,
-      events: dayEvts,
-    });
+    if (dayEvts.length === 1) {
+      setSelectedEvent(dayEvts[0]);
+    } else {
+      setSelectedDay({
+        date: dayDate,
+        events: dayEvts,
+      });
+    }
   };
 
   // Day Cell Highlight Getter for Today
@@ -366,7 +389,7 @@ export default function CalendarPage() {
     // 1. If item has reminder_date, strictly match month & year
     if (item.reminder_date) {
       return dayjs(item.reminder_date).isSame(selectedDate, 'month') &&
-             dayjs(item.reminder_date).isSame(selectedDate, 'year');
+        dayjs(item.reminder_date).isSame(selectedDate, 'year');
     }
 
     // 2. If item has NO reminder_date:
@@ -375,7 +398,7 @@ export default function CalendarPage() {
       // Completed items show in the month they were completed (updated_at)
       const compDate = item.updated_at || item.created_at;
       return dayjs(compDate).isSame(selectedDate, 'month') &&
-             dayjs(compDate).isSame(selectedDate, 'year');
+        dayjs(compDate).isSame(selectedDate, 'year');
     } else {
       // Pending notes without reminder:
       // Show if created in this month, OR if viewing current real-time month (so uncompleted tasks don't vanish)
@@ -469,11 +492,10 @@ export default function CalendarPage() {
             <p className="text-xs text-slate-400">{(error as any)?.message}</p>
           </div>
         ) : (
-          <div className={`transition-all ${
-            isFullscreen 
-              ? 'fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 overflow-hidden flex flex-col h-full' 
-              : 'p-2 sm:p-4 md:p-6 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm overflow-hidden flex flex-col h-[540px] sm:h-[600px] lg:h-[640px]'
-          }`}>
+          <div className={`transition-all ${isFullscreen
+            ? 'fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 p-2 sm:p-4 overflow-hidden flex flex-col h-full'
+            : 'p-2 sm:p-4 md:p-6 bg-white dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-sm dark:shadow-none backdrop-blur-sm overflow-hidden flex flex-col h-[540px] sm:h-[600px] lg:h-[640px]'
+            }`}>
             <BigCalendar
               localizer={localizer}
               events={events}
@@ -491,22 +513,14 @@ export default function CalendarPage() {
               eventPropGetter={eventStyleGetter as any}
               dayPropGetter={dayPropGetter as any}
               onSelectEvent={(event) => {
-                const customEvt = event as CustomEvent;
-                const dayDate = (customEvt.start as Date) || new Date();
-                const dayEvts = events.filter((e) =>
-                  dayjs(e.start).isSame(dayDate, 'day')
-                );
-                setSelectedDay({
-                  date: dayDate,
-                  events: dayEvts,
-                });
+                setSelectedEvent(event as CustomEvent);
               }}
               components={{
                 toolbar: (props: any) => (
-                  <CustomToolbar 
-                    {...props} 
-                    onToggleFullscreen={toggleFullscreen} 
-                    isFullscreen={isFullscreen} 
+                  <CustomToolbar
+                    {...props}
+                    onToggleFullscreen={toggleFullscreen}
+                    isFullscreen={isFullscreen}
                   />
                 ),
               }}
@@ -527,7 +541,7 @@ export default function CalendarPage() {
       {/* NOTES & REMINDERS CHECKLIST SECTION                      */}
       {/* ======================================================== */}
       {!isFullscreen && (
-        <div className="bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 rounded-2xl shadow-xs p-4 sm:p-6 backdrop-blur-sm space-y-4">
+        <div className="solid-glass rounded-2xl shadow-xs p-4 sm:p-6 space-y-4">
           {/* Header Row */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800/80">
             <div className="flex items-center gap-2.5">
@@ -537,17 +551,13 @@ export default function CalendarPage() {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">
-                    รายการบันทึกและกำหนดเตือน
+                    รายการประจำเดือน
                   </h3>
                   <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60">
                     {monthScope === 'month' ? dayjs(currentDate).format('MMMM YYYY') : 'ทุกเดือน'}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  {monthScope === 'month'
-                    ? `แสดงเฉพาะรายการประจำเดือน ${dayjs(currentDate).format('MMMM YYYY')} (เปลี่ยนตามปฏิทิน)`
-                    : 'แสดงรายการทั้งหมดทุกเดือน'}
-                </p>
+
               </div>
             </div>
 
@@ -557,11 +567,10 @@ export default function CalendarPage() {
                 <button
                   type="button"
                   onClick={() => setMonthScope('month')}
-                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    monthScope === 'month'
-                      ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
+                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${monthScope === 'month'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
                   title="แสดงเฉพาะเดือนที่เปิดอยู่บนปฏิทิน"
                 >
                   เดือนนี้
@@ -569,11 +578,10 @@ export default function CalendarPage() {
                 <button
                   type="button"
                   onClick={() => setMonthScope('all')}
-                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${
-                    monthScope === 'all'
-                      ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
+                  className={`px-2.5 py-1.5 rounded-lg transition-all cursor-pointer ${monthScope === 'all'
+                    ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
                   title="แสดงรายการทั้งหมดทุกเดือน"
                 >
                   ทุกเดือน
@@ -603,7 +611,7 @@ export default function CalendarPage() {
                 [
                   { id: 'pending', label: '🔔 รอจัดการ', count: pendingCount },
                   { id: 'today', label: '📅 เตือนวันนี้', count: todayCount },
-                  { id: 'completed', label: '✅ สำเร็จแล้ว', count: completedCount },
+                  { id: 'completed', label: '✅ สำเร็จ', count: completedCount },
                 ] as const
               ).map((tab) => {
                 const active = notesFilter === tab.id;
@@ -612,16 +620,14 @@ export default function CalendarPage() {
                     key={tab.id}
                     type="button"
                     onClick={() => setNotesFilter(tab.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                      active
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-750'
-                    }`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${active
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-750'
+                      }`}
                   >
                     <span>{tab.label}</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                      active ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
-                    }`}>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${active ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                      }`}>
                       {tab.count}
                     </span>
                   </button>
@@ -643,8 +649,8 @@ export default function CalendarPage() {
                   {notesFilter === 'pending'
                     ? (monthScope === 'month' ? 'ยอดเยี่ยม! ไม่มีรายการที่ค้างอยู่ในเดือนนี้' : 'ยอดเยี่ยม! ไม่มีรายการที่ค้างอยู่')
                     : notesFilter === 'today'
-                    ? 'ไม่มีรายการแจ้งเตือนสำหรับวันนี้'
-                    : (monthScope === 'month' ? 'ยังไม่มีรายการที่ทำสำเร็จในเดือนนี้' : 'ยังไม่มีรายการที่ทำสำเร็จ')}
+                      ? 'ไม่มีรายการแจ้งเตือนสำหรับวันนี้'
+                      : (monthScope === 'month' ? 'ยังไม่มีรายการที่ทำสำเร็จในเดือนนี้' : 'ยังไม่มีรายการที่ทำสำเร็จ')}
                 </p>
                 <p className="text-xs text-slate-400">
                   สามารถกดปุ่ม "เพิ่มบันทึกช่วยจำ" เพื่อสร้างรายการแรกได้เลย
@@ -660,12 +666,12 @@ export default function CalendarPage() {
                 return (
                   <div
                     key={item.id}
-                    className={`group p-3 sm:p-4 rounded-xl border transition-all flex items-start gap-3 ${
+                    className={`group p-3.5 sm:p-4 rounded-xl solid-glass hover-glass-lift transition-all flex items-start gap-3 border ${
                       isDone
-                        ? 'bg-slate-50/70 dark:bg-slate-900/30 border-slate-200/80 dark:border-slate-800/50 opacity-80'
+                        ? 'opacity-70 border-slate-200/60 dark:border-slate-800/40'
                         : isDueToday
-                        ? 'bg-indigo-50/30 dark:bg-indigo-950/15 border-indigo-200 dark:border-indigo-800/40 shadow-xs'
-                        : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs'
+                        ? 'border-indigo-300/80 dark:border-indigo-700/80 shadow-xs'
+                        : 'border-slate-200/80 dark:border-slate-800/80'
                     }`}
                   >
                     {/* Interactive Checkbox */}
@@ -678,26 +684,39 @@ export default function CalendarPage() {
                         })
                       }
                       disabled={toggleStatusMutation.isPending}
-                      className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center transition-all cursor-pointer shrink-0 ${
-                        isDone
-                          ? 'bg-emerald-500 border-2 border-emerald-500 text-white shadow-xs'
-                          : 'border-2 border-slate-300 dark:border-slate-600 hover:border-indigo-500 dark:hover:border-indigo-400 bg-white dark:bg-slate-950'
-                      }`}
+                      className={`mt-0.5 w-5 h-5 rounded-md flex items-center justify-center transition-all cursor-pointer shrink-0 ${isDone
+                        ? 'bg-emerald-500 border-2 border-emerald-500 text-white shadow-xs'
+                        : 'border-2 border-slate-300 dark:border-slate-600 hover:border-indigo-500 dark:hover:border-indigo-400 bg-white dark:bg-slate-950'
+                        }`}
                       title={isDone ? 'คลิกเพื่อเปลี่ยนเป็นยังไม่เสร็จ' : 'คลิกเพื่อติ๊กเสร็จสิ้น'}
                     >
                       {isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                     </button>
 
                     {/* Content */}
-                    <div className="min-w-0 flex-1">
+                    <div
+                      className="min-w-0 flex-1 cursor-pointer group/item"
+                      onClick={() => {
+                        const isCompleted = item.status === 'Issuing Item';
+                        const evtDate = new Date(item.reminder_date || item.created_at);
+                        setSelectedEvent({
+                          id: item.id,
+                          title: item.title,
+                          start: evtDate,
+                          end: new Date(evtDate.getTime() + 60 * 60 * 1000),
+                          allDay: false,
+                          type: isCompleted ? 'completed' : 'reminder',
+                          item,
+                        });
+                      }}
+                    >
                       <div className="flex flex-wrap items-center gap-1.5 mb-1">
                         {/* Status Badge */}
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                            isDone
-                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
-                              : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
-                          }`}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${isDone
+                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                            }`}
                         >
                           {isDone ? '✅ สำเร็จแล้ว' : '🔔 รอจัดการ'}
                         </span>
@@ -705,13 +724,12 @@ export default function CalendarPage() {
                         {/* Reminder / Completion Badge */}
                         {hasReminder ? (
                           <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums ${
-                              isOverdue
-                                ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400'
-                                : isDueToday
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold tabular-nums ${isOverdue
+                              ? 'bg-rose-500/15 text-rose-700 dark:text-rose-400'
+                              : isDueToday
                                 ? 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-400 font-extrabold'
                                 : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                            }`}
+                              }`}
                           >
                             <Clock className="w-2.5 h-2.5" />
                             <span>
@@ -731,11 +749,10 @@ export default function CalendarPage() {
 
                       {/* Title */}
                       <p
-                        className={`text-sm leading-snug transition-all ${
-                          isDone
-                            ? 'line-through text-slate-400 dark:text-slate-500 font-normal'
-                            : 'text-slate-800 dark:text-slate-100 font-bold'
-                        }`}
+                        className={`text-sm leading-snug transition-all ${isDone
+                          ? 'line-through text-slate-400 dark:text-slate-500 font-normal'
+                          : 'text-slate-800 dark:text-slate-100 font-bold'
+                          }`}
                       >
                         {item.title}
                       </p>
@@ -783,25 +800,20 @@ export default function CalendarPage() {
       )}
 
       {/* ======================================================== */}
-      {/* DAY EVENTS LIST MODAL / BOTTOM SHEET                      */}
+      {/* DAY EVENTS LIST MODAL                                    */}
       {/* ======================================================== */}
-      {selectedDay && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center items-center p-0 md:p-4">
+      {mounted && selectedDay && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm transition-opacity"
+          <div
+            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
             onClick={() => setSelectedDay(null)}
           />
-          
-          {/* Modal Container */}
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border-t md:border border-slate-200 dark:border-slate-800 rounded-t-[28px] md:rounded-2xl shadow-2xl p-5 md:p-6 flex flex-col z-10 animate-slide-up md:animate-scale-up max-h-[85vh] overflow-hidden">
-            {/* Drag handle on mobile */}
-            <div className="md:hidden pt-1 pb-3 flex items-center justify-center cursor-pointer" onClick={() => setSelectedDay(null)}>
-              <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-            </div>
 
+          {/* Modal Container */}
+          <div className="relative w-full max-w-lg liquid-glass-modal rounded-2xl shadow-2xl p-5 md:p-6 flex flex-col z-10 animate-modal-pop max-h-[85vh] overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 dark:border-slate-800/80 mb-4 shrink-0">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-200/80 dark:border-slate-800/80 mb-4 shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-600 dark:text-violet-400">
                   <CalendarIcon className="w-5 h-5" />
@@ -849,118 +861,76 @@ export default function CalendarPage() {
                   return (
                     <div
                       key={evt.id}
-                      className={`p-4 rounded-2xl border transition-all flex flex-col gap-3 shadow-xs ${
-                        isCompleted
-                          ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-800/40'
-                          : 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-800/40'
-                      }`}
+                      onClick={() => setSelectedEvent(evt)}
+                      className={`p-4 rounded-2xl border transition-all flex items-center justify-between gap-3 shadow-xs cursor-pointer hover:border-violet-500/50 hover-glass-lift ${isCompleted
+                        ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-800/40'
+                        : 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-800/40'
+                        }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                              isCompleted 
-                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400' 
-                                : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${isCompleted
+                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                            : 'bg-amber-500/15 text-amber-700 dark:text-amber-400'
                             }`}>
-                              {isCompleted ? '✅ สำเร็จแล้ว' : '🔔 กำลังเตือน'}
-                            </span>
-                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              {dayjs(evt.start).format('HH:mm น.')}
-                            </span>
-                          </div>
-
-                          <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug">
-                            {evt.item.title}
-                          </h4>
-
-                          {evt.item.description && (
-                            <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 whitespace-pre-wrap">
-                              {evt.item.description}
-                            </p>
-                          )}
+                            {isCompleted ? '✅ สำเร็จแล้ว' : '🔔 กำลังเตือน'}
+                          </span>
+                          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {dayjs(evt.start).format('HH:mm น.')}
+                          </span>
                         </div>
 
-                        {evt.item.image_url && (
-                          <div 
-                            onClick={() => setSelectedEvent(evt)}
-                            className="relative w-14 h-14 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shrink-0 cursor-pointer shadow-xs"
-                          >
-                            <Image
-                              src={evt.item.image_url}
-                              alt={evt.item.title}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
+                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-snug">
+                          {evt.item.title}
+                        </h4>
+
+                        {evt.item.description && (
+                          <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">
+                            {evt.item.description}
+                          </p>
                         )}
                       </div>
 
-                      {/* Card Action Buttons */}
-                      <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-slate-200/60 dark:border-slate-800/60">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm(`คุณต้องการลบรายการ "${evt.item.title}" ใช่หรือไม่?`)) {
-                              deleteMutation.mutate(evt.item.id);
-                            }
-                          }}
-                          disabled={deleteMutation.isPending}
-                          className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                      {evt.item.image_url ? (
+                        <div
+                          className="relative w-14 h-14 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 shrink-0 shadow-xs"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>ลบ</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setSelectedEvent(evt)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold text-violet-600 dark:text-violet-400 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-all shadow-xs cursor-pointer"
-                        >
-                          ดูรายละเอียดเต็ม
-                        </button>
-                      </div>
+                          <Image
+                            src={evt.item.image_url}
+                            alt={evt.item.title}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                      )}
                     </div>
                   );
                 })
               )}
             </div>
-
-            {/* Modal Footer */}
-            <div className="pt-3.5 border-t border-slate-200 dark:border-slate-800/80 mt-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => setSelectedDay(null)}
-                className="w-full py-2.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 text-xs transition-all duration-200 cursor-pointer"
-              >
-                ปิดหน้าต่าง
-              </button>
-            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ======================================================== */}
-      {/* Detail Overlay Modal / Bottom Sheet                      */}
+      {/* Detail Overlay Modal                                     */}
       {/* ======================================================== */}
-      {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center items-center p-0 md:p-4">
+      {mounted && selectedEvent && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm transition-opacity"
+          <div
+            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
             onClick={() => setSelectedEvent(null)}
           />
-          
-          {/* Modal Container */}
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border-t md:border border-slate-200 dark:border-slate-800 rounded-t-[28px] md:rounded-2xl shadow-2xl p-5 md:p-6 flex flex-col z-10 animate-slide-up md:animate-scale-up max-h-[90vh] md:max-h-[85vh] overflow-y-auto">
-            {/* Drag handle on mobile */}
-            <div className="md:hidden pt-1 pb-3 flex items-center justify-center cursor-pointer" onClick={() => setSelectedEvent(null)}>
-              <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-            </div>
 
+          {/* Modal Container (Liquid-Glass) */}
+          <div className="relative w-full max-w-md liquid-glass-modal rounded-2xl shadow-2xl p-5 md:p-6 flex flex-col z-10 animate-modal-pop max-h-[90vh] md:max-h-[85vh] overflow-y-auto">
             {/* Close and Title */}
-            <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-slate-200 dark:border-slate-800/80 mb-4 md:mb-6 shrink-0">
+            <div className="flex items-center justify-between pb-3 md:pb-4 border-b border-slate-200/80 dark:border-slate-800/80 mb-4 md:mb-6 shrink-0">
               <h2 className="text-base md:text-lg font-bold text-indigo-600 dark:text-indigo-400">
                 รายละเอียดบันทึกช่วยจำ
               </h2>
@@ -1026,10 +996,9 @@ export default function CalendarPage() {
                     <label className="block text-[10px] font-bold text-slate-450 dark:text-slate-500 tracking-wider mb-1">
                       สถานะปัจจุบัน
                     </label>
-                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide uppercase ${
-                      selectedEvent.item.status === 'Pending' ? 'text-amber-700 bg-amber-500/10' :
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide uppercase ${selectedEvent.item.status === 'Pending' ? 'text-amber-700 bg-amber-500/10' :
                       'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10'
-                    }`}>
+                      }`}>
                       {selectedEvent.item.status === 'Pending' ? 'กำลังดำเนินการ' : 'สำเร็จ'}
                     </span>
                   </div>
@@ -1056,16 +1025,24 @@ export default function CalendarPage() {
             </div>
 
             {/* Footer Actions */}
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 mt-6 shrink-0 flex items-center justify-between gap-3">
+            <div className="pt-4 border-t border-slate-200/80 dark:border-slate-800/80 mt-6 shrink-0 flex items-center justify-between gap-3">
               <button
                 type="button"
                 onClick={() => {
-                  if (confirm(`คุณต้องการลบรายการ "${selectedEvent.item.title}" ใช่หรือไม่?`)) {
-                    deleteMutation.mutate(selectedEvent.item.id);
-                  }
+                  setConfirmDialog({
+                    isOpen: true,
+                    title: 'ต้องการลบรายการนี้ใช่หรือไม่?',
+                    description: `คุณต้องการลบรายการ "${selectedEvent.item.title}" ออกจากปฏิทินใช่หรือไม่?`,
+                    confirmText: 'ลบรายการ',
+                    variant: 'danger',
+                    onConfirm: () => {
+                      deleteMutation.mutate(selectedEvent.item.id);
+                      setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                    },
+                  });
                 }}
                 disabled={deleteMutation.isPending}
-                className="px-4 py-2.5 rounded-xl font-bold bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-xs border border-red-500/20 transition-all duration-200 cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                className="px-4 py-2.5 rounded-xl font-bold bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-xs border border-rose-500/20 transition-all duration-200 cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>ลบรายการ</span>
@@ -1079,7 +1056,8 @@ export default function CalendarPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Item Modal for Create/Edit */}
@@ -1094,6 +1072,12 @@ export default function CalendarPage() {
           itemToEdit={itemToEdit}
         />
       )}
+
+      {/* Solid-Glass Confirm Dialog */}
+      <ConfirmDialog
+        {...confirmDialog}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

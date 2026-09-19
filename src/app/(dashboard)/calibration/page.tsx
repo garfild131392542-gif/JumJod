@@ -30,7 +30,7 @@ export default function CalibrationPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | CalStatus>('all');
   const [sortBy, setSortBy] = useState<'next-asc' | 'next-desc' | 'name-asc'>('next-asc');
-  
+
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedCal, setSelectedCal] = useState<LabCalibration | null>(null);
 
@@ -176,7 +176,7 @@ export default function CalibrationPage() {
       </div>
 
       {/* Summary Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-4 md:grid-cols-4 gap-3">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
             เครื่องมือทั้งหมด
@@ -193,7 +193,7 @@ export default function CalibrationPage() {
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm">
           <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-            ใกล้ถึงวัน Cal (ใน 14 วัน)
+            ใกล้ถึงวัน (14 วัน)
           </p>
           <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{dueSoonCount}</p>
         </div>
@@ -285,7 +285,34 @@ export default function CalibrationPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     {getStatusBadge(status)}
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                      <button
+                        onClick={() => {
+                          setSelectedCal(item);
+                          setModalOpen(true);
+                        }}
+                        className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-teal-600 hover:text-white dark:hover:bg-teal-600 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span>แก้ไขวันที่</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (confirm(`คุณต้องการลบเครื่องมือ "${item.name}" ใช่หรือไม่?`)) {
+                            deleteMutation.mutate(item.id);
+                          }
+                        }}
+                        className="p-2 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all cursor-pointer"
+                        title="ลบเครื่องมือ"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
+
 
                   <div className="flex items-start gap-2 pt-1">
                     <Scale className="w-5 h-5 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
@@ -326,31 +353,7 @@ export default function CalibrationPage() {
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/60">
-                  <button
-                    onClick={() => {
-                      setSelectedCal(item);
-                      setModalOpen(true);
-                    }}
-                    className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-teal-600 hover:text-white dark:hover:bg-teal-600 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span>แก้ไขวันที่</span>
-                  </button>
 
-                  <button
-                    onClick={() => {
-                      if (confirm(`คุณต้องการลบเครื่องมือ "${item.name}" ใช่หรือไม่?`)) {
-                        deleteMutation.mutate(item.id);
-                      }
-                    }}
-                    className="p-2 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all cursor-pointer"
-                    title="ลบเครื่องมือ"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
               </div>
             );
           })}

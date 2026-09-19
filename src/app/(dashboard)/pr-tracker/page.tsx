@@ -25,6 +25,7 @@ import {
   MessageSquare
 } from 'lucide-react';
 import PrModal from '@/components/dashboard/pr-modal';
+import ConfirmDialog from '@/components/common/confirm-dialog';
 
 export default function PrTrackerPage() {
   const { user } = useAuth();
@@ -34,11 +35,25 @@ export default function PrTrackerPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | PrStatus>('all');
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc'>('date-desc');
-  
+
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPr, setSelectedPr] = useState<PrRequest | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeLineCmdMenu, setActiveLineCmdMenu] = useState<string | null>(null);
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description?: string;
+    confirmText?: string;
+    variant?: 'danger' | 'warning' | 'primary' | 'success';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
 
   // Fetch PR requests using React Query
   const { data: prRequests = [], isLoading, error } = useQuery<PrRequest[]>({
@@ -189,46 +204,39 @@ export default function PrTrackerPage() {
         </button>
       </div>
 
-      {/* Summary Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-            ทั้งหมด (Total)
-          </p>
-          <p className="text-2xl font-black text-slate-800 dark:text-slate-100 mt-1">{totalCount}</p>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm">
+      {/* Summary Stat Cards (4 columns, without Total card) */}
+      <div className="grid grid-cols-4 md:grid-cols-4 gap-3.5">
+        <div className="p-4 rounded-2xl liquid-glass hover-glass-lift shadow-xs">
           <p className="text-[11px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
             รอเลข PR
           </p>
-          <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{pendingCount}</p>
+          <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 tabular-nums">{pendingCount}</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm">
+        <div className="p-4 rounded-2xl liquid-glass hover-glass-lift shadow-xs">
           <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
             ออก PR แล้ว
           </p>
-          <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{prIssuedCount}</p>
+          <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 tabular-nums">{prIssuedCount}</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm">
+        <div className="p-4 rounded-2xl liquid-glass hover-glass-lift shadow-xs">
           <p className="text-[11px] font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">
             ออก PO แล้ว
           </p>
-          <p className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1">{poIssuedCount}</p>
+          <p className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-1 tabular-nums">{poIssuedCount}</p>
         </div>
 
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm col-span-2 md:col-span-1">
+        <div className="p-4 rounded-2xl liquid-glass hover-glass-lift shadow-xs">
           <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
             เสร็จสมบูรณ์
           </p>
-          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{completedCount}</p>
+          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums">{completedCount}</p>
         </div>
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="p-4 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 backdrop-blur-sm shadow-sm flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+      <div className="p-3.5 rounded-2xl liquid-glass shadow-xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
         {/* Search */}
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -301,153 +309,159 @@ export default function PrTrackerPage() {
             return (
               <div
                 key={item.id}
-                className="p-5 rounded-2xl bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 hover:border-violet-500/40 backdrop-blur-sm shadow-sm transition-all duration-200 flex flex-col md:flex-row md:items-center justify-between gap-4 group"
+                className="p-5 rounded-2xl liquid-glass hover-glass-lift border border-slate-200/80 dark:border-slate-800/80 hover:border-violet-500/40 shadow-xs transition-all duration-200 flex flex-col gap-3.5 group"
               >
-                {/* Left Info: Title & Meta */}
-                <div className="flex-1 space-y-2">
+                {/* Header: Status & Date on Left, Action Buttons on Right */}
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  {/* Left: Status Badge & Date */}
                   <div className="flex items-center gap-2 flex-wrap">
                     {getStatusBadge(item.status)}
-                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
+                    <span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 tabular-nums">
+                      <Calendar className="w-3.5 h-3.5" />
                       <span>{formatDate(item.created_at)}</span>
                       <span className="text-[10px] text-slate-400">({formatTime(item.created_at)})</span>
                     </span>
                   </div>
 
-                  <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 leading-snug">
-                    {item.title}
-                  </h3>
+                  {/* Right: Edit & Delete Buttons */}
+                  <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPr(item);
+                        setModalOpen(true);
+                      }}
+                      className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-violet-600 hover:text-white dark:hover:bg-violet-600 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
+                      title="แก้ไข/เติมเลข"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">แก้ไข/เติมเลข</span>
+                    </button>
 
-                  {(item.subtotal || item.total_amount) && (
-                    <div className="flex items-center gap-2.5 text-xs bg-violet-500/5 dark:bg-violet-950/30 px-3 py-1.5 rounded-xl border border-violet-500/15 w-fit flex-wrap">
-                      <span className="text-slate-500">ราคาต้น: <strong className="text-slate-700 dark:text-slate-200 font-mono">฿{Number(item.subtotal || 0).toLocaleString()}</strong></span>
-                      <span className="text-slate-300 dark:text-slate-700">|</span>
-                      <span className="text-slate-500">VAT 7%: <strong className="text-slate-700 dark:text-slate-200 font-mono">฿{Number(item.vat_amount || 0).toLocaleString()}</strong></span>
-                      <span className="text-slate-300 dark:text-slate-700">|</span>
-                      <span className="text-violet-600 dark:text-violet-400 font-bold">สุทธิ: <strong className="font-mono text-sm">฿{Number(item.total_amount || 0).toLocaleString()}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirmDialog({
+                          isOpen: true,
+                          title: 'ต้องการลบรายการ PR นี้ใช่หรือไม่?',
+                          description: `คุณต้องการลบรายการ PR "${item.title}" ใช่หรือไม่?`,
+                          confirmText: 'ลบรายการ',
+                          variant: 'danger',
+                          onConfirm: () => {
+                            deleteMutation.mutate(item.id);
+                            setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+                          },
+                        });
+                      }}
+                      className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-600 hover:text-white transition-all cursor-pointer"
+                      title="ลบรายการ"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Body: Title & Meta on Left, PR/PO/QT Numbers on Right */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex-1 space-y-2">
+                    <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 leading-snug">
+                      {item.title}
+                    </h3>
+
+                    {(item.subtotal || item.total_amount) && (
+                      <div className="flex items-center gap-2.5 text-xs bg-violet-500/5 dark:bg-violet-950/30 px-3 py-1.5 rounded-xl border border-violet-500/15 w-fit flex-wrap">
+                        <span className="text-slate-500">ราคาต้น: <strong className="text-slate-700 dark:text-slate-200 font-mono">฿{Number(item.subtotal || 0).toLocaleString()}</strong></span>
+                        <span className="text-slate-300 dark:text-slate-700">|</span>
+                        <span className="text-slate-500">VAT 7%: <strong className="text-slate-700 dark:text-slate-200 font-mono">฿{Number(item.vat_amount || 0).toLocaleString()}</strong></span>
+                        <span className="text-slate-300 dark:text-slate-700">|</span>
+                        <span className="text-violet-600 dark:text-violet-400 font-bold">สุทธิ: <strong className="font-mono text-sm">฿{Number(item.total_amount || 0).toLocaleString()}</strong></span>
+                      </div>
+                    )}
+
+                    {item.notes && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-800/60 leading-relaxed whitespace-pre-wrap">
+                        {item.notes}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Middle Info: PR / PO / QT Numbers */}
+                  <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-950/80 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800/60 shrink-0 md:min-w-[280px]">
+                    {/* PR No */}
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        เลข PR
+                      </span>
+                      {item.pr_no ? (
+                        <button
+                          onClick={() => handleCopy(item.pr_no!, `pr_${item.id}`)}
+                          className="flex items-center gap-1 text-xs font-mono font-bold text-violet-600 dark:text-violet-400 hover:underline mt-0.5 cursor-pointer text-left truncate"
+                          title="คลิกเพื่อคัดลอก"
+                        >
+                          <span className="truncate">{item.pr_no}</span>
+                          {copiedId === `pr_${item.id}` ? (
+                            <Check className="w-3 h-3 text-emerald-500 shrink-0" />
+                          ) : (
+                            <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                          )}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-400 dark:text-slate-600 italic mt-0.5">
+                          - (ยังไม่ระบุ)
+                        </span>
+                      )}
                     </div>
-                  )}
 
-                  {item.notes && (
-                    <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-800/60 leading-relaxed whitespace-pre-wrap">
-                      {item.notes}
-                    </p>
-                  )}
-                </div>
-
-                {/* Middle Info: PR / PO / QT Numbers */}
-                <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-950/80 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800/60 shrink-0 min-w-[280px]">
-                  {/* PR No */}
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      เลข PR
-                    </span>
-                    {item.pr_no ? (
-                      <button
-                        onClick={() => handleCopy(item.pr_no!, `pr_${item.id}`)}
-                        className="flex items-center gap-1 text-xs font-mono font-bold text-violet-600 dark:text-violet-400 hover:underline mt-0.5 cursor-pointer text-left truncate"
-                        title="คลิกเพื่อคัดลอก"
-                      >
-                        <span className="truncate">{item.pr_no}</span>
-                        {copiedId === `pr_${item.id}` ? (
-                          <Check className="w-3 h-3 text-emerald-500 shrink-0" />
-                        ) : (
-                          <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                        )}
-                      </button>
-                    ) : (
-                      <span className="text-xs text-slate-400 dark:text-slate-600 italic mt-0.5">
-                        - (ยังไม่ระบุ)
+                    {/* PO No */}
+                    <div className="flex flex-col border-l border-slate-200 dark:border-slate-800 pl-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        เลข PO
                       </span>
-                    )}
-                  </div>
+                      {item.po_no ? (
+                        <button
+                          onClick={() => handleCopy(item.po_no!, `po_${item.id}`)}
+                          className="flex items-center gap-1 text-xs font-mono font-bold text-purple-600 dark:text-purple-400 hover:underline mt-0.5 cursor-pointer text-left truncate"
+                          title="คลิกเพื่อคัดลอก"
+                        >
+                          <span className="truncate">{item.po_no}</span>
+                          {copiedId === `po_${item.id}` ? (
+                            <Check className="w-3 h-3 text-emerald-500 shrink-0" />
+                          ) : (
+                            <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                          )}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-400 dark:text-slate-600 italic mt-0.5">
+                          - (ยังไม่ระบุ)
+                        </span>
+                      )}
+                    </div>
 
-                  {/* PO No */}
-                  <div className="flex flex-col border-l border-slate-200 dark:border-slate-800 pl-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      เลข PO
-                    </span>
-                    {item.po_no ? (
-                      <button
-                        onClick={() => handleCopy(item.po_no!, `po_${item.id}`)}
-                        className="flex items-center gap-1 text-xs font-mono font-bold text-purple-600 dark:text-purple-400 hover:underline mt-0.5 cursor-pointer text-left truncate"
-                        title="คลิกเพื่อคัดลอก"
-                      >
-                        <span className="truncate">{item.po_no}</span>
-                        {copiedId === `po_${item.id}` ? (
-                          <Check className="w-3 h-3 text-emerald-500 shrink-0" />
-                        ) : (
-                          <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                        )}
-                      </button>
-                    ) : (
-                      <span className="text-xs text-slate-400 dark:text-slate-600 italic mt-0.5">
-                        - (ยังไม่ระบุ)
+                    {/* QT No */}
+                    <div className="flex flex-col border-l border-slate-200 dark:border-slate-800 pl-2">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        เลข QT
                       </span>
-                    )}
+                      {item.qt_no ? (
+                        <button
+                          onClick={() => handleCopy(item.qt_no!, `qt_${item.id}`)}
+                          className="flex items-center gap-1 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline mt-0.5 cursor-pointer text-left truncate"
+                          title="คลิกเพื่อคัดลอก"
+                        >
+                          <span className="truncate">{item.qt_no}</span>
+                          {copiedId === `qt_${item.id}` ? (
+                            <Check className="w-3 h-3 text-emerald-500 shrink-0" />
+                          ) : (
+                            <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                          )}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-400 dark:text-slate-600 italic mt-0.5">
+                          - (ยังไม่ระบุ)
+                        </span>
+                      )}
+                    </div>
                   </div>
-
-                  {/* QT No */}
-                  <div className="flex flex-col border-l border-slate-200 dark:border-slate-800 pl-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      เลข QT
-                    </span>
-                    {item.qt_no ? (
-                      <button
-                        onClick={() => handleCopy(item.qt_no!, `qt_${item.id}`)}
-                        className="flex items-center gap-1 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 hover:underline mt-0.5 cursor-pointer text-left truncate"
-                        title="คลิกเพื่อคัดลอก"
-                      >
-                        <span className="truncate">{item.qt_no}</span>
-                        {copiedId === `qt_${item.id}` ? (
-                          <Check className="w-3 h-3 text-emerald-500 shrink-0" />
-                        ) : (
-                          <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                        )}
-                      </button>
-                    ) : (
-                      <span className="text-xs text-slate-400 dark:text-slate-600 italic mt-0.5">
-                        - (ยังไม่ระบุ)
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right Action Buttons */}
-                <div className="flex items-center gap-2 self-end md:self-center shrink-0">
-                  <button
-                    onClick={() => handleCopy(`ใส่เลข PR ${item.title} `, `line_cmd_${item.id}`)}
-                    className="p-2 rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-400 hover:bg-violet-600 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-                    title="คัดลอกคำสั่งแก้ไขผ่าน LINE"
-                  >
-                    <MessageSquare className="w-3.5 h-3.5" />
-                    <span className="hidden lg:inline">
-                      {copiedId === `line_cmd_${item.id}` ? 'คัดลอกคำสั่ง LINE แล้ว!' : 'สั่งแก้ใน LINE'}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setSelectedPr(item);
-                      setModalOpen(true);
-                    }}
-                    className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-violet-600 hover:text-white dark:hover:bg-violet-600 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">แก้ไข/เติมเลข</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      if (confirm(`คุณต้องการลบรายการ PR "${item.title}" ใช่หรือไม่?`)) {
-                        deleteMutation.mutate(item.id);
-                      }
-                    }}
-                    className="p-2 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all cursor-pointer"
-                    title="ลบรายการ"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
                 </div>
               </div>
             );
@@ -464,6 +478,12 @@ export default function PrTrackerPage() {
         }}
         userId={user?.id || ''}
         prToEdit={selectedPr}
+      />
+
+      {/* Solid-Glass Confirm Dialog */}
+      <ConfirmDialog
+        {...confirmDialog}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

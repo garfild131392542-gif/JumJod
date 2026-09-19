@@ -217,8 +217,8 @@ export default function ItemModal({ isOpen, onClose, userId, itemToEdit }: ItemM
         onClick={onClose}
       />
 
-      {/* Modal Box / Mobile Bottom Sheet */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border-t md:border border-slate-200 dark:border-slate-800 rounded-t-[28px] md:rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[92vh] md:max-h-[90vh] text-slate-800 dark:text-slate-200 animate-slide-up md:animate-scale-up">
+      {/* Modal Box / Mobile Bottom Sheet (Solid-Glass) */}
+      <div className="relative w-full max-w-lg solid-glass-modal rounded-t-[28px] md:rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[92vh] md:max-h-[90vh] text-slate-800 dark:text-slate-200 animate-slide-up md:animate-modal-pop">
         {/* Mobile Drag Indicator Handle */}
         <div className="md:hidden pt-3 pb-1 flex items-center justify-center cursor-pointer" onClick={onClose}>
           <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />

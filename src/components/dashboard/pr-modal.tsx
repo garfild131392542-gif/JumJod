@@ -181,7 +181,7 @@ export default function PrModal({ isOpen, onClose, userId, prToEdit }: PrModalPr
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center items-center p-0 md:p-4 bg-slate-950/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border-t md:border border-slate-200 dark:border-slate-800 rounded-t-[28px] md:rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[92vh] md:max-h-[90vh] animate-slide-up md:animate-scale-up">
+      <div className="relative w-full max-w-lg solid-glass-modal rounded-t-[28px] md:rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[92vh] md:max-h-[90vh] animate-slide-up md:animate-modal-pop">
         {/* Mobile Drag Indicator Handle */}
         <div className="md:hidden pt-3 pb-1 flex items-center justify-center cursor-pointer" onClick={onClose}>
           <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
 import { Item, ItemStatus, Profile } from '@/lib/types';
 import ItemModal from '@/components/dashboard/item-modal';
+import ConfirmDialog from '@/components/common/confirm-dialog';
 import {
   Plus, Search, Edit2, Trash2, Calendar,
   Image as ImageIcon, FileText, Clock, AlertCircle, CheckCircle2, ClipboardList
@@ -23,6 +24,20 @@ export default function DashboardPage() {
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description?: string;
+    confirmText?: string;
+    variant?: 'danger' | 'warning' | 'primary' | 'success';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
 
   // Toast and audited items states
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
@@ -181,30 +196,46 @@ export default function DashboardPage() {
   });
 
   const handleDeleteItem = (itemId: string) => {
-    if (confirm('คุณต้องการลบรายการจดบันทึกนี้ใช่หรือไม่?')) {
-      deleteMutation.mutate(itemId);
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'ต้องการลบรายการจดบันทึกนี้ใช่หรือไม่?',
+      description: 'เมื่อลบแล้วจะไม่สามารถกู้คืนรายการนี้ได้อีก',
+      confirmText: 'ลบรายการ',
+      variant: 'danger',
+      onConfirm: () => {
+        deleteMutation.mutate(itemId);
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   const handleCompleteItem = (item: Item) => {
-    if (confirm(`คุณต้องการบันทึกความสำเร็จรายการ "${item.title}" ใช่หรือไม่?\n(รายการจะถูกย้ายไปยังหน้าประวัติสำเร็จ)`)) {
-      moveStatusMutation.mutate(
-        { itemId: item.id, nextStatus: 'Issuing Item' },
-        {
-          onSuccess: () => {
-            const saved = localStorage.getItem('audited_items');
-            let audited: Record<string, boolean> = {};
-            if (saved) {
-              try { audited = JSON.parse(saved); } catch (e) {}
-            }
-            audited[item.id] = true;
-            localStorage.setItem('audited_items', JSON.stringify(audited));
-            setAuditedItems(audited);
-            showToast(`🎉 ยินดีด้วย! บันทึกความสำเร็จรายการ "${item.title}" เรียบร้อยแล้ว`);
+    setConfirmDialog({
+      isOpen: true,
+      title: 'บันทึกรายการสำเร็จ',
+      description: `ต้องการบันทึกความสำเร็จรายการ "${item.title}" ใช่หรือไม่?\nรายการจะถูกย้ายไปยังหน้าประวัติสำเร็จ`,
+      confirmText: 'สำเร็จแล้ว',
+      variant: 'success',
+      onConfirm: () => {
+        moveStatusMutation.mutate(
+          { itemId: item.id, nextStatus: 'Issuing Item' },
+          {
+            onSuccess: () => {
+              const saved = localStorage.getItem('audited_items');
+              let audited: Record<string, boolean> = {};
+              if (saved) {
+                try { audited = JSON.parse(saved); } catch (e) {}
+              }
+              audited[item.id] = true;
+              localStorage.setItem('audited_items', JSON.stringify(audited));
+              setAuditedItems(audited);
+              showToast(`🎉 ยินดีด้วย! บันทึกความสำเร็จรายการ "${item.title}" เรียบร้อยแล้ว`);
+            },
           }
-        }
-      );
-    }
+        );
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   const handleEditItem = (item: Item) => {
@@ -276,9 +307,9 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* LINE Connection Banner */}
+      {/* LINE Connection Banner (Solid-Glass) */}
       {profile && !profile.line_user_id && (
-        <div className="backdrop-blur-sm bg-white dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm">
+        <div className="solid-glass rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -386,7 +417,7 @@ export default function DashboardPage() {
               filteredItems.map((item) => (
                 <div
                   key={item.id}
-                  className="group relative bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 shadow-sm hover:shadow-md dark:shadow-none hover:border-slate-300 dark:hover:border-slate-700/80 transition-all duration-200 flex flex-col justify-between gap-3"
+                  className="group relative solid-glass hover-glass-lift rounded-2xl p-4.5 border border-slate-200/80 dark:border-slate-800/80 transition-all duration-200 flex flex-col justify-between gap-3"
                 >
                   {/* File Attachment Preview */}
                   {item.image_url && (
@@ -494,6 +525,12 @@ export default function DashboardPage() {
           <span>{toast.message}</span>
         </div>
       )}
+
+      {/* Solid-Glass Confirm Dialog */}
+      <ConfirmDialog
+        {...confirmDialog}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

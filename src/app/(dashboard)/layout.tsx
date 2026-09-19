@@ -81,7 +81,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     },
   ];
 
-  // Mobile Bottom Tab Bar Items (4 Quick Tabs + 1 Drawer Trigger)
+  // Mobile Bottom Tab Bar Items (5 Quick Tabs + 1 Drawer Trigger)
   const mobileTabItems = [
     {
       name: 'ช่วยจำ',
@@ -103,6 +103,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       href: '/stock',
       icon: Package,
     },
+    {
+      name: 'Calibrate',
+      href: '/calibration',
+      icon: Scale,
+    },
+  ];
+
+  // Remaining Navigation Items for Mobile Drawer
+  const drawerNavItems = [
+    {
+      name: 'รายการสำเร็จ',
+      shortName: 'สำเร็จแล้ว',
+      href: '/completed',
+      icon: CheckSquare,
+      description: 'ประวัติบันทึกที่เสร็จสิ้น'
+    },
+    {
+      name: 'ตั้งค่า & เชื่อมต่อ LINE',
+      shortName: 'ตั้งค่า',
+      href: '/settings',
+      icon: Settings,
+      description: 'จัดการบัญชีและไลน์บอท'
+    },
   ];
 
   const userAvatar = user?.user_metadata?.avatar_url;
@@ -110,16 +133,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const userEmail = user?.email || '';
 
   // Check if current page is in drawer items
-  const isMoreActive = pathname === '/calibration' || pathname === '/completed' || pathname === '/settings';
+  const isMoreActive = pathname === '/completed' || pathname === '/settings';
 
   return (
-    <div className="h-[100dvh] w-full flex flex-col md:flex-row overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200 font-sans antialiased selection:bg-violet-500 selection:text-white">
+    <div className="h-[100dvh] w-full flex flex-col md:flex-row overflow-hidden ambient-bg text-slate-900 dark:text-slate-100 transition-colors duration-200 font-sans antialiased selection:bg-violet-500 selection:text-white relative">
       
+      {/* Liquid Glass Atmospheric Ambient Blobs */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
+        <div className="absolute -top-[15%] left-[10%] w-[500px] sm:w-[700px] h-[500px] sm:h-[700px] rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 blur-[120px]" />
+        <div className="absolute top-[35%] -right-[10%] w-[450px] sm:w-[650px] h-[450px] sm:h-[650px] rounded-full bg-purple-500/10 dark:bg-purple-500/15 blur-[130px]" />
+        <div className="absolute -bottom-[10%] left-[25%] w-[500px] sm:w-[750px] h-[500px] sm:h-[750px] rounded-full bg-sky-500/10 dark:bg-sky-500/10 blur-[140px]" />
+      </div>
+
       {/* ======================================================== */}
       {/* 1. DESKTOP SIDEBAR (Visible on md: and above)             */}
       {/* ======================================================== */}
       <aside
-        className={`hidden md:flex ${sidebarOpen ? 'w-72' : 'w-20'} shrink-0 bg-white dark:bg-slate-900/40 border-r border-slate-200 dark:border-slate-800/80 backdrop-blur-md transition-all duration-300 flex-col justify-between z-20 h-full overflow-y-auto`}
+        className={`hidden md:flex ${sidebarOpen ? 'w-72' : 'w-20'} shrink-0 solid-glass border-r border-slate-200/80 dark:border-slate-800/80 transition-all duration-300 flex-col justify-between z-20 h-full overflow-y-auto`}
       >
         <div>
           {/* Header Branding */}
@@ -229,7 +259,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ======================================================== */}
       {/* 2. MOBILE TOP APP BAR (Fixed at top of screen)           */}
       {/* ======================================================== */}
-      <header className="md:hidden shrink-0 z-30 pt-safe backdrop-blur-xl bg-white/90 dark:bg-slate-950/90 border-b border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+      <header className="md:hidden shrink-0 z-30 pt-safe solid-glass border-b border-slate-200/80 dark:border-slate-800/80 shadow-xs">
         <div className="px-4 py-2.5 flex items-center justify-between">
           {/* Logo & App Name */}
           <Link href="/dashboard" className="flex items-center gap-2.5 active:scale-95 transition-transform">
@@ -337,7 +367,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden relative overscroll-contain">
 
 
-        <div className="px-4 py-4 pb-8 md:p-8 relative">
+        <div key={pathname} className="animate-page-enter px-4 py-4 pb-8 md:p-8 relative">
           {children}
         </div>
       </main>
@@ -345,8 +375,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ======================================================== */}
       {/* 4. MOBILE BOTTOM NAVIGATION DOCK (Permanently pinned)     */}
       {/* ======================================================== */}
-      <nav className="md:hidden shrink-0 z-40 pb-safe backdrop-blur-2xl bg-white/95 dark:bg-slate-950/95 border-t border-slate-200/90 dark:border-slate-800/90 shadow-[0_-4px_25px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_25px_rgba(0,0,0,0.4)]">
-        <div className="grid grid-cols-5 items-center justify-around px-2 py-1.5">
+      <nav className="md:hidden shrink-0 z-40 pb-safe solid-glass border-t border-slate-200/90 dark:border-slate-800/90 shadow-[0_-4px_25px_rgba(0,0,0,0.06)] dark:shadow-[0_-4px_25px_rgba(0,0,0,0.3)]">
+        <div className="grid grid-cols-6 items-center justify-around px-1 py-1.5">
           {mobileTabItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -354,7 +384,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl transition-all duration-200 relative group active:scale-95 ${
+                className={`flex flex-col items-center justify-center py-2 px-0.5 rounded-xl transition-all duration-200 relative group active:scale-95 ${
                   isActive
                     ? 'text-violet-600 dark:text-violet-400 font-bold'
                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -370,17 +400,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 }`}>
                   <Icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : ''}`} />
                 </div>
-                <span className="text-[11px] mt-0.5 tracking-tight font-semibold truncate max-w-full">
+                <span className="text-[10px] mt-0.5 tracking-tight font-semibold truncate max-w-full">
                   {item.name}
                 </span>
               </Link>
             );
           })}
 
-          {/* 5th Tab: "เมนูอื่นๆ" (More / Drawer Trigger) */}
+          {/* 6th Tab: "เมนูอื่นๆ" (More / Drawer Trigger) */}
           <button
             onClick={() => setMobileDrawerOpen(true)}
-            className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-xl transition-all duration-200 relative active:scale-95 cursor-pointer ${
+            className={`flex flex-col items-center justify-center py-2 px-0.5 rounded-xl transition-all duration-200 relative active:scale-95 cursor-pointer ${
               isMoreActive || mobileDrawerOpen
                 ? 'text-violet-600 dark:text-violet-400 font-bold'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
@@ -395,7 +425,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }`}>
               <Menu className="w-5 h-5" />
             </div>
-            <span className="text-[11px] mt-0.5 tracking-tight font-semibold truncate max-w-full">
+            <span className="text-[10px] mt-0.5 tracking-tight font-semibold truncate max-w-full">
               เมนูอื่นๆ
             </span>
           </button>
@@ -414,7 +444,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           />
 
           {/* Bottom Sheet Drawer Box */}
-          <div className="relative w-full max-h-[85vh] bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-t-2xl shadow-2xl overflow-hidden flex flex-col animate-slide-up z-10">
+          <div className="relative w-full max-h-[85vh] solid-glass-modal border-t border-slate-200/80 dark:border-slate-800/80 rounded-t-3xl shadow-2xl overflow-hidden flex flex-col animate-slide-up z-10">
             {/* Sheet Handle */}
             <div className="pt-3 pb-2 flex items-center justify-center cursor-pointer" onClick={() => setMobileDrawerOpen(false)}>
               <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
@@ -452,10 +482,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {/* Drawer Menu List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-1.5">
               <span className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-slate-500 px-3 tracking-wider block mb-1">
-                ฟังก์ชั่นทั้งหมด (All Features)
+                ฟังก์ชั่นเพิ่มเติม (Additional Features)
               </span>
 
-              {allNavItems.map((item) => {
+              {drawerNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
 
