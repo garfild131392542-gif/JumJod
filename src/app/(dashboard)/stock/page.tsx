@@ -8,6 +8,7 @@ import { StockItem } from '@/lib/types';
 import { Plus, Search, Edit2, Trash2, AlertCircle, Package, Minus, ArrowUpDown, AlertTriangle, History, X, ChevronDown, CheckCircle2, XCircle } from 'lucide-react';
 import StockModal from '@/components/dashboard/stock-modal';
 import StockHistoryModal from '@/components/dashboard/stock-history-modal';
+import ConfirmDialog from '@/components/common/confirm-dialog';
 
 export default function StockPage() {
   const { user } = useAuth();
@@ -21,6 +22,20 @@ export default function StockPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockItem | null>(null);
   const [openCategoryDropdown, setOpenCategoryDropdown] = useState<string | null>(null);
+
+  // Confirm dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    description?: string;
+    confirmText?: string;
+    variant?: 'danger' | 'warning' | 'primary' | 'success';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    onConfirm: () => {},
+  });
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -79,7 +94,7 @@ export default function StockPage() {
     enabled: !!user?.id,
   });
 
-  // Adjust quantity mutation via API (enables push alerts on threshold)
+  // Adjust quantity mutation via API with instant Optimistic Updates
   const adjustQuantityMutation = useMutation({
     mutationFn: async ({ id, newQuantity }: { id: string; newQuantity: number }) => {
       const response = await fetch('/api/stock/adjust', {
@@ -92,9 +107,37 @@ export default function StockPage() {
         const errData = await response.json();
         throw new Error(errData?.error || 'Failed to adjust quantity');
       }
+      return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stocks'] });
+    // Instant local UI update (0ms delay)
+    onMutate: async ({ id, newQuantity }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['stocks'] });
+
+      // Snapshot previous stocks
+      const previousStocks = queryClient.getQueryData<StockItem[]>(['stocks']);
+
+      // Optimistically update cache immediately
+      if (previousStocks) {
+        queryClient.setQueryData<StockItem[]>(
+          ['stocks'],
+          previousStocks.map((stock) =>
+            stock.id === id ? { ...stock, quantity: newQuantity } : stock
+          )
+        );
+      }
+
+      return { previousStocks };
+    },
+    // Rollback on error
+    onError: (err: any, _variables, context) => {
+      if (context?.previousStocks) {
+        queryClient.setQueryData<StockItem[]>(['stocks'], context.previousStocks);
+      }
+      alert('เกิดข้อผิดพลาดในการปรับจำนวนวัสดุ: ' + (err?.message || ''));
+    },
+    // Invalidate background transaction queries quietly
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-transactions'] });
     },
   });
@@ -124,10 +167,18 @@ export default function StockPage() {
     setModalOpen(true);
   };
 
-  const handleDeleteStock = (id: string) => {
-    if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบวัสดุชิ้นนี้ออกจากคลัง?')) {
-      deleteStockMutation.mutate(id);
-    }
+  const handleDeleteStock = (id: string, name: string) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'ต้องการลบวัสดุนี้ใช่หรือไม่?',
+      description: `คุณต้องการลบ "${name}" ออกจากระบบสต็อกใช่หรือไม่?`,
+      confirmText: 'ลบวัสดุ',
+      variant: 'danger',
+      onConfirm: () => {
+        deleteStockMutation.mutate(id);
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   const handleAdjustQuantity = (stock: StockItem, amount: number) => {
@@ -486,34 +537,44 @@ export default function StockPage() {
                 {/* Quantity Adjuster & Actions */}
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800/40 flex items-center justify-between gap-3 shrink-0">
                   {/* Quantity Control Panel */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleAdjustQuantity(stock, -1)}
-                      disabled={stock.quantity <= 0 || adjustQuantityMutation.isPending}
-                      className="w-11 h-11 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    
-                    <div className="text-center min-w-16">
-                      <span className={`text-lg font-black transition-colors tabular-nums ${
-                        isAlert ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'
-                      }`}>{stock.quantity}</span>
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block leading-none">{stock.unit}</span>
-                    </div>
+                  {(() => {
+                    const isAdjustingThis = adjustQuantityMutation.isPending && adjustQuantityMutation.variables?.id === stock.id;
+                    return (
+                      <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => handleAdjustQuantity(stock, -1)}
+                          disabled={stock.quantity <= 0 || isAdjustingThis}
+                          className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 disabled:opacity-35 disabled:pointer-events-none transition-colors cursor-pointer"
+                          title="ลดจำนวน"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        
+                        <div className="text-center min-w-16">
+                          <span className={`text-lg font-black transition-colors tabular-nums ${
+                            isAlert ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'
+                          }`}>{stock.quantity}</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block leading-none">{stock.unit}</span>
+                        </div>
 
-                    <button
-                      onClick={() => handleAdjustQuantity(stock, 1)}
-                      disabled={adjustQuantityMutation.isPending}
-                      className="w-11 h-11 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                        <button
+                          type="button"
+                          onClick={() => handleAdjustQuantity(stock, 1)}
+                          disabled={isAdjustingThis}
+                          className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 disabled:opacity-35 disabled:pointer-events-none transition-colors cursor-pointer"
+                          title="เพิ่มจำนวน"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })()}
 
                   {/* Edit & Delete Actions */}
                   <div className="flex items-center gap-1.5">
                     <button
+                      type="button"
                       onClick={() => handleEditStock(stock)}
                       className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-slate-500 dark:text-slate-400 hover:text-violet-600 dark:hover:text-violet-400 transition-all cursor-pointer"
                       title="แก้ไขข้อมูลวัสดุ"
@@ -521,8 +582,9 @@ export default function StockPage() {
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
-                      onClick={() => handleDeleteStock(stock.id)}
-                      className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all cursor-pointer"
+                      type="button"
+                      onClick={() => handleDeleteStock(stock.id, stock.name)}
+                      className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800 hover:bg-rose-100 dark:hover:bg-rose-900/30 text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-all cursor-pointer"
                       title="ลบวัสดุออกจากคลัง"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -550,6 +612,12 @@ export default function StockPage() {
       <StockHistoryModal
         isOpen={historyOpen}
         onClose={() => setHistoryOpen(false)}
+      />
+
+      {/* Liquid-Glass Confirm Dialog */}
+      <ConfirmDialog
+        {...confirmDialog}
+        onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import { StockItem } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
@@ -17,6 +18,11 @@ interface StockModalProps {
 export default function StockModal({ isOpen, onClose, userId, stockToEdit, categories = [] }: StockModalProps) {
   const queryClient = useQueryClient();
   const supabase = createClient();
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -120,23 +126,18 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit, categ
     mutation.mutate();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end md:justify-center items-center p-0 md:p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Glass backdrop overlay */}
       <div
-        className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
-      {/* Modal Box / Mobile Bottom Sheet (Solid-Glass) */}
-      <div className="relative w-full max-w-lg solid-glass-modal rounded-t-[28px] md:rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[92vh] md:max-h-[90vh] animate-slide-up md:animate-modal-pop">
-        {/* Mobile Drag Indicator Handle */}
-        <div className="md:hidden pt-3 pb-1 flex items-center justify-center cursor-pointer" onClick={onClose}>
-          <div className="w-12 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-        </div>
-
+      {/* Modal Box (Liquid-Glass) */}
+      <div className="relative w-full max-w-lg liquid-glass-modal rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[90vh] animate-modal-pop">
         {/* Header */}
         <div className="px-5 py-4 md:p-6 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between">
           <h2 className="text-lg md:text-xl font-bold text-indigo-600 dark:text-indigo-400">
@@ -309,6 +310,7 @@ export default function StockModal({ isOpen, onClose, userId, stockToEdit, categ
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
