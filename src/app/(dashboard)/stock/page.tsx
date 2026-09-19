@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -44,6 +44,28 @@ export default function StockPage() {
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
   }, [openCategoryDropdown]);
+
+  // Pending target quantities and debouncing timers for rapid clicking
+  const pendingAdjustmentsRef = useRef<Record<string, number>>({});
+  const debounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
+
+  // Flush any pending updates when unmounting so rapid changes are never lost
+  useEffect(() => {
+    return () => {
+      Object.entries(debounceTimersRef.current).forEach(([stockId, timer]) => {
+        clearTimeout(timer);
+        const finalQty = pendingAdjustmentsRef.current[stockId];
+        if (finalQty !== undefined) {
+          fetch('/api/stock/adjust', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: stockId, newQuantity: finalQty }),
+            keepalive: true,
+          }).catch(console.error);
+        }
+      });
+    };
+  }, []);
 
   const { data: inventoryBoard } = useQuery({
     queryKey: ['inventory-board', user?.id],
@@ -94,53 +116,6 @@ export default function StockPage() {
     enabled: !!user?.id,
   });
 
-  // Adjust quantity mutation via API with instant Optimistic Updates
-  const adjustQuantityMutation = useMutation({
-    mutationFn: async ({ id, newQuantity }: { id: string; newQuantity: number }) => {
-      const response = await fetch('/api/stock/adjust', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, newQuantity })
-      });
-
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData?.error || 'Failed to adjust quantity');
-      }
-      return response.json();
-    },
-    // Instant local UI update (0ms delay)
-    onMutate: async ({ id, newQuantity }) => {
-      // Cancel outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['stocks'] });
-
-      // Snapshot previous stocks
-      const previousStocks = queryClient.getQueryData<StockItem[]>(['stocks']);
-
-      // Optimistically update cache immediately
-      if (previousStocks) {
-        queryClient.setQueryData<StockItem[]>(
-          ['stocks'],
-          previousStocks.map((stock) =>
-            stock.id === id ? { ...stock, quantity: newQuantity } : stock
-          )
-        );
-      }
-
-      return { previousStocks };
-    },
-    // Rollback on error
-    onError: (err: any, _variables, context) => {
-      if (context?.previousStocks) {
-        queryClient.setQueryData<StockItem[]>(['stocks'], context.previousStocks);
-      }
-      alert('เกิดข้อผิดพลาดในการปรับจำนวนวัสดุ: ' + (err?.message || ''));
-    },
-    // Invalidate background transaction queries quietly
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['stock-transactions'] });
-    },
-  });
 
   // Delete stock item mutation
   const deleteStockMutation = useMutation({
@@ -182,8 +157,59 @@ export default function StockPage() {
   };
 
   const handleAdjustQuantity = (stock: StockItem, amount: number) => {
-    const newQty = Math.max(0, stock.quantity + amount);
-    adjustQuantityMutation.mutate({ id: stock.id, newQuantity: newQty });
+    // 1. Calculate next quantity based on any pending rapid clicks or current stock quantity
+    const currentQty = pendingAdjustmentsRef.current[stock.id] !== undefined
+      ? pendingAdjustmentsRef.current[stock.id]
+      : stock.quantity;
+
+    const newQty = Math.max(0, currentQty + amount);
+    if (newQty === currentQty) return; // e.g. already 0 and minus clicked
+
+    pendingAdjustmentsRef.current[stock.id] = newQty;
+
+    // 2. Optimistically update local TanStack Query cache synchronously (0ms instant response)
+    queryClient.setQueryData<StockItem[]>(['stocks'], (oldStocks) => {
+      if (!oldStocks) return [];
+      return oldStocks.map((item) => (item.id === stock.id ? { ...item, quantity: newQty } : item));
+    });
+
+    // 3. Reset debounce timer for this specific stock item
+    if (debounceTimersRef.current[stock.id]) {
+      clearTimeout(debounceTimersRef.current[stock.id]);
+    }
+
+    // 4. Batch and sync with server 400ms after user finishes rapid clicking
+    debounceTimersRef.current[stock.id] = setTimeout(async () => {
+      const targetQty = pendingAdjustmentsRef.current[stock.id];
+      delete debounceTimersRef.current[stock.id];
+      if (targetQty === undefined) return;
+
+      try {
+        const response = await fetch('/api/stock/adjust', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: stock.id, newQuantity: targetQty }),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData?.error || 'Failed to adjust stock quantity');
+        }
+
+        // Clean up from pending if no newer click occurred during request
+        if (pendingAdjustmentsRef.current[stock.id] === targetQty) {
+          delete pendingAdjustmentsRef.current[stock.id];
+        }
+
+        // Quietly update transaction log in background
+        queryClient.invalidateQueries({ queryKey: ['stock-transactions'] });
+      } catch (err: any) {
+        console.error('Error syncing stock quantity:', err);
+        alert('เกิดข้อผิดพลาดในการบันทึกจำนวนวัสดุ: ' + (err?.message || 'กรุณาลองใหม่อีกครั้ง'));
+        delete pendingAdjustmentsRef.current[stock.id];
+        queryClient.invalidateQueries({ queryKey: ['stocks'] });
+      }
+    }, 400);
   };
 
   const handleMoveCategory = async (stock: StockItem, newCategory: string) => {
@@ -537,39 +563,33 @@ export default function StockPage() {
                 {/* Quantity Adjuster & Actions */}
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800/40 flex items-center justify-between gap-3 shrink-0">
                   {/* Quantity Control Panel */}
-                  {(() => {
-                    const isAdjustingThis = adjustQuantityMutation.isPending && adjustQuantityMutation.variables?.id === stock.id;
-                    return (
-                      <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                        <button
-                          type="button"
-                          onClick={() => handleAdjustQuantity(stock, -1)}
-                          disabled={stock.quantity <= 0 || isAdjustingThis}
-                          className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 disabled:opacity-35 disabled:pointer-events-none transition-colors cursor-pointer"
-                          title="ลดจำนวน"
-                        >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        
-                        <div className="text-center min-w-16">
-                          <span className={`text-lg font-black transition-colors tabular-nums ${
-                            isAlert ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'
-                          }`}>{stock.quantity}</span>
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block leading-none">{stock.unit}</span>
-                        </div>
+                  <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900/60 p-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800 touch-manipulation select-none">
+                    <button
+                      type="button"
+                      onClick={() => handleAdjustQuantity(stock, -1)}
+                      disabled={stock.quantity <= 0}
+                      className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 disabled:opacity-35 disabled:pointer-events-none transition-all active:scale-90 cursor-pointer select-none"
+                      title="ลดจำนวน"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    
+                    <div className="text-center min-w-16 select-none">
+                      <span className={`text-lg font-black transition-colors tabular-nums ${
+                        isAlert ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'
+                      }`}>{stock.quantity}</span>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold block leading-none">{stock.unit}</span>
+                    </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleAdjustQuantity(stock, 1)}
-                          disabled={isAdjustingThis}
-                          className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 disabled:opacity-35 disabled:pointer-events-none transition-colors cursor-pointer"
-                          title="เพิ่มจำนวน"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    );
-                  })()}
+                    <button
+                      type="button"
+                      onClick={() => handleAdjustQuantity(stock, 1)}
+                      className="w-10 h-10 rounded-lg flex items-center justify-center bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-600 dark:text-slate-300 transition-all active:scale-90 cursor-pointer select-none"
+                      title="เพิ่มจำนวน"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
 
                   {/* Edit & Delete Actions */}
                   <div className="flex items-center gap-1.5">
